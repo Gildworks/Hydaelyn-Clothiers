@@ -22,24 +22,24 @@ module Program =
 
         model.LoadFile()
 
-        let header = parseHeader model.Data
-        let declarations, _ = parseVertexDeclarations model.Data header
-        let rawBuffers = extractRawBuffers model.Data header
+        //let header = parseHeader model.Data
+        //let declarations, _ = parseVertexDeclarations model.Data header
+        //let rawBuffers = extractRawBuffers model.Data header
 
-        printfn "Model Loaded: %s" modelPath
-        printfn "Vertex decls: %d" declarations.Length
-        printfn "Vertex 0 has %d elements" (List.length declarations[0])
-        printfn "LOD count: %d" header.LodCount
-        printfn "Vertex buffer 0 size: %d bytes" rawBuffers.VertexBuffers[0].Length
-        printfn "Index buffer 0 size: %d bytes" rawBuffers.IndexBuffers[0].Length
+        //printfn "Model Loaded: %s" modelPath
+        //printfn "Vertex decls: %d" declarations.Length
+        //printfn "Vertex 0 has %d elements" (List.length declarations[0])
+        //printfn "LOD count: %d" header.LodCount
+        //printfn "Vertex buffer 0 size: %d bytes" rawBuffers.VertexBuffers[0].Length
+        //printfn "Index buffer 0 size: %d bytes" rawBuffers.IndexBuffers[0].Length
 
-        let vertices = decodeVertices declarations[0] rawBuffers.VertexBuffers[0]
-        let indices = decodeIndices rawBuffers.IndexBuffers[0]
+        //let vertices = decodeVertices declarations[0] rawBuffers.VertexBuffers[0]
+        //let indices = decodeIndices rawBuffers.IndexBuffers[0]
 
-        printfn "Parsed %d vertices and %d indices" vertices.Length indices.Length
-        printfn "First vertex: Position=(%f %f %f), UV=(%f %f)"
-            vertices[0].Position.X vertices[0].Position.Y vertices[0].Position.Z
-            vertices[0].UV.X vertices[0].UV.Y
+        //printfn "Parsed %d vertices and %d indices" vertices.Length indices.Length
+        //printfn "First vertex: Position=(%f %f %f), UV=(%f %f)"
+        //    vertices[0].Position.X vertices[0].Position.Y vertices[0].Position.Z
+        //    vertices[0].UV.X vertices[0].UV.Y
 
         AppBuilder
             .Configure<App>()

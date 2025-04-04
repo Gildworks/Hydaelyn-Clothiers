@@ -12,13 +12,16 @@ open Veldrid
 open Veldrid.StartupUtilities
 open Veldrid.Sdl2
 open Vertex
+open MdlParser
+open generateNormals
 
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexPositionColorUv = 
     val Position    : Vector3
     val Color       : Vector4
     val UV          : Vector2
-    new(pos,col, uv) = { Position = pos; Color = col; UV = uv }
+    val Normal      : Vector3
+    new(pos,col,uv,nor) = { Position = pos; Color = col; UV = uv; Normal = nor }
 
 type CustomVeldridControl() as this =
     inherit NativeControlHost()
@@ -46,24 +49,45 @@ type CustomVeldridControl() as this =
     layout(location = 0) in vec3 Position;
     layout(location = 1) in vec4 Color;
     layout(location = 2) in vec2 UV;
+    layout(location = 3) in vec3 Normal;
 
-    layout(location = 0) out vec4 fsin_Color;
+    layout(location = 0) out vec3 fs_Position;
+    layout(location = 1) out vec4 fs_Color;
+    layout(location = 2) out vec2 fs_UV;
+    layout(location = 3) out vec3 fs_Normal;
 
     void main()
     {
         gl_Position = MVP * vec4(Position, 1.0);
-        fsin_Color = Color;
+        fs_Position = Position;
+        fs_Color = Color;
+        fs_UV = UV;
+        fs_Normal = normalize(Normal);
     }
     """
 
     let fragmentShaderCode = """
     #version 450
-    layout(location = 0) in vec4 fsin_Color;
+    layout(location = 0) in vec3 fs_Position;
+    layout(location = 1) in vec4 fs_Color;
+    layout(location = 2) in vec2 fs_UV;
+    layout(location = 3) in vec3 fs_Normal;
+    
     layout(location = 0) out vec4 fsout_Color;
 
     void main()
     {
-        fsout_Color = fsin_Color;
+        vec3 lightDir = normalize(vec3(-0.5, -1.0, -0.3));
+        vec3 normal = normalize(fs_Normal);
+
+        float diff = max(dot(normal, -lightDir), 0.0);
+
+        vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
+        vec3 reflectDir = reflect(lightDir, normal);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);
+
+        vec3 baseColor = fs_Color.rgb * diff + vec3(spec);
+        fsout_Color = vec4(baseColor, fs_Color.a);
     }
     """
 
@@ -118,14 +142,30 @@ type CustomVeldridControl() as this =
         let declarations, _ = MdlParser.parseVertexDeclarations model.Data header
         let rawBuffers = MdlParser.extractRawBuffers model.Data header
 
-        let decodedVertices = MdlParser.decodeVertices declarations[0] rawBuffers.VertexBuffers[0]
+        let allDeclarations = declarations |> List.concat
+
+        //let decodedVertices = MdlParser.decodeVertices declarations[0] rawBuffers.VertexBuffers
+        let decodedVertices = MdlParser.decodeVerticesFromDeclaration declarations[0] rawBuffers.VertexBuffers
         let indices = MdlParser.decodeIndices rawBuffers.IndexBuffers[0]
+        let generatedNormals = generateNormals (decodedVertices |> Array.map (fun v -> v.Position)) indices
 
         let convertedVertices = 
             decodedVertices
-            |> Array.map (fun v -> VertexPositionColorUv(v.Position, v.Color, v.UV))
+            |> Array.mapi (fun i v -> 
+                VertexPositionColorUv(v.Position, v.Color, v.UV, generatedNormals[i]))
 
         conVert <- convertedVertices
+        indices |> Array.take 20 |> Array.iteri (fun i ix -> printfn "Index %d: %d" i ix)
+        printfn "Total vertices: %d" convertedVertices.Length
+        printfn "Total triangles: %d" (indices.Length / 3)
+        printfn "Index buffer length is multiple of 3: %b" (indices.Length % 3 = 0)
+
+        printfn "First triangle indices: %A" indices.[0..2]
+
+        declarations[0]
+        |> List.iter (fun d ->
+            printfn $"Usage: %A{d.VertexUsage}, Type: %A{d.VertexType}, Offset: {d.Offset}, Stream: {d.Stream}"
+        )
 
         let vb = gd.ResourceFactory.CreateBuffer(
             BufferDescription(
@@ -150,11 +190,12 @@ type CustomVeldridControl() as this =
         let aspectRatio = float32 sdl.Width / float32 sdl.Height
 
         let projection = Matrix4x4.CreatePerspectiveFieldOfView(
-            MathF.PI / 4.0f, aspectRatio, 0.1f, 100.0f
+            MathF.PI / 4.0f, aspectRatio, 0.5f, 100.0f
         )
         let view = Matrix4x4.CreateLookAt(
             Vector3(0.0f, 0.0f, -20.0f), Vector3.Zero, Vector3.UnitY
         )
+        let convertCoordSystem = Matrix4x4.CreateRotationZ(MathF.PI / 2.0f)
         let modelMatrix = Matrix4x4.CreateScale(5.0f)
 
         let mvp = modelMatrix * view * projection
@@ -185,12 +226,13 @@ type CustomVeldridControl() as this =
                     VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+                    VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                 |]
             )
 
         let mutable pipelineDescription = GraphicsPipelineDescription()
         pipelineDescription.BlendState <- BlendStateDescription.SingleOverrideBlend
-        pipelineDescription.DepthStencilState <- DepthStencilStateDescription.Disabled
+        pipelineDescription.DepthStencilState <- DepthStencilStateDescription.DepthOnlyGreaterEqual
         pipelineDescription.RasterizerState <- RasterizerStateDescription(
             FaceCullMode.None,
             PolygonFillMode.Solid,
@@ -198,7 +240,8 @@ type CustomVeldridControl() as this =
             true,
             false
         )
-        pipelineDescription.PrimitiveTopology <- PrimitiveTopology.PointList
+        pipelineDescription.PrimitiveTopology <- PrimitiveTopology.TriangleList
+        //pipelineDescription.PrimitiveTopology <- PrimitiveTopology.PointList
         pipelineDescription.ResourceLayouts <- [| layout |]
         pipelineDescription.ShaderSet <- ShaderSetDescription([| vertexLayout |], shaders)
         pipelineDescription.Outputs <- gd.SwapchainFramebuffer.OutputDescription
@@ -221,12 +264,19 @@ type CustomVeldridControl() as this =
             cl.SetGraphicsResourceSet(0u, resourceSet)
             cl.SetVertexBuffer(0u, vb)
             cl.SetIndexBuffer(indexBuffer.Value, IndexFormat.UInt16)
-            cl.Draw(
-                vertexCount = uint32 conVert.Length,
+            cl.DrawIndexed(
+                indexCount = uint32 indexCount,
                 instanceCount = 1u,
-                vertexStart = 0u,
+                indexStart = 0u,
+                vertexOffset = 0,
                 instanceStart = 0u
             )
+            //cl.Draw(
+            //    vertexCount = uint32 conVert.Length,
+            //    instanceCount = 1u,
+            //    vertexStart = 0u,
+            //    instanceStart = 0u
+            //)
             cl.End()
 
             gd.SubmitCommands(cl)

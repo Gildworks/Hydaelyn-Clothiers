@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Numerics
 open System.Buffers.Binary
+open System.Runtime.InteropServices
 
 // Enums based on documentation
 type VertexType =
@@ -180,82 +181,322 @@ type DecodedVertex =
         Position    : Vector3
         Color       : Vector4
         UV          : Vector2
+        Normal      : Vector3
     }
 
-let decodeVertices (declaration: VertexElement list) (raw: byte[]) : DecodedVertex[] =
-    let vertexStride =
+//let decodeVertices (declaration: VertexElement list) (rawBuffers: byte[][]) : DecodedVertex[] =
+//    // Group by stream ID
+//    let streams = 
+//        declaration 
+//        |> List.groupBy (fun el -> el.Stream)
+//        |> Map.ofList
+//
+//    // Decode a single stream
+//    let decodeStream (elements: VertexElement list) (buffer: byte[]) =
+//        // Compute stride
+//        let stride =
+//            elements
+//            |> List.map (fun el ->
+//                match el.VertexType with
+//                | VertexType.Single3 -> el.Offset + 12uy
+//                | VertexType.Single4 -> el.Offset + 16uy
+//                | VertexType.Half2   -> el.Offset + 4uy
+//                | VertexType.Half4   -> el.Offset + 8uy
+//                | VertexType.ByteFloat4 -> el.Offset + 4uy
+//                | _ -> el.Offset + 4uy
+//            )
+//            |> List.max
+//            |> int
+//
+//        let count = buffer.Length / stride
+//
+//        Array.init count (fun i ->
+//            let baseOffset = i * stride
+//
+//            let tryReadVec3 offset =
+//                if offset + 12 <= buffer.Length then
+//                    Vector3(
+//                        BitConverter.ToSingle(buffer, offset),
+//                        BitConverter.ToSingle(buffer, offset + 4),
+//                        BitConverter.ToSingle(buffer, offset + 8)
+//                    )
+//                else Vector3.Zero
+//
+//            let tryReadVec2 offset =
+//                if offset + 8 <= buffer.Length then
+//                    Vector2(
+//                        BitConverter.ToSingle(buffer, offset),
+//                        BitConverter.ToSingle(buffer, offset + 4)
+//                    )
+//                else Vector2.Zero
+//
+//            let tryReadVec4 offset =
+//                if offset + 16 <= buffer.Length then
+//                    Vector4(
+//                        BitConverter.ToSingle(buffer, offset),
+//                        BitConverter.ToSingle(buffer, offset + 4),
+//                        BitConverter.ToSingle(buffer, offset + 8),
+//                        BitConverter.ToSingle(buffer, offset + 12)
+//                    )
+//                else Vector4.One
+//
+//            let tryReadByteFloat4 offset =
+//                if offset + 4 <= buffer.Length then
+//                    Vector4(
+//                        float32 buffer[offset]   / 255.0f,
+//                        float32 buffer[offset+1] / 255.0f,
+//                        float32 buffer[offset+2] / 255.0f,
+//                        float32 buffer[offset+3] / 255.0f
+//                    )
+//                else Vector4.One
+//            let halfToFloat (half: uint16) : float32 =
+//                let s = (half >>> 15) &&& 0x0001us
+//                let e = (half >>> 10) &&& 0x001Fus
+//                let f = half &&& 0x03FFus
+//
+//                let result =
+//                    if e = 0us then
+//                        float32 (int f) * (2.0f ** -24.0f)
+//                    elif e = 31us then
+//                        if f = 0us then
+//                            if s = 0us then Single.PositiveInfinity else Single.NegativeInfinity
+//                        else Single.NaN
+//                    else
+//                        let exponent = float32 (int e - 15)
+//                        let mantissa = 1.0f + (float32 f) / 1024.0f
+//                        mantissa * (2.0f ** exponent)
+//                if s = 1us then -result else result
+//
+//            let tryReadHalf4Raw offset =
+//                printfn "Raw Half4 bytes at offset %d: " offset
+//                for i in 0 .. 7 do
+//                    printf "%02X " buffer[offset + i]
+//                printfn ""
+//
+//            let tryReadHalf4 offset =
+//                tryReadHalf4Raw offset
+//                if offset + 6 <= buffer.Length then
+//                    Vector3(
+//                        halfToFloat (BitConverter.ToUInt16(buffer, offset)),
+//                        halfToFloat (BitConverter.ToUInt16(buffer, offset + 2)),
+//                        halfToFloat (BitConverter.ToUInt16(buffer, offset + 4))
+//                    )
+//                else Vector3.UnitZ
+//
+//
+//            // Extract values based on available usages
+//            let pos =
+//                elements |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.Position)
+//                |> Option.map (fun d -> tryReadVec3 (baseOffset + int d.Offset))
+//           
+//            let col =
+//                elements |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.Color)
+//                |> Option.map (fun d ->
+//                    match d.VertexType with
+//                    | VertexType.ByteFloat4 -> tryReadByteFloat4 (baseOffset + int d.Offset)
+//                    | _ -> tryReadVec4 (baseOffset + int d.Offset))
+//
+//            let uv =
+//                elements |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.UV)
+//                |> Option.map (fun d -> tryReadVec2 (baseOffset + int d.Offset))
+//
+//            let nor =
+//                elements |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.Normal)
+//                |> Option.map (fun d -> tryReadHalf4 (baseOffset + int d.Offset))
+//
+//            (pos, col, uv, nor)
+//        )
+//
+//    // Decode each stream (up to the number of buffers we have)
+//    let decodedStreams =
+//        rawBuffers
+//        |> Array.mapi (fun streamId buf ->
+//            match Map.tryFind (byte streamId) streams with
+//            | Some elements -> Some (decodeStream elements buf)
+//            | None -> None
+//        )
+//
+//    // Merge all decoded streams into a final DecodedVertex array
+//    let vertexCount =
+//        decodedStreams
+//        |> Array.choose id
+//        |> Array.map Array.length
+//        |> Array.max
+//
+//    Array.init vertexCount (fun i ->
+//        let mutable pos = Vector3.Zero
+//        let mutable col = Vector4.One
+//        let mutable uv  = Vector2.Zero
+//        let mutable nor = Vector3.UnitZ
+//
+//        for stream in decodedStreams do
+//            match stream with
+//            | Some verts when i < verts.Length ->
+//                let (p, c, u, n) = verts[i]
+//                match p with Some v -> pos <- v | _ -> ()
+//                match c with Some v -> col <- v | _ -> ()
+//                match u with Some v -> uv  <- v | _ -> ()
+//                match n with Some v -> nor <- v | _ -> ()
+//            | _ -> ()
+//
+//        {
+//            Position = pos
+//            Color    = col
+//            UV       = uv
+//            Normal   = nor
+//        }
+//    )
+
+let decodeVerticesFromDeclaration (declaration: VertexElement list) (rawBuffers: byte[][]) =
+    let tryMax list =
+        if List.isEmpty list then None
+        else Some (List.max list)
+
+    let getElement usage expectedStream =
+            declaration
+            |> List.tryFind (fun el -> el.VertexUsage = usage && el.Stream = expectedStream)
+
+    let posEl = getElement VertexUsage.Position 0uy
+    let norEl = getElement VertexUsage.Normal 1uy
+    let colEl = getElement VertexUsage.Color 1uy
+    let uvEl  = getElement VertexUsage.UV 1uy
+
+    // Get raw buffer slices
+    let posBuf = if rawBuffers.Length > 0 then Some rawBuffers[0] else None
+    let attrBuf = if rawBuffers.Length > 1 then Some rawBuffers[1] else None
+
+    // Estimate strides per stream
+    let strideOf stream =
         declaration
+        |> List.filter (fun el -> el.Stream = stream)
         |> List.map (fun el ->
             match el.VertexType with
-            | VertexType.Single3 -> el.Offset + 12uy
-            | VertexType.Single4 -> el.Offset + 16uy
-            | VertexType.Half2   -> el.Offset + 4uy
-            | VertexType.Half4   -> el.Offset + 8uy
-            | _ -> el.Offset + 4uy
+            | VertexType.Single3 -> int el.Offset + 12
+            | VertexType.Single4 -> int el.Offset + 16
+            | VertexType.Half4   -> int el.Offset + 8
+            | VertexType.ByteFloat4 -> int el.Offset + 4
+            | VertexType.Half2   -> int el.Offset + 4
+            | _ -> int el.Offset + 4
         )
-        |> List.max
-        |> int
-    let count = raw.Length / vertexStride
+        |> tryMax
+        |> Option.defaultValue 0
 
-    let tryReadVec3 offset =
-        if offset + 12 <= raw.Length then
-            Vector3(
-                BitConverter.ToSingle(raw, offset),
-                BitConverter.ToSingle(raw, offset + 4),
-                BitConverter.ToSingle(raw, offset + 8)
-            )
-        else
-            printfn "WARN: Skipped reading Vec3 at offset %d (buffer too small)" offset
-            Vector3.Zero
+    let posStride = strideOf 0uy
+    let attrStride = strideOf 1uy
 
-    let tryReadVec2 offset =
-        if offset + 8 <= raw.Length then
-            Vector2(
-                BitConverter.ToSingle(raw, offset),
-                BitConverter.ToSingle(raw, offset + 4)
-            )
-        else
-            printfn "WARN: Skipped reading Vec2 at offset %d (buffer too small)" offset
-            Vector2.Zero
+    // Determine how many vertices exist (based on position stream)
+    let count =
+        match posBuf with
+        | Some buf -> buf.Length / posStride
+        | None -> 0
 
-    let tryReadVec4 offset =
-        if offset + 16 <= raw.Length then
-            Vector4(
-                BitConverter.ToSingle(raw, offset),
-                BitConverter.ToSingle(raw, offset + 4),
-                BitConverter.ToSingle(raw, offset + 8),
-                BitConverter.ToSingle(raw, offset + 12)
-            )
-        else
-            printfn "WARN: Skipped reading Vec4 at offset %d (buffer too small)" offset
-            Vector4.One
+    let halfToFloat (half: uint16) : float32 =
+        let s = (half >>> 15) &&& 0x0001us
+        let e = (half >>> 10) &&& 0x001Fus
+        let f = half &&& 0x03FFus
+        let result =
+            if e = 0us then float32 f * (2.0f ** -24.0f)
+            elif e = 31us then if f = 0us then (if s = 0us then Single.PositiveInfinity else Single.NegativeInfinity) else Single.NaN
+            else
+                let exponent = float32 (int e - 15)
+                let mantissa = 1.0f + float32 f / 1024.0f
+                mantissa * (2.0f ** exponent)
+        if s = 1us then -result else result
+
+    let tryReadVec3 (buffer: byte[]) offset =
+        Vector3(
+            BitConverter.ToSingle(buffer, offset),
+            BitConverter.ToSingle(buffer, offset + 4),
+            BitConverter.ToSingle(buffer, offset + 8)
+        )
+
+    let tryReadVec2 (buffer: byte[]) offset =
+        Vector2(
+            BitConverter.ToSingle(buffer, offset),
+            BitConverter.ToSingle(buffer, offset + 4)
+        )
+
+    let tryReadHalfVec3 (buffer: byte[]) offset =
+        Vector3(
+            halfToFloat (BitConverter.ToUInt16(buffer, offset)),
+            halfToFloat (BitConverter.ToUInt16(buffer, offset + 2)),
+            halfToFloat (BitConverter.ToUInt16(buffer, offset + 4))
+        )
+
+    let tryReadByteFloat4 (buffer: byte[]) offset =
+        Vector4(
+            float32 buffer[offset] / 255.0f,
+            float32 buffer[offset + 1] / 255.0f,
+            float32 buffer[offset + 2] / 255.0f,
+            float32 buffer[offset + 3] / 255.0f
+        )
+
+    let tryReadVec4 (buffer: byte[]) offset =
+        Vector4(
+            BitConverter.ToSingle(buffer, offset),
+            BitConverter.ToSingle(buffer, offset + 4),
+            BitConverter.ToSingle(buffer, offset + 8),
+            BitConverter.ToSingle(buffer, offset + 12)
+        )
 
     Array.init count (fun i ->
-        let baseOffset = i * vertexStride
+        let mutable pos = Vector3.Zero
+        let mutable nor = Vector3.UnitZ
+        let mutable col = Vector4.One
+        let mutable uv  = Vector2.Zero
 
-        let pos =
-            match declaration |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.Position) with
-            | Some d -> tryReadVec3 (baseOffset + int d.Offset)
-            | None -> Vector3.Zero
+        match posBuf, posEl with
+        | Some buf, Some el ->
+            let offset = i * posStride + int el.Offset
+            if offset + 12 <= buf.Length then
+                pos <- tryReadVec3 buf offset
+        | _ -> ()
 
-        let color =
-            match declaration |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.Color) with
-            | Some d -> tryReadVec4 (baseOffset + int d.Offset)
-            | None -> Vector4.One
+        match attrBuf, norEl with
+        | Some buf, Some el ->
+            let offset = i * attrStride + int el.Offset
+            if offset + 6 <= buf.Length then
+                nor <- tryReadHalfVec3 buf offset
+        | _ -> ()
 
-        let uv =
-            match declaration |> List.tryFind (fun d -> d.VertexUsage = VertexUsage.UV) with
-            | Some d -> tryReadVec2 (baseOffset + int d.Offset)
-            | None -> Vector2.Zero
+        match attrBuf, colEl with
+        | Some buf, Some el ->
+            let offset = i * attrStride + int el.Offset
+            if offset + 4 <= buf.Length then
+                col <- tryReadByteFloat4 buf offset
+        | _ -> ()
+
+        match attrBuf, uvEl with
+        | Some buf, Some el ->
+            let offset = i * attrStride + int el.Offset
+            if offset + 8 <= buf.Length then
+                uv <- tryReadVec2 buf offset
+        | _ -> ()
 
         {
             Position = pos
-            Color = color
+            Normal = nor
+            Color = col
             UV = uv
         }
     )
 
+
+
+//let decodeIndices (raw: byte[]) : uint16[] =
+//    Array.init (raw.Length / 2) (fun i ->
+//        BitConverter.ToUInt16(raw, i * 2)
+//    )
+
 let decodeIndices (raw: byte[]) : uint16[] =
-    Array.init (raw.Length / 2) (fun i ->
+    let count = raw.Length / 2
+    printfn "Raw index buffer size: %d bytes" raw.Length
+    printfn "Interpreted as %d 16-bit indices" count
+
+    for i in 0 .. min 19 (count - 1) do
+        let index = BitConverter.ToUInt16(raw, i * 2)
+        printfn "Index %d: %d" i index
+    
+    Array.init count (fun i ->
         BitConverter.ToUInt16(raw, i * 2)
     )
