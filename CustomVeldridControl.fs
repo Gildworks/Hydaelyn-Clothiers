@@ -14,6 +14,7 @@ open Veldrid.Sdl2
 open Vertex
 open MdlParser
 open generateNormals
+open CameraController
 
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexPositionColorUv = 
@@ -40,6 +41,17 @@ type CustomVeldridControl() as this =
     let mutable conVert : VertexPositionColorUv[] = [||]
 
     let mutable pipeline : Pipeline option = None
+
+    let mutable isLeftDown = false
+    let mutable isRightDown = false
+    let mutable isMiddleDown = false
+    let mutable lastMousePos = Vector2.Zero
+
+    let mutable mvpb : DeviceBuffer option = None
+    let mutable modm = null
+    let mutable proj = null
+
+    let cameraComtroller = CameraController()
 
     let vertexShaderCode = """
     #version 450
@@ -110,10 +122,48 @@ type CustomVeldridControl() as this =
             WindowHeight = 600,
             WindowTitle = "Veldrid Test"
         )
+        let flags = SDL_WindowFlags.OpenGL ||| SDL_WindowFlags.InputFocus ||| SDL_WindowFlags.AllowHighDpi ||| SDL_WindowFlags.Shown
 
-        let sdl = VeldridStartup.CreateWindow(ref windowCI)
+        let sdl = new Sdl2Window(windowCI.WindowTitle, windowCI.X, windowCI.Y, windowCI.WindowWidth,windowCI.WindowHeight, flags, true)
+
+        printfn "Hooking Mouse Event"
+        // Add mouse button state
+        sdl.add_MouseDown(fun (e: MouseEvent) ->
+            match e.MouseButton with
+            | MouseButton.Left -> isLeftDown <- true; cameraComtroller.StartOrbit(lastMousePos)
+            | MouseButton.Right -> isRightDown <- true; cameraComtroller.StartDolly(lastMousePos)
+            | MouseButton.Middle -> isMiddleDown <- true; cameraComtroller.StartPan(lastMousePos)
+            | _ -> ()
+        )
+
+        sdl.add_MouseUp(fun (e: MouseEvent) ->
+            match e.MouseButton with
+            | MouseButton.Left -> isLeftDown <- false; cameraComtroller.Stop()
+            | MouseButton.Right -> isRightDown <- false; cameraComtroller.Stop()
+            | MouseButton.Middle -> isMiddleDown <- false; cameraComtroller.Stop()
+            | _ -> ()
+        )
+
+        // Add camera controls
+        printfn "Hooking mouse move"
+        sdl.add_MouseMove(fun (e: MouseMoveEventArgs) ->
+            let pos = Vector2(float32 e.MousePosition.X, float32 e.MousePosition.Y)
+            lastMousePos <- pos
+            cameraComtroller.MouseMove(pos)
+        )
+
         sdl.Visible <- true
+        async {
+            while sdl.Exists do
+                Sdl2Events.ProcessEvents()
+
+                do! Async.Sleep(10)
+        } |> Async.Start
+
         sdlWindow <- Some sdl
+
+        if not sdl.Exists then
+            failwith "SDL window does not exist!"
 
         let swapchainSrc = VeldridStartup.GetSwapchainSource(sdl)
         swapchainSource <- Some swapchainSrc
@@ -192,18 +242,21 @@ type CustomVeldridControl() as this =
         let projection = Matrix4x4.CreatePerspectiveFieldOfView(
             MathF.PI / 4.0f, aspectRatio, 0.5f, 100.0f
         )
+     
         let view = Matrix4x4.CreateLookAt(
             Vector3(0.0f, 0.0f, -20.0f), Vector3.Zero, Vector3.UnitY
         )
         let convertCoordSystem = Matrix4x4.CreateRotationZ(MathF.PI / 2.0f)
         let modelMatrix = Matrix4x4.CreateScale(5.0f)
 
-        let mvp = modelMatrix * view * projection
+        //let mvp = modelMatrix * view * projection
 
         let mvpBuffer = gd.ResourceFactory.CreateBuffer(
             BufferDescription(uint32 sizeof<Matrix4x4>, BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)
         )
-        gd.UpdateBuffer(mvpBuffer, 0u, Matrix4x4.Transpose(mvp))
+        mvpb <- Some mvpBuffer
+
+        //gd.UpdateBuffer(mvpBuffer, 0u, Matrix4x4.Transpose(mvp))
 
         let layout = gd.ResourceFactory.CreateResourceLayout(
             ResourceLayoutDescription(
@@ -212,7 +265,7 @@ type CustomVeldridControl() as this =
         )
 
         let resourceSet = gd.ResourceFactory.CreateResourceSet(
-            ResourceSetDescription(layout, mvpBuffer)
+            ResourceSetDescription(layout, mvpb.Value)
         )
 
         // === Shader setup ===
@@ -277,6 +330,14 @@ type CustomVeldridControl() as this =
             //    vertexStart = 0u,
             //    instanceStart = 0u
             //)
+            let model = Matrix4x4.CreateScale(5.0f)
+            let view = cameraComtroller.GetViewMatrix()
+            let projection = cameraComtroller.GetProjectionMatrix(
+                float32 gd.SwapchainFramebuffer.Width / float32 gd.SwapchainFramebuffer.Height
+            )
+
+            let mvp = model * view * projection
+            gd.UpdateBuffer(mvpb.Value, 0u, Matrix4x4.Transpose(mvp))
             cl.End()
 
             gd.SubmitCommands(cl)

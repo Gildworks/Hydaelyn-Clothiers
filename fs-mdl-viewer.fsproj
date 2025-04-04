@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CameraController.fs" />
     <Compile Include="generateNormals.fs" />
     <Compile Include="MdlParser.fs" />
     <Compile Include="GameData.fs" />
