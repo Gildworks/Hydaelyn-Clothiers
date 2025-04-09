@@ -72,7 +72,7 @@ type CustomVeldridControl() as this =
     {
         gl_Position = MVP * vec4(Position, 1.0);
         fs_Position = Position;
-        fs_Color = Color;
+        fs_Color = vec4(0.0, 1.0, 0.0, 1.0);
         fs_UV = UV;
         fs_Normal = normalize(Normal);
     }
@@ -172,7 +172,9 @@ type CustomVeldridControl() as this =
             sdl,
             GraphicsDeviceOptions(
                 debug = true,
-                ResourceBindingModel = ResourceBindingModel.Improved
+                swapchainDepthFormat = PixelFormat.D32_Float_S8_UInt,
+                syncToVerticalBlank = true,
+                ResourceBindingModel = ResourceBindingModel.Improved                
             ),
             GraphicsBackend.OpenGL
         )
@@ -182,7 +184,7 @@ type CustomVeldridControl() as this =
         let cl = gd.ResourceFactory.CreateCommandList()
 
         // === Load model ===
-        let modelPath = "chara/human/c0101/obj/body/b0001/model/c0101b0001_top.mdl"
+        let modelPath = "chara/human/c1101/obj/body/b0003/model/c1101b0003_top.mdl"
         let gameDataPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack"
         let lumina = new Lumina.GameData(gameDataPath)
         let model = lumina.GetFile(modelPath)
@@ -199,10 +201,20 @@ type CustomVeldridControl() as this =
         let indices = MdlParser.decodeIndices rawBuffers.IndexBuffers[0]
         let generatedNormals = generateNormals (decodedVertices |> Array.map (fun v -> v.Position)) indices
 
+        let minPos, maxPos =
+            conVert
+            |> Array.map (fun v -> v.Position)
+            |> Array.fold (fun (minV, maxV) p ->
+                Vector3.Min(minV, p), Vector3.Max(maxV, p)
+            ) (Vector3(float32 Int32.MaxValue), Vector3(float32 Int32.MinValue))
+
+        let center = (minPos + maxPos) / 2.0f
+
         let convertedVertices = 
             decodedVertices
             |> Array.mapi (fun i v -> 
-                VertexPositionColorUv(v.Position, v.Color, v.UV, generatedNormals[i]))
+                let centeredPos = v.Position - center
+                VertexPositionColorUv(centeredPos, v.Color, v.UV, generatedNormals[i]))
 
         conVert <- convertedVertices
         indices |> Array.take 20 |> Array.iteri (fun i ix -> printfn "Index %d: %d" i ix)
@@ -285,12 +297,16 @@ type CustomVeldridControl() as this =
 
         let mutable pipelineDescription = GraphicsPipelineDescription()
         pipelineDescription.BlendState <- BlendStateDescription.SingleOverrideBlend
-        pipelineDescription.DepthStencilState <- DepthStencilStateDescription.DepthOnlyGreaterEqual
+        pipelineDescription.DepthStencilState <- DepthStencilStateDescription(
+            depthTestEnabled = true,
+            depthWriteEnabled = true,
+            comparisonKind = ComparisonKind.LessEqual
+        )
         pipelineDescription.RasterizerState <- RasterizerStateDescription(
             FaceCullMode.None,
             PolygonFillMode.Solid,
             FrontFace.Clockwise,
-            true,
+            false,
             false
         )
         pipelineDescription.PrimitiveTopology <- PrimitiveTopology.TriangleList
@@ -312,11 +328,15 @@ type CustomVeldridControl() as this =
         | Some gd, Some cl, Some pl, Some vb ->
             cl.Begin()
             cl.SetFramebuffer(gd.SwapchainFramebuffer)
-            cl.ClearColorTarget(0u, RgbaFloat.Black)
+
+            cl.ClearColorTarget(0u, RgbaFloat.Grey)
+            cl.ClearDepthStencil(1.0f)
+
             cl.SetPipeline(pl)
             cl.SetGraphicsResourceSet(0u, resourceSet)
             cl.SetVertexBuffer(0u, vb)
             cl.SetIndexBuffer(indexBuffer.Value, IndexFormat.UInt16)
+
             cl.DrawIndexed(
                 indexCount = uint32 indexCount,
                 instanceCount = 1u,
@@ -336,8 +356,8 @@ type CustomVeldridControl() as this =
                 float32 gd.SwapchainFramebuffer.Width / float32 gd.SwapchainFramebuffer.Height
             )
 
-            let mvp = model * view * projection
-            gd.UpdateBuffer(mvpb.Value, 0u, Matrix4x4.Transpose(mvp))
+            let mvp = model * (view * projection)
+            gd.UpdateBuffer(mvpb.Value, 0u, mvp)
             cl.End()
 
             gd.SubmitCommands(cl)
