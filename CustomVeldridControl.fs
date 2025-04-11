@@ -4,11 +4,7 @@ open System
 open System.IO
 open System.Numerics
 open System.Runtime.InteropServices
-open Avalonia
 open Avalonia.Controls
-open Avalonia.Controls.Primitives
-open Avalonia.Platform
-open Avalonia.Platform.Interop
 open Veldrid
 open Veldrid.StartupUtilities
 open Veldrid.Sdl2
@@ -19,12 +15,7 @@ open xivModdingFramework.Models.FileTypes
 open xivModdingFramework.Materials.FileTypes
 open xivModdingFramework.Textures.Enums
 open xivModdingFramework.Textures.FileTypes
-
-//open Vertex
-//open MdlParser
-open generateNormals
 open CameraController
-open SharpToNumerics
 
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexPositionColorUv = 
@@ -48,7 +39,6 @@ type CustomVeldridControl() as this =
     let mutable vertexBuffer : DeviceBuffer option = None
     let mutable indexBuffer : DeviceBuffer option = None
     let mutable indexCount = 0
-    let mutable conVert : VertexPositionColorUv[] = [||]
 
     let mutable pipeline : Pipeline option = None
 
@@ -58,8 +48,6 @@ type CustomVeldridControl() as this =
     let mutable lastMousePos = Vector2.Zero
 
     let mutable mvpb : DeviceBuffer option = None
-    let mutable modm = null
-    let mutable proj = null
     let mutable ts = null
 
     let cameraComtroller = CameraController()
@@ -142,7 +130,6 @@ type CustomVeldridControl() as this =
 
         let sdl = new Sdl2Window(windowCI.WindowTitle, windowCI.X, windowCI.Y, windowCI.WindowWidth,windowCI.WindowHeight, flags, true)
 
-        printfn "Hooking Mouse Event"
         // Add mouse button state
         sdl.add_MouseDown(fun (e: MouseEvent) ->
             match e.MouseButton with
@@ -161,7 +148,6 @@ type CustomVeldridControl() as this =
         )
 
         // Add camera controls
-        printfn "Hooking mouse move"
         sdl.add_MouseMove(fun (e: MouseMoveEventArgs) ->
             let pos = Vector2(float32 e.MousePosition.X, float32 e.MousePosition.Y)
             lastMousePos <- pos
@@ -200,15 +186,13 @@ type CustomVeldridControl() as this =
         let cl = gd.ResourceFactory.CreateCommandList()
 
         //// === Load model with xivModdingFramework ===
-        let modelPath = "chara/human/c1304/obj/body/b0001/model/c1304b0001_top.mdl"
-        let mtrlPath = "chara/human/c1304/obj/body/b0001/material/v0001/mt_c1304b0001_a.mtrl"
+        let modelPath = "chara/monster/m8299/obj/body/b0001/model/m8299b0001.mdl"
+        let mtrlPath = "chara/monster/m8299/obj/body/b0001/material/v0001/mt_m8299b0001_a.mtrl"
         let gameDataPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack"
         let xivPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
         let lumina = new Lumina.GameData(gameDataPath)
         let gameInfo = xivModdingFramework.GameInfo(DirectoryInfo(xivPath), XivLanguage.English)
-        printfn "Loding game info..."
         let xivInfo = XivCache.SetGameInfo(gameInfo)
-        printfn "Game info loaded"
         let file = lumina.GetFile(modelPath).Data
         let xivMdl = Mdl.GetXivMdl(file, modelPath)
         let mesh = xivMdl.LoDList[0].MeshDataList[0]
@@ -236,32 +220,23 @@ type CustomVeldridControl() as this =
             xivMtrl.Textures
             |> Seq.tryFind (fun t -> t.Usage = XivTexType.Normal)
 
-
-        printfn "Grabbing diffuse"
         let xivTex = diffuseTex
-        printfn "Loading texture..."
         let rgba = xivTex.GetRawPixels(0)
         let width = xivTex.Width
         let height = xivTex.Height
         let loadRgba32ArrayAsync (xivTex: xivModdingFramework.Textures.DataContainers.XivTex) =
             async {
-                printfn "Calling GetRawPixels..."
                 let! raw = xivTex.GetRawPixels(0) |> Async.AwaitTask
-                printfn "Pixel data loaded, decoding..."
-
                 let count = raw.Length / 4
                 let rgba32Array =
                     Array.init count (fun i ->
                         let idx = i * 4
                         RgbaByte(raw.[idx], raw.[idx + 1], raw.[idx + 2], raw.[idx + 3])
                     )
-                printfn "Decoded %d pixels" count
                 return rgba32Array
             }
 
-        printfn "Decoding pixels"
         let rgba32Array = loadRgba32ArrayAsync xivTex |> Async.RunSynchronously
-        printfn "Pixels decoded"
         let positions = mesh.VertexData.Positions.ToArray()
         let normals = mesh.VertexData.Normals.ToArray()
         let uvs = mesh.VertexData.TextureCoordinates0.ToArray()
@@ -275,7 +250,7 @@ type CustomVeldridControl() as this =
                 let pos = if i < positions.Length then SharpToNumerics.vec3 positions[i] else Vector3.Zero
                 let nor = if i < normals.Length then SharpToNumerics.vec3 normals[i] else Vector3.UnitZ
                 let uv = if i < uvs.Length then SharpToNumerics.vec2 uvs[i] else Vector2.Zero
-                let col = if i < colors.Length then SharpToNumerics.vec4 colors[i] else Vector4.One
+                let col = if i < colors.Length then SharpToNumerics.col colors[i] else Vector4.One
                 VertexPositionColorUv(pos, col, uv, nor)
             )
 
@@ -322,8 +297,6 @@ type CustomVeldridControl() as this =
         let view = Matrix4x4.CreateLookAt(
             Vector3(0.0f, 0.0f, -20.0f), Vector3.Zero, Vector3.UnitY
         )
-        let convertCoordSystem = Matrix4x4.CreateRotationZ(MathF.PI / 2.0f)
-        let modelMatrix = Matrix4x4.CreateScale(5.0f)
 
         let mvpBuffer = gd.ResourceFactory.CreateBuffer(
             BufferDescription(uint32 sizeof<Matrix4x4>, BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)

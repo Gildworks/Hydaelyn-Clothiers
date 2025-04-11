@@ -15,8 +15,6 @@
         <Compile Include="SharpToNumerics.fs" />
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
-        <Compile Include="GameData.fs" />
-        <Compile Include="Vertex.fs" />
         <Compile Include="CustomVeldridControl.fs" />
         <Compile Include="MainWindow.axaml.fs" />
         <Compile Include="App.axaml.fs" />
