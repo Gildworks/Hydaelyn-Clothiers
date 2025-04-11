@@ -12,6 +12,7 @@
     </ItemGroup>
     
     <ItemGroup>
+        <Compile Include="MaterialLoader.fs" />
         <Compile Include="SharpToNumerics.fs" />
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
