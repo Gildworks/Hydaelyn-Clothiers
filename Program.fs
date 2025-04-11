@@ -5,7 +5,6 @@ open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
 open Avalonia.Reactive
 open Lumina
-open MdlParser
 
 module Program =
 
