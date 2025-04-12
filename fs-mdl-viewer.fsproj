@@ -12,6 +12,7 @@
     </ItemGroup>
     
     <ItemGroup>
+		<Compile Include="ShaderBuilder.fs" />
 		<Compile Include="SharpToNumerics.fs" />
 		<Compile Include="MaterialLoader.fs" />
         <Compile Include="ModelLoader.fs" />

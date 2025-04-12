@@ -11,6 +11,7 @@ open xivModdingFramework.Cache
 open xivModdingFramework.General.Enums
 open CameraController
 open ModelLoader
+open ShaderBuilder
 
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexPositionColorUv = 
@@ -29,7 +30,6 @@ type CustomVeldridControl() as this =
     let mutable isInitialized = false
 
     let mutable sdlWindow : Sdl2Window option = None
-    let mutable swapchainSource : SwapchainSource option = None
 
     let mutable vertexBuffer : DeviceBuffer option = None
     let mutable indexBuffer : DeviceBuffer option = None
@@ -46,64 +46,6 @@ type CustomVeldridControl() as this =
     let mutable ts = null
 
     let cameraComtroller = CameraController()
-
-    let vertexShaderCode = """
-    #version 450
-    layout(set = 0, binding = 0) uniform MVPBuffer {
-        mat4 MVP;
-    };
-    layout(location = 0) in vec3 Position;
-    layout(location = 1) in vec4 Color;
-    layout(location = 2) in vec2 UV;
-    layout(location = 3) in vec3 Normal;
-
-    layout(location = 0) out vec3 fs_Position;
-    layout(location = 1) out vec4 fs_Color;
-    layout(location = 2) out vec2 fs_UV;
-    layout(location = 3) out vec3 fs_Normal;
-
-    void main()
-    {
-        gl_Position = MVP * vec4(Position, 1.0);
-        fs_Position = Position;
-        fs_Color = vec4(0.0, 1.0, 0.0, 1.0);
-        fs_UV = UV;
-        fs_Normal = normalize(Normal);
-    }
-    """
-
-    let fragmentShaderCode = """
-    #version 450
-    layout(binding = 1) uniform sampler2D tex_Diffuse;
-
-    layout(location = 0) in vec3 fs_Position;
-    layout(location = 1) in vec4 fs_Color;
-    layout(location = 2) in vec2 fs_UV;
-    layout(location = 3) in vec3 fs_Normal;
-    
-    layout(location = 0) out vec4 fsout_Color;
-
-    void main()
-    {
-        vec3 lightDir = normalize(vec3(-0.5, -1.0, -0.3));
-        vec3 normal = normalize(fs_Normal);
-
-        float diff = max(dot(normal, -lightDir), 0.0);
-
-        vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
-        vec3 reflectDir = reflect(lightDir, normal);
-        float spec = 0.0;
-
-        vec4 texColor = texture(tex_Diffuse, fs_UV);
-
-        vec3 litColor = texColor.rgb * diff + vec3(spec);
-        fsout_Color = vec4(litColor, texColor.a);
-    }
-    """
-
-    let loadShader (factory: ResourceFactory) (stage: ShaderStages) (code: string) (entryPoint: string) =
-        let bytes = System.Text.Encoding.UTF8.GetBytes(code)
-        factory.CreateShader(ShaderDescription(stage, bytes, entryPoint))
 
     do
         
@@ -162,9 +104,6 @@ type CustomVeldridControl() as this =
         if not sdl.Exists then
             failwith "SDL window does not exist!"
 
-        let swapchainSrc = VeldridStartup.GetSwapchainSource(sdl)
-        swapchainSource <- Some swapchainSrc
-
         let gd = VeldridStartup.CreateGraphicsDevice(
             sdl,
             GraphicsDeviceOptions(
@@ -185,27 +124,27 @@ type CustomVeldridControl() as this =
         let gameInfo = xivModdingFramework.GameInfo(DirectoryInfo(gameDataPath), XivLanguage.English)
         XivCache.SetGameInfo(gameInfo) |> ignore
 
-        let model = loadGameModel gd factory.Value modelPath |> Async.RunSynchronously
-        ts <- model.TextureSet
+        let loadedModel = loadGameModel gd factory.Value modelPath |> Async.RunSynchronously
+        ts <- loadedModel.TextureSet
 
         let vb = gd.ResourceFactory.CreateBuffer(
             BufferDescription(
-                uint32 (model.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
+                uint32 (loadedModel.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
                 BufferUsage.VertexBuffer
             )
         )
-        gd.UpdateBuffer(vb, 0u, model.Vertices)
+        gd.UpdateBuffer(vb, 0u, loadedModel.Vertices)
         vertexBuffer <- Some vb
 
         let ib = gd.ResourceFactory.CreateBuffer(
             BufferDescription(
-                uint32 (model.Indices.Length * Marshal.SizeOf<uint16>()),
+                uint32 (loadedModel.Indices.Length * Marshal.SizeOf<uint16>()),
                 BufferUsage.IndexBuffer
             )
         )
-        gd.UpdateBuffer(ib, 0u, model.Indices)
+        gd.UpdateBuffer(ib, 0u, loadedModel.Indices)
         indexBuffer <- Some ib
-        indexCount <- model.Indices.Length
+        indexCount <- loadedModel.Indices.Length
         
 
         // === Create MVP matrix and buffer ===
@@ -228,10 +167,6 @@ type CustomVeldridControl() as this =
         )
 
         // === Shader setup ===
-        let vertexShader = loadShader gd.ResourceFactory ShaderStages.Vertex vertexShaderCode "main"
-        let fragmentShader = loadShader gd.ResourceFactory ShaderStages.Fragment fragmentShaderCode "main"
-        let shaders = [| vertexShader; fragmentShader |]
-
         let vertexLayout = 
             VertexLayoutDescription(
                 [|
@@ -242,26 +177,9 @@ type CustomVeldridControl() as this =
                 |]
             )
 
-        let mutable pipelineDescription = GraphicsPipelineDescription()
-        pipelineDescription.BlendState <- BlendStateDescription.SingleOverrideBlend
-        pipelineDescription.DepthStencilState <- DepthStencilStateDescription(
-            depthTestEnabled = true,
-            depthWriteEnabled = true,
-            comparisonKind = ComparisonKind.LessEqual
-        )
-        pipelineDescription.RasterizerState <- RasterizerStateDescription(
-            FaceCullMode.None,
-            PolygonFillMode.Solid,
-            FrontFace.Clockwise,
-            false,
-            false
-        )
-        pipelineDescription.PrimitiveTopology <- PrimitiveTopology.TriangleList
-        pipelineDescription.ResourceLayouts <- [| layout; model.TextureLayout.Value |]
-        pipelineDescription.ShaderSet <- ShaderSetDescription([| vertexLayout |], shaders)
-        pipelineDescription.Outputs <- gd.SwapchainFramebuffer.OutputDescription
+        let pl = createDefaultPipeline gd factory.Value vertexLayout gd.SwapchainFramebuffer.OutputDescription layout loadedModel.TextureLayout.Value
 
-        pipeline <- Some (gd.ResourceFactory.CreateGraphicsPipeline(pipelineDescription))
+        pipeline <- Some pl
 
         commandList <- Some cl
 
