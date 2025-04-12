@@ -12,8 +12,9 @@
     </ItemGroup>
     
     <ItemGroup>
-        <Compile Include="MaterialLoader.fs" />
-        <Compile Include="SharpToNumerics.fs" />
+		<Compile Include="SharpToNumerics.fs" />
+		<Compile Include="MaterialLoader.fs" />
+        <Compile Include="ModelLoader.fs" />
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
         <Compile Include="CustomVeldridControl.fs" />

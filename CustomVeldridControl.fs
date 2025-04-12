@@ -8,14 +8,10 @@ open Avalonia.Controls
 open Veldrid
 open Veldrid.StartupUtilities
 open Veldrid.Sdl2
-open xivModdingFramework.Mods
 open xivModdingFramework.Cache
 open xivModdingFramework.General.Enums
-open xivModdingFramework.Models.FileTypes
-open xivModdingFramework.Materials.FileTypes
-open xivModdingFramework.Textures.Enums
-open xivModdingFramework.Textures.FileTypes
 open CameraController
+open ModelLoader
 
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexPositionColorUv = 
@@ -185,139 +181,41 @@ type CustomVeldridControl() as this =
 
         let cl = gd.ResourceFactory.CreateCommandList()
 
-        //// === Load model with xivModdingFramework ===
-        let modelPath = "chara/monster/m8299/obj/body/b0001/model/m8299b0001.mdl"
-        let mtrlPath = "chara/monster/m8299/obj/body/b0001/material/v0001/mt_m8299b0001_a.mtrl"
-        let gameDataPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack"
-        let xivPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
-        let lumina = new Lumina.GameData(gameDataPath)
-        let gameInfo = xivModdingFramework.GameInfo(DirectoryInfo(xivPath), XivLanguage.English)
-        let xivInfo = XivCache.SetGameInfo(gameInfo)
-        let file = lumina.GetFile(modelPath).Data
-        let xivMdl = Mdl.GetXivMdl(file, modelPath)
-        let mesh = xivMdl.LoDList[0].MeshDataList[0]
+        let modelPath = "chara/monster/m8448/obj/body/b0001/model/m8448b0001.mdl"
+        let gameDataPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
+        let gameInfo = xivModdingFramework.GameInfo(DirectoryInfo(gameDataPath), XivLanguage.English)
+        XivCache.SetGameInfo(gameInfo) |> ignore
 
-        let mtrlFile = lumina.GetFile(mtrlPath).Data
-        let xivMtrl = Mtrl.GetXivMtrl(mtrlFile, mtrlPath)
-
-        let loadXivTexAsync (tx: ModTransaction) (mtrlTex: xivModdingFramework.Materials.DataContainers.MtrlTexture) =
-            async {
-                let! xivTex = Tex.GetXivTex(mtrlTex, false, tx) |> Async.AwaitTask
-                return xivTex
-            }
-        
-        let diffuseTexOpt = 
-            xivMtrl.Textures
-            |> Seq.tryFind (fun t -> t.Usage = XivTexType.Diffuse)
-        
-        use tx = ModTransaction.BeginReadonlyTransaction()
-        let diffuseTex =
-            match diffuseTexOpt with
-            | Some tex -> loadXivTexAsync tx tex |> Async.RunSynchronously
-            | None -> failwith "Diffuse texture not found"
-
-        let normalTex =
-            xivMtrl.Textures
-            |> Seq.tryFind (fun t -> t.Usage = XivTexType.Normal)
-
-        let xivTex = diffuseTex
-        let rgba = xivTex.GetRawPixels(0)
-        let width = xivTex.Width
-        let height = xivTex.Height
-        let loadRgba32ArrayAsync (xivTex: xivModdingFramework.Textures.DataContainers.XivTex) =
-            async {
-                let! raw = xivTex.GetRawPixels(0) |> Async.AwaitTask
-                let count = raw.Length / 4
-                let rgba32Array =
-                    Array.init count (fun i ->
-                        let idx = i * 4
-                        RgbaByte(raw.[idx], raw.[idx + 1], raw.[idx + 2], raw.[idx + 3])
-                    )
-                return rgba32Array
-            }
-
-        let rgba32Array = loadRgba32ArrayAsync xivTex |> Async.RunSynchronously
-        let positions = mesh.VertexData.Positions.ToArray()
-        let normals = mesh.VertexData.Normals.ToArray()
-        let uvs = mesh.VertexData.TextureCoordinates0.ToArray()
-        let colors = mesh.VertexData.Colors.ToArray()
-        let indices : uint16[] =
-            mesh.VertexData.Indices
-            |> Seq.map uint16
-            |> Seq.toArray
-        let convertedVertices = 
-            Array.init positions.Length (fun i ->
-                let pos = if i < positions.Length then SharpToNumerics.vec3 positions[i] else Vector3.Zero
-                let nor = if i < normals.Length then SharpToNumerics.vec3 normals[i] else Vector3.UnitZ
-                let uv = if i < uvs.Length then SharpToNumerics.vec2 uvs[i] else Vector2.Zero
-                let col = if i < colors.Length then SharpToNumerics.col colors[i] else Vector4.One
-                VertexPositionColorUv(pos, col, uv, nor)
-            )
-
-
-        let tex = factory.Value.CreateTexture(TextureDescription(
-            uint32 width, uint32 height, 1u, 1u, 1u,
-            PixelFormat.R8_G8_B8_A8_UNorm,
-            TextureUsage.Sampled,
-            TextureType.Texture2D
-        ))
-        let textureView = factory.Value.CreateTextureView(tex)
-
-        gd.UpdateTexture(tex, rgba32Array, 0u, 0u, 0u, uint32 width, uint32 height, 1u, 0u, 0u)
-        
-        
-
+        let model = loadGameModel gd factory.Value modelPath |> Async.RunSynchronously
+        ts <- model.TextureSet
 
         let vb = gd.ResourceFactory.CreateBuffer(
             BufferDescription(
-                uint32 (convertedVertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
+                uint32 (model.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
                 BufferUsage.VertexBuffer
             )
         )
-        gd.UpdateBuffer(vb, 0u, convertedVertices)
+        gd.UpdateBuffer(vb, 0u, model.Vertices)
         vertexBuffer <- Some vb
 
         let ib = gd.ResourceFactory.CreateBuffer(
             BufferDescription(
-                uint32 (indices.Length * sizeof<uint16>),
+                uint32 (model.Indices.Length * Marshal.SizeOf<uint16>()),
                 BufferUsage.IndexBuffer
             )
         )
-        gd.UpdateBuffer(ib, 0u, indices)
+        gd.UpdateBuffer(ib, 0u, model.Indices)
         indexBuffer <- Some ib
-        indexCount <- indices.Length
+        indexCount <- model.Indices.Length
+        
 
         // === Create MVP matrix and buffer ===
         let aspectRatio = float32 sdl.Width / float32 sdl.Height
-
-        let projection = Matrix4x4.CreatePerspectiveFieldOfView(
-            MathF.PI / 4.0f, aspectRatio, 0.5f, 100.0f
-        )
-     
-        let view = Matrix4x4.CreateLookAt(
-            Vector3(0.0f, 0.0f, -20.0f), Vector3.Zero, Vector3.UnitY
-        )
 
         let mvpBuffer = gd.ResourceFactory.CreateBuffer(
             BufferDescription(uint32 sizeof<Matrix4x4>, BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)
         )
         mvpb <- Some mvpBuffer
-
-        // === Create Texture sampler and resource layout
-        let textureLayout = factory.Value.CreateResourceLayout(ResourceLayoutDescription(
-            ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-            ResourceLayoutElementDescription("sampler_Diffuse", ResourceKind.Sampler, ShaderStages.Fragment)
-        ))
-
-        let sampler = factory.Value.CreateSampler(SamplerDescription.Linear)
-
-        let textureSet = factory.Value.CreateResourceSet(ResourceSetDescription(
-            textureLayout,
-            textureView,
-            sampler
-        ))
-
-        ts <- Some textureSet
 
 
         let layout = gd.ResourceFactory.CreateResourceLayout(
@@ -360,7 +258,7 @@ type CustomVeldridControl() as this =
             false
         )
         pipelineDescription.PrimitiveTopology <- PrimitiveTopology.TriangleList
-        pipelineDescription.ResourceLayouts <- [| layout; textureLayout |]
+        pipelineDescription.ResourceLayouts <- [| layout; model.TextureLayout.Value |]
         pipelineDescription.ShaderSet <- ShaderSetDescription([| vertexLayout |], shaders)
         pipelineDescription.Outputs <- gd.SwapchainFramebuffer.OutputDescription
 
