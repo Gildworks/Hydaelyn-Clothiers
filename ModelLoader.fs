@@ -1,18 +1,13 @@
 ﻿module ModelLoader
 
-open System
 open System.IO
 open System.Numerics
 open System.Runtime.InteropServices
 open Veldrid
-open Veldrid.StartupUtilities
 open xivModdingFramework.Models.FileTypes
 open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Mods
 open xivModdingFramework.Textures.Enums
-open xivModdingFramework.Textures.FileTypes
-
-open SharpToNumerics
 open MaterialLoader
 
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -68,7 +63,7 @@ let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: stri
         let! materials = loadAllModelMaterials xivMdl
         let firstTextureOpt =
             materials
-            |> List.tryPick (fun m -> m.Textures |> List.tryFind (fun t -> t.Usage = XivTexType.Diffuse))
+            |> List.tryPick (fun m -> m.Textures |> List.tryFind (fun t -> t.Usage = XivTexType.Diffuse || t.Usage = XivTexType.Normal))
 
         let texSet, texLayout =
             match firstTextureOpt with

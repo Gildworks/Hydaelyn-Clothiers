@@ -1,6 +1,5 @@
 ﻿module CustomVeldridControl
 
-open System
 open System.IO
 open System.Numerics
 open System.Runtime.InteropServices
@@ -181,7 +180,7 @@ type CustomVeldridControl() as this =
 
         let cl = gd.ResourceFactory.CreateCommandList()
 
-        let modelPath = "chara/monster/m8448/obj/body/b0001/model/m8448b0001.mdl"
+        let modelPath = "chara/equipment/e0755/model/c0101e0755_top.mdl"
         let gameDataPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
         let gameInfo = xivModdingFramework.GameInfo(DirectoryInfo(gameDataPath), XivLanguage.English)
         XivCache.SetGameInfo(gameInfo) |> ignore
