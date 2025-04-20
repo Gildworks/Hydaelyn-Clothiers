@@ -12,6 +12,8 @@
     </ItemGroup>
     
     <ItemGroup>
+		<None Include="shaders\fragment.frag" />
+		<None Include="shaders\vertex.vert" />
 		<Compile Include="ShaderBuilder.fs" />
 		<Compile Include="SharpToNumerics.fs" />
 		<Compile Include="MaterialLoader.fs" />

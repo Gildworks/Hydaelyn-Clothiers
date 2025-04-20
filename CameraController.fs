@@ -6,7 +6,7 @@ open System.Numerics
 type CameraController() as this =
     let mutable position = Vector3(0.0f, 0.0f, 20.0f)
     let mutable target = Vector3.Zero
-    let mutable up = Vector3.UnitY
+    let mutable up = -Vector3.UnitY
 
     let mutable orbitAngles = Vector2(0.0f, 0.0f)
     let mutable distance = 20.0f
@@ -43,7 +43,7 @@ type CameraController() as this =
 
     member private _.UpdatePosition() =
         let pitch = orbitAngles.Y
-        let yaw = -orbitAngles.X
+        let yaw = orbitAngles.X
 
         let dir =
             Vector3(
@@ -66,7 +66,7 @@ type CameraController() as this =
             let up = Vector3.Normalize(Vector3.Cross(forward, right))
 
             let panSpeed = distance * 0.002f
-            target <- target + (delta.X * panSpeed * right) + (delta.Y * panSpeed * up)
+            target <- target - (delta.X * panSpeed * right) + (delta.Y * panSpeed * up)
             this.UpdatePosition()
         elif isDollying then
             distance <- max 2.0f (distance - delta.Y * 0.1f)

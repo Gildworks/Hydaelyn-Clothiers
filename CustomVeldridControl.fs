@@ -1,230 +1,239 @@
-﻿module CustomVeldridControl
+﻿namespace fs_mdl_viewer
 
+open System
 open System.IO
 open System.Numerics
 open System.Runtime.InteropServices
+open System.Diagnostics
+open System.Threading
+open Avalonia
 open Avalonia.Controls
+open Avalonia.VisualTree
+open Avalonia.Platform
+open Avalonia.Rendering
+open Avalonia.Threading
+open Avalonia.Visuals
 open Veldrid
-open Veldrid.StartupUtilities
 open Veldrid.Sdl2
+open Veldrid.StartupUtilities
+open Veldrid.Vk
 open xivModdingFramework.Cache
 open xivModdingFramework.General.Enums
-open CameraController
 open ModelLoader
 open ShaderBuilder
-
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type VertexPositionColorUv = 
-    val Position    : Vector3
-    val Color       : Vector4
-    val UV          : Vector2
-    val Normal      : Vector3
-    new(pos,col,uv,nor) = { Position = pos; Color = col; UV = uv; Normal = nor }
+open CameraController
 
 type CustomVeldridControl() as this =
     inherit NativeControlHost()
 
-    let mutable graphicsDevice : GraphicsDevice option = None
-    let mutable commandList : CommandList option = None
-    let mutable factory : ResourceFactory option = None
-    let mutable isInitialized = false
+    // --- mutable state ---
+    let mutable gd          : GraphicsDevice        option  = None
+    let mutable cl          : CommandList           option  = None
+    let mutable pl          : Pipeline              option  = None
+    let mutable indexCount  : int                           = 0
+    let mutable intd        : bool                          = false
+    let mutable childHwnd   : IntPtr                        = IntPtr.Zero
 
-    let mutable sdlWindow : Sdl2Window option = None
+    let mutable timer       : DispatcherTimer       option  = None
+    let mutable resize      : IDisposable           option  = None
 
-    let mutable vertexBuffer : DeviceBuffer option = None
-    let mutable indexBuffer : DeviceBuffer option = None
-    let mutable indexCount = 0
+    let mutable camera      : CameraController              = CameraController()
+    let mutable model       : LoadedModel           option  = None
 
-    let mutable pipeline : Pipeline option = None
+    let mutable vb          : DeviceBuffer          option  = None
+    let mutable ib          : DeviceBuffer          option  = None
+    let mutable mb          : DeviceBuffer          option  = None
+    let mutable ml          : ResourceLayout        option  = None
+    let mutable ms          : ResourceSet           option  = None
+    let mutable ts          : ResourceSet           option  = None
 
-    let mutable isLeftDown = false
-    let mutable isRightDown = false
-    let mutable isMiddleDown = false
-    let mutable lastMousePos = Vector2.Zero
 
-    let mutable mvpb : DeviceBuffer option = None
-    let mutable ts = null
+    // --- Initialization ---
+    override this.CreateNativeControlCore (parent: IPlatformHandle): IPlatformHandle = 
+        let native = base.CreateNativeControlCore(parent)
+        childHwnd <- native.Handle
+        native
 
-    let cameraComtroller = CameraController()
+    override this.OnAttachedToVisualTree (e: VisualTreeAttachmentEventArgs): unit = 
+        base.OnAttachedToVisualTree(e: VisualTreeAttachmentEventArgs)
 
-    do
-        
-        this.AttachedToVisualTree.Add(fun _ -> this.InitializeVeldrid())
+        resize <-
+            Some (this.GetObservable(NativeControlHost.BoundsProperty)
+            .Subscribe(fun rect ->
+                printfn $"Resize caught, initializing..."
+                let w = uint32 rect.Width
+                let h = uint32 rect.Height
 
-    member private this.InitializeVeldrid() =
-        if isInitialized then () else
+                if rect.Width > 0. && rect.Height > 0. then
+                    if not intd && childHwnd <> IntPtr.Zero then
+                        printfn "We've made it to the main loop, I think..."
+                        let hinst = Process.GetCurrentProcess().MainModule.BaseAddress
+                        let vkSrc = VkSurfaceSource.CreateWin32(hinst, childHwnd)
 
-        isInitialized <- true
+                        let dev = GraphicsDevice.CreateVulkan(
+                            GraphicsDeviceOptions(true, PixelFormat.D32_Float_S8_UInt, true, ResourceBindingModel.Improved),
+                            vkSrc,
+                            w, h
+                        )
+                        gd <- Some dev
 
-        let windowCI = WindowCreateInfo(
-            X = 100,
-            Y = 100,
-            WindowWidth = 800,
-            WindowHeight = 600,
-            WindowTitle = "Veldrid Test"
-        )
-        let flags = SDL_WindowFlags.OpenGL ||| SDL_WindowFlags.InputFocus ||| SDL_WindowFlags.AllowHighDpi ||| SDL_WindowFlags.Shown
+                        this.InitializeVeldrid dev
 
-        let sdl = new Sdl2Window(windowCI.WindowTitle, windowCI.X, windowCI.Y, windowCI.WindowWidth,windowCI.WindowHeight, flags, true)
+                        let rec renderLoop () = async {
+                            do! Async.Sleep 16
+                            Dispatcher.UIThread.Post(fun () ->
+                                this.RenderVeldridFrame()
+                                this.InvalidateVisual()
+                            )
+                            return! renderLoop()
+                        }
+                        Async.StartImmediate (renderLoop())
 
-        // Add mouse button state
-        sdl.add_MouseDown(fun (e: MouseEvent) ->
-            match e.MouseButton with
-            | MouseButton.Left -> isLeftDown <- true; cameraComtroller.StartOrbit(lastMousePos)
-            | MouseButton.Right -> isRightDown <- true; cameraComtroller.StartDolly(lastMousePos)
-            | MouseButton.Middle -> isMiddleDown <- true; cameraComtroller.StartPan(lastMousePos)
-            | _ -> ()
-        )
+                        intd <- true
+                        printfn $"If you're seeing this, this should end in true. {intd}"
+                    else if intd then
+                        match gd with
+                        | Some d -> d.MainSwapchain.Resize(w, h)
+                        | None   -> ()
 
-        sdl.add_MouseUp(fun (e: MouseEvent) ->
-            match e.MouseButton with
-            | MouseButton.Left -> isLeftDown <- false; cameraComtroller.Stop()
-            | MouseButton.Right -> isRightDown <- false; cameraComtroller.Stop()
-            | MouseButton.Middle -> isMiddleDown <- false; cameraComtroller.Stop()
-            | _ -> ()
-        )
+                    else
+                        printfn $"Failing intialize conditions: {intd} {childHwnd}"
+            ))
 
-        // Add camera controls
-        sdl.add_MouseMove(fun (e: MouseMoveEventArgs) ->
-            let pos = Vector2(float32 e.MousePosition.X, float32 e.MousePosition.Y)
-            lastMousePos <- pos
-            cameraComtroller.MouseMove(pos)
-        )
+    //override this.OnDetachedFromVisualTree(e: VisualTreeAttachmentEventArgs): unit =
+    //    timer   |> Option.iter (fun t -> t.Stop())
+    //    resize  |> Option.iter (fun r -> r.Dispose())
+    //    vb      |> Option.iter (fun b -> b.Dispose())
+    //    ib      |> Option.iter (fun b -> b.Dispose())
+    //    mb      |> Option.iter (fun b -> b.Dispose())
+    //    ml      |> Option.iter (fun l -> l.Dispose())
+    //    ms      |> Option.iter (fun s -> s.Dispose())
+    //    ts      |> Option.iter (fun s -> s.Dispose())
+    //    match cl        with Some   c -> c.Dispose()      | None -> ()
+    //    match pl        with Some   p -> p.Dispose()      | None -> ()
+    //    match gd        with Some   d -> d.Dispose()      | None -> ()
 
-        sdl.Visible <- true
-        async {
-            while sdl.Exists do
-                Sdl2Events.ProcessEvents()
+    //    base.OnDetachedFromVisualTree(e: VisualTreeAttachmentEventArgs)
 
-                do! Async.Sleep(10)
-        } |> Async.Start
+    // Load the model, create buffers, etc
+    member private this.InitializeVeldrid (device: GraphicsDevice) =
+        let gdp             = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
+        let mdlPath         = "chara/monster/m8299/obj/body/b0001/model/m8299b0001.mdl"
+        let info            = xivModdingFramework.GameInfo(DirectoryInfo(gdp), XivLanguage.English)
 
-        sdlWindow <- Some sdl
+        XivCache.SetGameInfo(info) |> ignore
 
-        if not sdl.Exists then
-            failwith "SDL window does not exist!"
+        let initModel       = loadGameModel device (device.ResourceFactory) mdlPath |> Async.RunSynchronously
+        let textureSet      = initModel.TextureSet
+        model       <- Some initModel
+        ts          <- Some textureSet.Value
 
-        let gd = VeldridStartup.CreateGraphicsDevice(
-            sdl,
-            GraphicsDeviceOptions(
-                debug = true,
-                swapchainDepthFormat = PixelFormat.D32_Float_S8_UInt,
-                syncToVerticalBlank = true,
-                ResourceBindingModel = ResourceBindingModel.Improved                
-            ),
-            GraphicsBackend.OpenGL
-        )
-        graphicsDevice <- Some gd
-        factory <- Some gd.ResourceFactory
-
-        let cl = gd.ResourceFactory.CreateCommandList()
-
-        let modelPath = "chara/equipment/e0755/model/c0101e0755_top.mdl"
-        let gameDataPath = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
-        let gameInfo = xivModdingFramework.GameInfo(DirectoryInfo(gameDataPath), XivLanguage.English)
-        XivCache.SetGameInfo(gameInfo) |> ignore
-
-        let loadedModel = loadGameModel gd factory.Value modelPath |> Async.RunSynchronously
-        ts <- loadedModel.TextureSet
-
-        let vb = gd.ResourceFactory.CreateBuffer(
+        // Get the vertex and index buffers set up
+        let vBuff = device.ResourceFactory.CreateBuffer(
             BufferDescription(
-                uint32 (loadedModel.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
+                uint32 (initModel.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
                 BufferUsage.VertexBuffer
             )
         )
-        gd.UpdateBuffer(vb, 0u, loadedModel.Vertices)
-        vertexBuffer <- Some vb
-
-        let ib = gd.ResourceFactory.CreateBuffer(
+        let iBuff = device.ResourceFactory.CreateBuffer(
             BufferDescription(
-                uint32 (loadedModel.Indices.Length * Marshal.SizeOf<uint16>()),
+                uint32 (initModel.Indices.Length * Marshal.SizeOf<uint16>()),
                 BufferUsage.IndexBuffer
             )
         )
-        gd.UpdateBuffer(ib, 0u, loadedModel.Indices)
-        indexBuffer <- Some ib
-        indexCount <- loadedModel.Indices.Length
-        
-
-        // === Create MVP matrix and buffer ===
-        let aspectRatio = float32 sdl.Width / float32 sdl.Height
-
-        let mvpBuffer = gd.ResourceFactory.CreateBuffer(
-            BufferDescription(uint32 sizeof<Matrix4x4>, BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)
+        let mBuff = device.ResourceFactory.CreateBuffer(
+            BufferDescription(
+                uint32 (Marshal.SizeOf<Matrix4x4>()),
+                BufferUsage.UniformBuffer ||| BufferUsage.Dynamic
+            )
         )
-        mvpb <- Some mvpBuffer
+        device.UpdateBuffer(vBuff, 0u, initModel.Vertices)
+        device.UpdateBuffer(iBuff, 0u, initModel.Indices)
+        vb          <- Some vBuff
+        ib          <- Some iBuff
+        indexCount  <- initModel.Indices.Length
+        mb          <- Some mBuff
 
-
-        let layout = gd.ResourceFactory.CreateResourceLayout(
+        let vertexLayout = VertexLayoutDescription(
+            [|
+                VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+                VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+            |]
+        )
+        let layout = device.ResourceFactory.CreateResourceLayout(
             ResourceLayoutDescription(
                 ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)
             )
         )
-
-        let resourceSet = gd.ResourceFactory.CreateResourceSet(
-            ResourceSetDescription(layout, mvpb.Value)
+        let set = device.ResourceFactory.CreateResourceSet(
+            ResourceSetDescription(
+                layout,
+                mb.Value
+            )
         )
-
-        // === Shader setup ===
-        let vertexLayout = 
-            VertexLayoutDescription(
-                [|
-                    VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                    VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
-                    VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-                    VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                |]
-            )
-
-        let pl = createDefaultPipeline gd factory.Value vertexLayout gd.SwapchainFramebuffer.OutputDescription layout loadedModel.TextureLayout.Value
-
-        pipeline <- Some pl
-
-        commandList <- Some cl
-
-        // Pass resourceSet into a member if needed, or use in RenderLoop
-        this.RenderLoop(resourceSet)
+        ml <- Some layout
+        ms <- Some set
 
 
-    member private this.RenderLoop(resourceSet: ResourceSet) =
-        match graphicsDevice, commandList, pipeline, vertexBuffer with
-        | Some gd, Some cl, Some pl, Some vb ->
-            cl.Begin()
-            cl.SetFramebuffer(gd.SwapchainFramebuffer)
 
-            cl.ClearColorTarget(0u, RgbaFloat.Grey)
-            cl.ClearDepthStencil(1.0f)
+        let pipeline        = createDefaultPipeline device device.ResourceFactory vertexLayout device.SwapchainFramebuffer.OutputDescription ml.Value initModel.TextureLayout.Value
+        let commandList     = device.ResourceFactory.CreateCommandList()
 
-            cl.SetPipeline(pl)
-            cl.SetGraphicsResourceSet(0u, resourceSet)
-            cl.SetGraphicsResourceSet(1u, ts.Value)
-            cl.SetVertexBuffer(0u, vb)
-            cl.SetIndexBuffer(indexBuffer.Value, IndexFormat.UInt16)
+        pl <- Some pipeline
+        cl <- Some commandList
 
-            cl.DrawIndexed(
-                indexCount = uint32 indexCount,
-                instanceCount = 1u,
-                indexStart = 0u,
-                vertexOffset = 0,
-                instanceStart = 0u
-            )
-            let model = Matrix4x4.CreateScale(5.0f)
-            let view = cameraComtroller.GetViewMatrix()
-            let projection = cameraComtroller.GetProjectionMatrix(
-                float32 gd.SwapchainFramebuffer.Width / float32 gd.SwapchainFramebuffer.Height
-            )
 
-            let mvp = model * (view * projection)
-            gd.UpdateBuffer(mvpb.Value, 0u, mvp)
-            cl.End()
+    member private this.RenderVeldridFrame() =
+        printfn "Rendering a frame!"
+        match gd, cl,  pl, vb, ib, mb, ms, ts with
+        | Some d, Some c, Some p, Some v, Some i, Some m, Some s, Some t ->
+            printfn "Resources matched! Beginning render..."
 
-            gd.SubmitCommands(cl)
-            gd.SwapBuffers()
-            gd.WaitForIdle()
+            
+            // Set up buffers and camera
+            let w       = float32 d.MainSwapchain.Framebuffer.Width
+            let h       = float32 d.MainSwapchain.Framebuffer.Height
+            let aspect  = w / h
+            
+            let view                            = camera.GetViewMatrix()
+            let proj                            = camera.GetProjectionMatrix(aspect)
+            let mutable mvp : Matrix4x4         = proj * view
+            c.Begin()
+            printfn "Begun. Setting framebuffer..."
+            c.SetFramebuffer(d.SwapchainFramebuffer)
 
-            async {
-                do! Async.Sleep(16)
-                this.RenderLoop(resourceSet)
-            } |> Async.StartImmediate
-        | _ -> ()
+            printfn "Framebuffer set, setting clear color target..."
+            c.ClearColorTarget(0u, RgbaFloat.Grey)
+            printfn "Clear color target set, clearing depth stencil..."
+            c.ClearDepthStencil(1.0f)
+
+            printfn "Depth stencil cleared, setting pipeline..."
+            c.SetPipeline(p)
+            printfn "Pipeline set, setting graphics resource sets..."
+            c.SetGraphicsResourceSet(0u, s)
+            c.SetGraphicsResourceSet(1u, t)
+            printfn "Resource sets set, setting vertex buffer..."
+            c.SetVertexBuffer(0u, v)
+            printfn "Vertex buffer set, setting index buffer..."
+            c.SetIndexBuffer(i, IndexFormat.UInt16)
+
+            printfn "Index buffer set, attempting to draw... Index count %d" indexCount
+            c.DrawIndexed(uint32 indexCount, 1u, 0u, 0, 0u)
+
+            printfn "Drawing complete, updating MVP buffer..."
+            d.UpdateBuffer(mb.Value, 0u, mvp)
+            printfn "MVP Buffer updated, ending..."
+            c.End()
+
+            printfn "Ended, submitting commands..."
+            d.SubmitCommands(c)
+            printfn "Commands submitted, swapping buffers..."
+            d.SwapBuffers(d.MainSwapchain)
+            printfn "Buffers swapped, waiting for idle..."
+            d.WaitForIdle()
+            printfn "All commands executed successfully. Frame should have fully rendered."
+        | _ ->
+            printfn "If you're seeing this, the frame failed to render. Something didn't match somewhere."
+            ()

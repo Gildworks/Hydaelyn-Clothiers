@@ -3,6 +3,7 @@ namespace fs_mdl_viewer
 open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
 open Avalonia.Markup.Xaml
+open Avalonia.Platform
 
 type App() =
     inherit Application()
@@ -14,6 +15,7 @@ type App() =
         match this.ApplicationLifetime with
         | :? IClassicDesktopStyleApplicationLifetime as desktop ->
              desktop.MainWindow <- MainWindow()
+             desktop.MainWindow.Hide()
         | _ -> ()
 
         base.OnFrameworkInitializationCompleted()

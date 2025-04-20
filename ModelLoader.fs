@@ -10,7 +10,7 @@ open xivModdingFramework.Mods
 open xivModdingFramework.Textures.Enums
 open MaterialLoader
 
-[<Struct; StructLayout(LayoutKind.Sequential)>]
+[<Struct; StructLayout(LayoutKind.Sequential, Pack = 16)>]
 type VertexPositionColorUv =
     val Position: Vector3
     val Color: Vector4
