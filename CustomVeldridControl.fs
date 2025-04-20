@@ -66,6 +66,15 @@ type CustomVeldridControl() as this =
         let flags = SDL_WindowFlags.OpenGL ||| SDL_WindowFlags.InputFocus ||| SDL_WindowFlags.AllowHighDpi ||| SDL_WindowFlags.Shown
 
         let sdl = new Sdl2Window(windowCI.WindowTitle, windowCI.X, windowCI.Y, windowCI.WindowWidth,windowCI.WindowHeight, flags, true)
+        
+        let scSrc = VeldridStartup.GetSwapchainSource(sdl)
+        let scDsc = SwapchainDescription(
+            scSrc,
+            uint32 sdl.Bounds.Width,
+            uint32 sdl.Bounds.Height,
+            PixelFormat.D32_Float_S8_UInt,
+            true
+        )
 
         // Add mouse button state
         sdl.add_MouseDown(fun (e: MouseEvent) ->
@@ -104,15 +113,14 @@ type CustomVeldridControl() as this =
         if not sdl.Exists then
             failwith "SDL window does not exist!"
 
-        let gd = VeldridStartup.CreateGraphicsDevice(
-            sdl,
+        let gd = GraphicsDevice.CreateVulkan(
             GraphicsDeviceOptions(
                 debug = true,
                 swapchainDepthFormat = PixelFormat.D32_Float_S8_UInt,
                 syncToVerticalBlank = true,
                 ResourceBindingModel = ResourceBindingModel.Improved                
             ),
-            GraphicsBackend.OpenGL
+            scDsc
         )
         graphicsDevice <- Some gd
         factory <- Some gd.ResourceFactory
