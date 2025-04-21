@@ -49,13 +49,19 @@ type CustomVeldridControl() as this =
 
 
     // --- Initialization ---
+    
+
     override this.CreateNativeControlCore (parent: IPlatformHandle): IPlatformHandle = 
         let native = base.CreateNativeControlCore(parent)
         childHwnd <- native.Handle
         native
 
+    
+
     override this.OnAttachedToVisualTree (e: VisualTreeAttachmentEventArgs): unit = 
         base.OnAttachedToVisualTree(e: VisualTreeAttachmentEventArgs)
+
+        let access = this.CheckAccess()
 
         resize <-
             Some (this.GetObservable(NativeControlHost.BoundsProperty)
@@ -64,7 +70,7 @@ type CustomVeldridControl() as this =
                 let w = uint32 rect.Width
                 let h = uint32 rect.Height
 
-                if rect.Width > 0. && rect.Height > 0. then
+                if rect.Width > 0. && rect.Height > 0. && access then
                     if not intd && childHwnd <> IntPtr.Zero then
                         printfn "We've made it to the main loop, I think..."
                         let hinst = Process.GetCurrentProcess().MainModule.BaseAddress
@@ -83,7 +89,6 @@ type CustomVeldridControl() as this =
                             do! Async.Sleep 16
                             Dispatcher.UIThread.Post(fun () ->
                                 this.RenderVeldridFrame()
-                                this.InvalidateVisual()
                             )
                             return! renderLoop()
                         }
@@ -97,7 +102,7 @@ type CustomVeldridControl() as this =
                         | None   -> ()
 
                     else
-                        printfn $"Failing intialize conditions: {intd} {childHwnd}"
+                        printfn $"Failing intialize conditions: {intd} {childHwnd} {access}"
             ))
 
     //override this.OnDetachedFromVisualTree(e: VisualTreeAttachmentEventArgs): unit =
@@ -186,7 +191,7 @@ type CustomVeldridControl() as this =
 
 
     member private this.RenderVeldridFrame() =
-        printfn "Rendering a frame!"
+        printfn $"Rendering a frame!"
         match gd, cl,  pl, vb, ib, mb, ms, ts with
         | Some d, Some c, Some p, Some v, Some i, Some m, Some s, Some t ->
             printfn "Resources matched! Beginning render..."
@@ -230,10 +235,19 @@ type CustomVeldridControl() as this =
             printfn "Ended, submitting commands..."
             d.SubmitCommands(c)
             printfn "Commands submitted, swapping buffers..."
-            d.SwapBuffers(d.MainSwapchain)
+            d.SwapBuffers()
             printfn "Buffers swapped, waiting for idle..."
             d.WaitForIdle()
             printfn "All commands executed successfully. Frame should have fully rendered."
         | _ ->
             printfn "If you're seeing this, the frame failed to render. Something didn't match somewhere."
             ()
+
+    override this.Render (context: Media.DrawingContext): unit = 
+        base.Render(context: Media.DrawingContext)
+        if intd then
+            
+            this.RenderVeldridFrame()
+            
+        else
+            printfn "Render called, but Veldrid not intialized yet."

@@ -9,6 +9,7 @@
 	
 	<ItemGroup>
 	    <ProjectReference Include="lib\xivModdingFramework\xivModdingFramework\xivModdingFramework.csproj" />
+		<ProjectReference Include="lib\AvaloniaRender\src\AvaloniaRender.Veldrid\AvaloniaRender.Veldrid.csproj" />
     </ItemGroup>
     
     <ItemGroup>
@@ -21,19 +22,21 @@
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
         <Compile Include="CustomVeldridControl.fs" />
+		<Compile Include="VeldridView.fs" />
+		<Compile Include="ViewModel.fs" />
         <Compile Include="MainWindow.axaml.fs" />
         <Compile Include="App.axaml.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.2.1" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.2.1" />
+        <PackageReference Include="Avalonia" Version="11.2.7" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.2.7" />
         <PackageReference Include="Avalonia.FuncUI.Elmish" Version="1.5.1" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.1" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.7" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.2.1">
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.2.7">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
