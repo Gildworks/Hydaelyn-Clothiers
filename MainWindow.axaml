@@ -6,12 +6,15 @@
         x:Class="fs_mdl_viewer.MainWindow"
         Title="fs_mdl_viewer"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}">
-	<Grid ColumnDefinitions="Auto, *">
-		<StackPanel Grid.Column="0" Width="200">
-			<TextBlock Text="Controls Area" Margin="10"/>
+	<Grid ColumnDefinitions="Auto, 5, *">
+		<StackPanel Grid.Column="0">
+			<TextBlock Text="Controls Area" HorizontalAlignment="Stretch" Margin="10"/>
+			<ComboBox x:Name="Minions" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 		</StackPanel>
 
-		<Border Grid.Column="1" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
+		<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
+
+		<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
 			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl" />
 		</Border>
 

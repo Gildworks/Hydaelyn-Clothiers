@@ -13,12 +13,20 @@
     </ItemGroup>
     
     <ItemGroup>
+		
+		
+		
+		<Compile Include="CommonTypes.fs" />
+		<Compile Include="MaterialInterpreter.fs" />
+		<Compile Include="TextureUtils.fs" />
 		<None Include="shaders\fragment.frag" />
 		<None Include="shaders\vertex.vert" />
 		<Compile Include="ShaderBuilder.fs" />
 		<Compile Include="SharpToNumerics.fs" />
 		<Compile Include="MaterialLoader.fs" />
+		<Compile Include="ModelLoaderRedux.fs" />
         <Compile Include="ModelLoader.fs" />
+		<Compile Include="MaterialHelper.fs" />
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
         <Compile Include="CustomVeldridControl.fs" />

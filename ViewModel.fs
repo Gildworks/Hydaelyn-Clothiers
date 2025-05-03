@@ -4,10 +4,11 @@ open System
 open AvaloniaRender.Veldrid
 open AvaloniaRender
 
-type VeldridWindowViewModel() as this =
+type VeldridWindowViewModel(defaultPath: string option) as this =
 
-    let mutable _render         : VeldridRender                    = new VeldridView()
+    let mutable _render         : VeldridRender                    = new VeldridView(defaultPath)
     let mutable _windowHandle   : Core.IDisposableWindow    option = None
+    
 
     interface IVeldridWindowModel with
 
@@ -26,6 +27,9 @@ type VeldridWindowViewModel() as this =
     member this.DisposeGraphicsContext() = 
         _windowHandle |> Option.iter (fun wh -> wh.DisposeGraphics())
 
+    
+
     interface System.IDisposable with
         member this.Dispose() =
             this.DisposeGraphicsContext()
+

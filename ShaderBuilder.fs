@@ -20,8 +20,21 @@ let createDefaultPipeline
 
     let shaderSet = ShaderSetDescription([| vertexLayout |], [| vertexShader; fragmentShader |])
 
+    let blendState = BlendStateDescription(
+        RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
+        BlendAttachmentDescription(
+            true,
+            BlendFactor.SourceAlpha,
+            BlendFactor.InverseSourceAlpha,
+            BlendFunction.Add,
+            BlendFactor.One,
+            BlendFactor.InverseSourceAlpha,
+            BlendFunction.Add
+        )
+    )
+
     let pipelineDescription = GraphicsPipelineDescription(
-        BlendStateDescription.SingleOverrideBlend,
+        blendState,
         DepthStencilStateDescription(
             depthTestEnabled = true,
             depthWriteEnabled = true,

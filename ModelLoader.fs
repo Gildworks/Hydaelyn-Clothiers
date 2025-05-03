@@ -12,20 +12,34 @@ open MaterialLoader
 
 [<Struct; StructLayout(LayoutKind.Sequential, Pack = 16)>]
 type VertexPositionColorUv =
-    val Position: Vector3
-    val Color: Vector4
-    val UV: Vector2
-    val Normal: Vector3
-    new(pos, col, uv, nor) = { Position = pos; Color = col; UV = uv; Normal = nor }
+    val Position        : Vector3
+    val Color           : Vector4
+    val Color2          : Vector4
+    val UV              : Vector2
+    val Normal          : Vector3
+    new(pos, col, col2, uv, nor) = { Position = pos; Color = col; Color2 = col2; UV = uv; Normal = nor }
+
+type LoadedTextures =
+    {
+        Diffuse         : TextureView
+        Normal          : TextureView
+        Mask            : TextureView
+        Index           : TextureView
+        Sampler         : Sampler
+    }
 
 type LoadedModel =
     {
-        Vertices: VertexPositionColorUv[]
-        Indices: uint16[]
-        TextureSet: ResourceSet option
-        TextureLayout: ResourceLayout option
-        RawModel: XivMdl
+        Vertices        : VertexPositionColorUv[]
+        Indices         : uint16[]
+        TextureSet      : ResourceSet       option
+        TextureLayout   : ResourceLayout    option
+        Textures        : LoadedTextures    option
+        ColorSetBuffer  : DeviceBuffer      option
+        RawModel        : XivMdl
     }
+
+
 
 let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: string) : Async<LoadedModel> =
     async{
@@ -42,6 +56,9 @@ let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: stri
         let normals = mesh.VertexData.Normals |> Seq.toArray |> Array.map SharpToNumerics.vec3
         let uvs = mesh.VertexData.TextureCoordinates0 |> Seq.toArray |> Array.map SharpToNumerics.vec2
         let colors = mesh.VertexData.Colors |> Seq.toArray |> Array.map SharpToNumerics.col
+        let colors2 = mesh.VertexData.Colors2 |> Seq.toArray |> Array.map SharpToNumerics.col
+
+        printfn $"{mesh.VertexData.BoneWeights}"
 
         let vertexCount = positions.Length
         let vertices =
@@ -50,7 +67,15 @@ let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: stri
                 let nor = if i < normals.Length then normals[i] else Vector3.UnitZ
                 let uv = if i < uvs.Length then uvs[i] else Vector2.Zero
                 let col = if i < colors.Length then colors[i] else Vector4.One
-                VertexPositionColorUv(pos, col, uv, nor)
+                let col2 = if i < colors2.Length then colors[i] else Vector4.Zero
+          
+
+                //if col.Z < 254.0f then
+                //    printfn $"Vertex %d{i}: Color = {col}"
+                //else
+                //    printfn $"Opaque Alpha. Vertex %d{i}: Color = {col}; Position = {pos}; Normal = {nor}; UV = {uv} \n \n"
+
+                VertexPositionColorUv(pos, col, col2, uv, nor)
             )
 
         let indices =
@@ -61,48 +86,66 @@ let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: stri
 
         // === Get materials ===
         let! materials = loadAllModelMaterials xivMdl
-        let firstTextureOpt =
+        let fallWhite   = TextureUtils.oneByWhite gd
+        let fallNorm    = TextureUtils.oneByNormal gd
+        let fallBlack   = TextureUtils.oneByBlack gd
+        let sampler = factory.CreateSampler(SamplerDescription.Linear)
+
+        let colorSetOpt = materials |> List.tryPick (fun mat -> mat.ColorSet)
+
+        let getTex usage fallback =
             materials
-            |> List.tryPick (fun m -> m.Textures |> List.tryFind (fun t -> t.Usage = XivTexType.Diffuse || t.Usage = XivTexType.Normal))
+            |> List.tryPick (fun m -> m.Textures |> List.tryFind(fun t -> t.Usage = usage))
+            |> Option.map (fun t -> TextureUtils.texViewFromBytes gd t)
+            |> Option.defaultValue fallback
 
-        let texSet, texLayout =
-            match firstTextureOpt with
-            | Some tex ->
-                let rgba32Array =
-                    Array.init (tex.Data.Length / 4) (fun i ->
-                        let idx = i * 4
-                        RgbaByte(tex.Data[idx], tex.Data[idx + 1], tex.Data[idx + 2], tex.Data[idx + 3])
-                    )
-                let texObj = factory.CreateTexture(TextureDescription(
-                    uint32 tex.Width, uint32 tex.Height, 1u, 1u, 1u,
-                    PixelFormat.R8_G8_B8_A8_UNorm,
-                    TextureUsage.Sampled,
-                    TextureType.Texture2D
-                ))
+        let texViews =
+            {
+                Diffuse = getTex XivTexType.Diffuse fallWhite
+                Normal = getTex XivTexType.Normal fallNorm
+                Mask = getTex XivTexType.Mask fallWhite
+                Index = getTex XivTexType.Index fallBlack
+                Sampler = sampler
+            }
 
-                let texView = factory.CreateTextureView(texObj)
-                let sampler = factory.CreateSampler(SamplerDescription.Linear)
+        let colorSetBuffer =
+            match colorSetOpt with
+            | Some cs ->
+                let buf = factory.CreateBuffer(BufferDescription(uint32 (cs.Length * 4), BufferUsage.UniformBuffer))
+                gd.UpdateBuffer(buf, 0u, cs)
+                Some buf
+            | None -> None
 
-                gd.UpdateTexture(texObj, rgba32Array, 0u, 0u, 0u, uint32 tex.Width, uint32 tex.Height, 1u, 0u, 0u)
-
-                let layout = factory.CreateResourceLayout(ResourceLayoutDescription(
-                
-                    ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("sampler_Diffuse", ResourceKind.Sampler, ShaderStages.Fragment)
-                ))
-
-                let set = factory.CreateResourceSet(ResourceSetDescription(layout, texView, sampler))
-                Some set, Some layout
-            | None -> None, None
-
-
-
+        let layout = factory.CreateResourceLayout(ResourceLayoutDescription(
+            ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+            ResourceLayoutElementDescription("tex_Normal", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+            ResourceLayoutElementDescription("tex_Mask", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+            ResourceLayoutElementDescription("tex_Index", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+            ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment),
+            ResourceLayoutElementDescription("ColorSetBuffer", ResourceKind.UniformBuffer, ShaderStages.Fragment)
+        ))
+        let set = factory.CreateResourceSet(ResourceSetDescription(
+            layout,
+            texViews.Diffuse,
+            texViews.Normal,
+            texViews.Mask,
+            texViews.Index,
+            texViews.Sampler,
+            colorSetBuffer |> Option.defaultWith (fun () ->
+                let empty = Array.init 4 (fun _ -> 0.0f)
+                let buf = factory.CreateBuffer(BufferDescription(4u, BufferUsage.UniformBuffer))
+                gd.UpdateBuffer(buf, 0u, empty)
+                buf
+            )
+        ))
 
         return {
             Vertices = vertices
             Indices = indices
-            TextureSet = texSet
-            TextureLayout = texLayout
+            TextureSet = Some set
+            TextureLayout = Some layout
+            Textures = Some texViews
+            ColorSetBuffer = colorSetBuffer
             RawModel = xivMdl
         }
     }
