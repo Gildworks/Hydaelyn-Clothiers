@@ -9,28 +9,9 @@ open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Mods
 open xivModdingFramework.Textures.Enums
 open MaterialLoader
+open MaterialHelper
+open ShaderBuilder
 open Shared
-
-[<Struct; StructLayout(LayoutKind.Sequential, Pack = 16)>]
-type VertexPositionColorUv =
-    val Position        : Vector3
-    val Color           : Vector4
-    val Color2          : Vector4
-    val UV              : Vector2
-    val Normal          : Vector3
-    val BiTangent       : Vector3
-    val Unknown1        : Vector3
-    new(pos, col, col2, uv, nor, bitan, un1) = { Position = pos; Color = col; Color2 = col2; UV = uv; Normal = nor; BiTangent = bitan; Unknown1 = un1 }
-
-type LoadedModel =
-    {
-        Vertices        : VertexPositionColorUv[]
-        Indices         : uint16[]
-        Materials       : InterpretedMaterial list
-        RawModel        : XivMdl
-    }
-
-
 
 let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: string) : Async<LoadedModel> =
     async{
@@ -87,4 +68,59 @@ let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: stri
             Materials = interpreted
             RawModel = xivMdl
         }
+    }
+
+let createRenderModel (gd: GraphicsDevice) (factory: ResourceFactory) (model: LoadedModel) : RenderModel =
+    printfn "Creating buffers..."
+    let vBuff = factory.CreateBuffer(BufferDescription(uint32 (model.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()), BufferUsage.VertexBuffer))
+    let iBuff = factory.CreateBuffer(BufferDescription(uint32 (model.Indices.Length * Marshal.SizeOf<uint32>()), BufferUsage.IndexBuffer))
+    let mBuff = factory.CreateBuffer(BufferDescription(uint32 (Marshal.SizeOf<Matrix4x4>()), BufferUsage.UniformBuffer ||| BufferUsage.Dynamic))
+    printfn "Buffers created!"
+
+    printfn "Updating buffers..."
+    gd.UpdateBuffer(vBuff, 0u, model.Vertices)
+    gd.UpdateBuffer(iBuff, 0u, model.Indices)
+    printfn "Buffers updated!"
+
+    printfn "Preparing materials..."
+    let preparedMaterials = model.Materials |> List.map (prepareMaterial gd factory)
+    let matLayout, matSet =
+        match preparedMaterials with
+        | pm :: _ -> pm.ResourceLayout, pm.ResourceSet
+        | []      -> failwith "No materials found for model."
+    printfn "Materials prepared!"
+
+    printfn "Creating MVP layout and set..."
+    let mvpLayout = factory.CreateResourceLayout(ResourceLayoutDescription(ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)))
+    let mvpSet = factory.CreateResourceSet(ResourceSetDescription(mvpLayout, mBuff))
+    printfn "MVP Layout and Set created!"
+
+    printfn "Creating Vertex Layout..."
+    let vertexLayout = VertexLayoutDescription(
+        [|
+            VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
+            VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
+            VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
+            VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+            VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+            VertexElementDescription("BiTangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+            VertexElementDescription("Unknown1", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+        |]
+    )
+    printfn "Vertex Layout created!"
+
+    //printfn "Creating pipeline..."
+    //let pipeline = createDefaultPipeline gd factory vertexLayout gd.MainSwapchain.Framebuffer.OutputDescription mvpLayout matLayout
+    //printfn "Pipeline created!"
+
+    {
+        Vertices = vBuff
+        Indices = iBuff
+        IndexCount = uint32 model.Indices.Length
+        MVPBuffer = mBuff
+        MVPSet = mvpSet
+        MaterialSet = matSet
+        MaterialLayout = matLayout
+        Pipeline = None
+        RawModel = model
     }

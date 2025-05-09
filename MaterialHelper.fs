@@ -9,12 +9,28 @@ let prepareMaterial (gd: GraphicsDevice) (factory: ResourceFactory) (mat: Interp
     let fallbackBlack = TextureUtils.oneByBlack gd
     let sampler = factory.CreateSampler(SamplerDescription.Linear)
 
+    let fallbackDiffuse =
+        match mat.ColorSetData with
+        | Some _ ->
+            try
+                let bytes, width, height = MaterialInterpreter.Interpreter.getColorizeDiffuseFromModelMaps mat.RawMtrl
+                TextureUtils.texViewFromBytes gd {
+                    Usage= xivModdingFramework.Textures.Enums.XivTexType.Diffuse
+                    Path = "BakedDiffuse"
+                    Data = bytes
+                    Width = width
+                    Height = height
+                }
+            with _ ->
+                fallbackWhite
+        | None -> fallbackWhite
+
     let getTex texOpt fallback =
         texOpt
         |> Option.map (TextureUtils.texViewFromBytes gd)
         |> Option.defaultValue fallback
 
-    let diffuse = getTex mat.DiffuseTexture fallbackWhite
+    let diffuse = getTex mat.DiffuseTexture fallbackDiffuse
     let normal = getTex mat.NormalTexture fallbackNorm
     let mask = getTex mat.MaskTexture fallbackWhite
     let index = getTex mat.IndexTexture fallbackBlack

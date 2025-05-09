@@ -1,40 +1,23 @@
 ﻿namespace fs_mdl_viewer
 
-open System
 open System.IO
 open System.Numerics
 open System.Runtime.InteropServices
 open Avalonia
-open Avalonia.Input
 open AvaloniaRender.Veldrid
 open Veldrid
-open Veldrid.Vk
-open xivModdingFramework.Cache
 open xivModdingFramework.General.Enums
-open xivModdingFramework.Exd
 open xivModdingFramework.Exd.Enums
 open xivModdingFramework.Exd.FileTypes
+open xivModdingFramework.Cache
+open xivModdingFramework.Items.Categories
+open xivModdingFramework.Items.DataContainers
 open ModelLoaderRedux
 open ShaderBuilder
 open CameraController
+open ShaderUtils
 open Shared
 open MaterialHelper
-
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type VertexPositionColorUv = 
-    val Position    : Vector3
-    val Color       : Vector4
-    val Color2      : Vector4
-    val UV          : Vector2
-    val Normal      : Vector3
-    val BiTangent   : Vector3
-    val Unknown1    : Vector3
-    new(pos,col,col2,uv,nor,bitan, un1) = { Position = pos; Color = col; Color2 = col2; UV = uv; Normal = nor; BiTangent = bitan; Unknown1 = un1 }
-
-type MinionEntry = {
-    Name: string
-    MdlPath: string
-}
 
 type VeldridView(initialModelPath: string option) as this =
     inherit VeldridRender()
@@ -51,7 +34,8 @@ type VeldridView(initialModelPath: string option) as this =
     let mutable loadedModel : LoadedModel       option      = None
     let mutable indexCount  : uint32                        = 0u
     let mutable device      : GraphicsDevice    option      = None
-    let mutable preparedMats: PreparedMaterial list option  = None 
+    let mutable preparedMats: PreparedMaterial list option  = None
+    let mutable models      : RenderModel list              = []
 
     // --- Camera ---
     let mutable camera      : CameraController              = CameraController()
@@ -64,7 +48,13 @@ type VeldridView(initialModelPath: string option) as this =
 
     // --- UI vars ---
     let mutable modelPath       : string            option  = None
+    let mutable replaceIndex    : int               option  = None
     let mutable modelHasChanged : bool                      = false
+    let mutable replaceModel    : bool                      = false
+    let mutable appendModel     : bool                      = false
+    let mutable emptyPipeline   : Pipeline          option  = None
+    let mutable emptyMVPBuffer  : DeviceBuffer      option  = None
+    let mutable emptyMVPSet     : ResourceSet       option  = None
 
     // --- Constants ---
     let gdp                 = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
@@ -72,117 +62,135 @@ type VeldridView(initialModelPath: string option) as this =
     let info = xivModdingFramework.GameInfo(DirectoryInfo(gdp), XivLanguage.English)
     
     member val InitialModelPath = initialModelPath with get, set
-  
 
-   
+    member this.ModelCount = models.Length
+       
     override this.Prepare(gd: GraphicsDevice) =
+        printfn "Running Prepare"
         base.Prepare(gd)
 
         device <- Some gd
         ()
 
-        try
+        //try
             
-            //if modelPath.IsNone then
-            //    modelPath <- Some defaultModel
-            printfn $"Attempting to load model {this.InitialModelPath}"
-            match this.InitialModelPath with
-            | Some path -> 
-                if path.Length > 0 then
-                    let initModel = loadGameModel gd gd.ResourceFactory path |> Async.RunSynchronously
-                    loadedModel <- Some initModel
-                    printfn "Model loaded!"
-                else printfn "Failed to load model"
-            | None -> printfn "Initial model path not set"
-            //let initModel = loadGameModel gd gd.ResourceFactory modelPath.Value |> Async.RunSynchronously
-            //loadedModel <- Some initModel
-            //ts <- initModel.TextureSet
-            //tl <- initModel.TextureLayout
-            let prepared = 
-                loadedModel.Value.Materials
-                |> List.map (prepareMaterial gd gd.ResourceFactory)
-            preparedMats <- Some prepared
+        //    //if modelPath.IsNone then
+        //    //    modelPath <- Some defaultModel
+        //    printfn $"Attempting to load model {this.InitialModelPath}"
+        //    match this.InitialModelPath with
+        //    | Some path -> 
+        //        if path.Length > 0 then
+        //            let initModel = loadGameModel gd gd.ResourceFactory path |> Async.RunSynchronously
+        //            printfn "initModel Loaded!"
+        //            let renderModel = createRenderModel gd gd.ResourceFactory initModel
+        //            printfn "renderModel Loaded!"
+        //            models <- [renderModel]
+        //            loadedModel <- Some initModel
+        //            printfn "Model loaded!"
+        //        else printfn "Failed to load model"
+        //    | None -> printfn "Initial model path not set"
+        //    //let initModel = loadGameModel gd gd.ResourceFactory modelPath.Value |> Async.RunSynchronously
+        //    //loadedModel <- Some initModel
+        //    //ts <- initModel.TextureSet
+        //    //tl <- initModel.TextureLayout
+        //    let prepared = 
+        //        loadedModel.Value.Materials
+        //        |> List.map (prepareMaterial gd gd.ResourceFactory)
+        //    preparedMats <- Some prepared
 
-            match prepared with
-            | pm :: _ ->
-                tl <- Some pm.ResourceLayout
-            | [] ->
-                printfn "Warning: No materials found for model."
+        //    match prepared with
+        //    | pm :: _ ->
+        //        tl <- Some pm.ResourceLayout
+        //    | [] ->
+        //        printfn "Warning: No materials found for model."
 
-            // --- Create Buffers ---
-            let vBuff = gd.ResourceFactory.CreateBuffer(
-                BufferDescription(
-                    uint32 (loadedModel.Value.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
-                    BufferUsage.VertexBuffer
-                )
-            )
-            let iBuff = gd.ResourceFactory.CreateBuffer(
-                BufferDescription(
-                    uint32 (loadedModel.Value.Indices.Length * Marshal.SizeOf<uint16>()),
-                    BufferUsage.IndexBuffer
-                )
-            )
+        //    // --- Create Buffers ---
+        //    let vBuff = gd.ResourceFactory.CreateBuffer(
+        //        BufferDescription(
+        //            uint32 (loadedModel.Value.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()),
+        //            BufferUsage.VertexBuffer
+        //        )
+        //    )
+        //    let iBuff = gd.ResourceFactory.CreateBuffer(
+        //        BufferDescription(
+        //            uint32 (loadedModel.Value.Indices.Length * Marshal.SizeOf<uint16>()),
+        //            BufferUsage.IndexBuffer
+        //        )
+        //    )
+        //    let mBuff = gd.ResourceFactory.CreateBuffer(
+        //        BufferDescription(
+        //            uint32 (Marshal.SizeOf<Matrix4x4>()),
+        //            BufferUsage.UniformBuffer ||| BufferUsage.Dynamic
+        //        )
+        //    )
+
+        //    gd.UpdateBuffer(vBuff, 0u, loadedModel.Value.Vertices)
+        //    gd.UpdateBuffer(iBuff, 0u, loadedModel.Value.Indices)
+        //    vb              <- Some vBuff
+        //    ib              <- Some iBuff
+        //    mb              <- Some mBuff
+        //    indexCount      <- uint32 loadedModel.Value.Indices.Length
+
+        //    // --- Create resource layout and set for MVP matrix ---
+        //    let mvpLayout = gd.ResourceFactory.CreateResourceLayout(
+        //        ResourceLayoutDescription(
+        //            ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)
+        //        )
+        //    )
+        //    let mvpSet = gd.ResourceFactory.CreateResourceSet(
+        //        ResourceSetDescription(
+        //            mvpLayout,
+        //            mBuff
+        //        )
+        //    )
+        //    ml <- Some mvpLayout
+        //    ms <- Some mvpSet
+        
+        //with ex ->
+        //    failwith $"Error during VeldridView.Prepare: {ex.Message}\n{ex.StackTrace}"
+
+        try
+            printfn ""
+            models <- []
+            loadedModel <- None
+            preparedMats <- Some []
+            tl <- None
+            vb <- None
+            ib <- None
+            indexCount <- 0u
+
             let mBuff = gd.ResourceFactory.CreateBuffer(
-                BufferDescription(
-                    uint32 (Marshal.SizeOf<Matrix4x4>()),
-                    BufferUsage.UniformBuffer ||| BufferUsage.Dynamic
-                )
+                BufferDescription(uint32 (Marshal.SizeOf<Matrix4x4>()), BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)
             )
-
-            gd.UpdateBuffer(vBuff, 0u, loadedModel.Value.Vertices)
-            gd.UpdateBuffer(iBuff, 0u, loadedModel.Value.Indices)
-            vb              <- Some vBuff
-            ib              <- Some iBuff
-            mb              <- Some mBuff
-            indexCount      <- uint32 loadedModel.Value.Indices.Length
-
-            // --- Create resource layout and set for MVP matrix ---
+            mb <- Some mBuff
             let mvpLayout = gd.ResourceFactory.CreateResourceLayout(
                 ResourceLayoutDescription(
                     ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)
                 )
             )
             let mvpSet = gd.ResourceFactory.CreateResourceSet(
-                ResourceSetDescription(
-                    mvpLayout,
-                    mBuff
-                )
+                ResourceSetDescription(mvpLayout, mBuff)
             )
             ml <- Some mvpLayout
             ms <- Some mvpSet
+                
         with ex ->
-            failwith $"Error during VeldridView.Prepare: {ex.Message}\n{ex.StackTrace}"
+            failwith $"Error during Prepare: {ex.Message} \n {ex.StackTrace}"
+        printfn "Finished Prepare"
 
     override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain) =
         if modelHasChanged then
             this.UpdateRender(gd)
             modelHasChanged <- false
-        if pl.IsNone then
-            match ml, tl with
-            |Some mvpL, Some texL ->
-                // --- Create Vertex Layout ---
-                let vertexLayout = VertexLayoutDescription(
-                    [|
-                        VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                        VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
-                        VertexElementDescription("Color2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
-                        VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-                        VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                        VertexElementDescription("BiTangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                        VertexElementDescription("Unknown1", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                    |]
-                )
-                try
-                    let pipeline = createDefaultPipeline gd gd.ResourceFactory vertexLayout swapchain.Framebuffer.OutputDescription mvpL texL
-                    pl <- Some pipeline
-                with ex ->
-                    printfn $"Pipeline creation failed: {ex.Message}"
 
-            | _ ->
-                printfn "Failed to match MVP and Texture layouts"
-                ()
+        if appendModel then
+            this.AppendModel(modelPath.Value, gd)
+            appendModel <- false
 
-        // --- Skip rendering if resize is in progress
+        if replaceModel then
+            this.ReplaceModelAt(replaceIndex.Value, modelPath.Value, gd)
+            replaceModel <- false
+
         if isResizing then
             ()
         else
@@ -191,52 +199,77 @@ type VeldridView(initialModelPath: string option) as this =
             if fb.Width <> this.WindowWidth || fb.Height <> this.WindowHeight then
                 gd.WaitForIdle()
                 swapchain.Resize(this.WindowWidth, this.WindowHeight)
+
             let w = float32 fb.Width
             let h = float32 fb.Height
+
             if w > 0.0f && h > 0.0f then
                 let aspect = w / h
-                let model = Matrix4x4.CreateScale(5.0f)
                 let view = camera.GetViewMatrix()
                 let proj = camera.GetProjectionMatrix(aspect)
-                let mutable mvp : Matrix4x4     = model * (view * proj)
 
-                // --- Record commands ---
-                match vb, ib, mb, ms, preparedMats, pl with
-                | Some vBuff, Some iBuff, Some mBuff, Some mSet, Some (pm :: _), Some pipe -> 
-                    cmdList.Begin()
+                cmdList.Begin()
 
-               
+                cmdList.SetFramebuffer(fb)
+                cmdList.ClearColorTarget(0u, RgbaFloat.Grey)
+                cmdList.ClearDepthStencil(1.0f)
 
-                    cmdList.SetFramebuffer(swapchain.Framebuffer)
-                    cmdList.ClearColorTarget(0u, RgbaFloat.Grey)
-                    cmdList.ClearDepthStencil(1.0f)
+                for model in models do
+                    let index = models |> List.findIndex (fun m -> obj.ReferenceEquals(m, model))
+                    let initModel =
+                        if model.Pipeline.IsNone then
+                            let vLayout = VertexLayoutDescription(
+                                [|
+                                    VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
+                                    VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                                    VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                                    VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+                                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+                                    VertexElementDescription("BiTangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+                                    VertexElementDescription("Unknown1", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                                |]
+                            )
+                            let mvpLayout = gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)))
+                            let pipe = createDefaultPipeline gd gd.ResourceFactory vLayout swapchain.Framebuffer.OutputDescription mvpLayout model.MaterialLayout
+                            Some pipe
+                        else model.Pipeline
+                    let pipeModel = { model with Pipeline = initModel }
+                    models <- models |> List.mapi (fun i m -> if i = index then pipeModel else m)
+                    
+                    if pipeModel.MVPBuffer = null || pipeModel.MaterialSet = null then
+                        printfn $"[RenderFrame] Skipping model due to missing pipeline or resources: {pipeModel.RawModel.RawModel.MdlPath}"
+                    else
+                        let mvp = Matrix4x4.CreateScale(5.0f) * view * proj
+                        
 
-                    cmdList.SetPipeline(pipe)
-                    cmdList.SetVertexBuffer(0u, vBuff)
-                    cmdList.SetIndexBuffer(iBuff, IndexFormat.UInt16)
-                    cmdList.SetGraphicsResourceSet(0u, mSet)
-                    cmdList.SetGraphicsResourceSet(1u, pm.ResourceSet)
+                        cmdList.SetPipeline(pipeModel.Pipeline.Value)
+                        cmdList.SetVertexBuffer(0u, pipeModel.Vertices)
+                        cmdList.SetIndexBuffer(pipeModel.Indices, IndexFormat.UInt16)
+                        cmdList.SetGraphicsResourceSet(0u, pipeModel.MVPSet)
+                        cmdList.SetGraphicsResourceSet(1u, pipeModel.MaterialSet)
 
-                    cmdList.DrawIndexed(
-                        indexCount = indexCount,
-                        instanceCount = 1u,
-                        indexStart = 0u,
-                        vertexOffset = 0,
-                        instanceStart = 0u
-                    )
+                        cmdList.DrawIndexed(
+                            indexCount = pipeModel.IndexCount,
+                            instanceCount = 1u,
+                            indexStart = 0u,
+                            vertexOffset = 0,
+                            instanceStart = 0u
+                        )
 
-                    gd.UpdateBuffer(mBuff, 0u, mvp)
+                        gd.UpdateBuffer(pipeModel.MVPBuffer, 0u, mvp)
 
-                    cmdList.End()
+                if List.isEmpty models then
+                    if emptyPipeline.IsNone then
+                        this.createEmptyPipeline gd swapchain.Framebuffer.OutputDescription
 
-                    gd.SubmitCommands(cmdList)
-                    gd.SwapBuffers(swapchain)
-                    if not firstRender then
-                        firstRender <- true
-                | _ -> printfn "Renderfram: Pipeline or layout missing."
-            else
-                printfn ""
-                ()
+                    cmdList.SetPipeline(emptyPipeline.Value)
+                    cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
+
+                cmdList.End()
+                gd.SubmitCommands(cmdList)
+                gd.SwapBuffers(swapchain)
+                
+                if not firstRender then firstRender <- true
 
     override this.Dispose (gd: GraphicsDevice): unit = 
         pl |> Option.iter (fun p -> p.Dispose())
@@ -317,7 +350,7 @@ type VeldridView(initialModelPath: string option) as this =
 
     member this.IsFirstRenderComplete = firstRender
 
-    member this.GetMinions() : Async<MinionEntry list> =
+    member this.GetMinions() : Async<MdlEntry list> =
         async {
             let exReader    = Ex()
             let! compExd    = exReader.ReadExData(XivEx.companion)  |> Async.AwaitTask
@@ -343,9 +376,96 @@ type VeldridView(initialModelPath: string option) as this =
             return results
         }
 
+    //member this.GetEquipment () : Async<GearEntry list> =
+    //    async {
+    //        let exReader    = Ex()
+    //        let! compExd    = exReader.ReadExData(XivEx.item) |> Async.AwaitTask
+    //        let results =
+    //            printfn $"Item Count: {compExd.Count}"
+    //            compExd.Values
+    //            |> Seq.choose (fun row ->
+    //                try
+    //                    let name = row.GetColumnByName("Name") :?> string
+    //                    let slot = row.GetColumnByName("SlotNum") :?> int8
+    //                    printfn $"Item: {name} | PrimaryInfo: {slot}"
+    //                    let primaryInfo = row.GetColumnByName("PrimaryInfo") :?> uint64
+                        
+    //                    let modelId = int (primaryInfo &&& 0xFFFFUL)
+    //                    let variant = int ((primaryInfo >>> 16) &&& 0xFFUL)
+    //                    let path = $"chara/equipment/e{modelId}/model/c0101e{modelId}_top.mdl"
+    //                    Some { Name = name; MdlPath = path; Slot = int slot}
+    //                with _ -> None                        
+    //            )
+    //            |> Seq.sortBy (fun x -> x.Name)
+    //            |> Seq.toList
+    //        printfn $"Returned Rows: {results.Length}"
+    //        return results
+    //    }
+
+    member this.createEmptyPipeline (gd: GraphicsDevice) (outputDesc: OutputDescription) =
+        let factory = gd.ResourceFactory
+        let vertexLayout = VertexLayoutDescription([||])
+        let mvpLayout = factory.CreateResourceLayout(
+            ResourceLayoutDescription(
+                ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)
+            )
+        )
+        let dummyMVP = factory.CreateBuffer(BufferDescription(64u, BufferUsage.UniformBuffer))
+        gd.UpdateBuffer(dummyMVP, 0u, Matrix4x4.Identity)
+
+        let mvpSet = factory.CreateResourceSet(ResourceSetDescription(mvpLayout, dummyMVP))
+
+        let shaders = ShaderUtils.getEmptyShaderSet factory
+        let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
+
+        let pipeline = factory.CreateGraphicsPipeline(GraphicsPipelineDescription(
+            BlendStateDescription.SingleOverrideBlend,
+            DepthStencilStateDescription.Disabled,
+            RasterizerStateDescription.CullNone,
+            PrimitiveTopology.TriangleList,
+            shaderSet,
+            [| mvpLayout |],
+            outputDesc
+        ))
+
+        emptyPipeline <- Some pipeline
+        emptyMVPBuffer <- Some dummyMVP
+        emptyMVPSet <- Some mvpSet
+
+    member this.GetEquipment () : Async<XivGear list> =
+        async {
+            let gear = new Gear()
+            let! gearList = gear.GetGearList() |> Async.AwaitTask
+            return gearList |> List.ofSeq
+        }
+
     member this.ChangeModel(path: string) =
         modelPath <- Some path
         modelHasChanged <- true
+
+    member this.AppendTrigger(path: string) =
+        modelPath <- Some path
+        appendModel <- true
+
+    member this.ReplaceTrigger(index: int, path: string) =
+        modelPath <- Some path
+        replaceIndex <- Some index
+        replaceModel <- true
+
+    member this.ReplaceModelAt(index: int, path: string, gd: GraphicsDevice) =
+        async {
+            let! newModel = loadGameModel gd gd.ResourceFactory path
+            let renderModel = createRenderModel gd gd.ResourceFactory newModel
+            models <- models |> List.mapi (fun i m -> if i = index then renderModel else m)
+        } |> Async.StartImmediate
+
+    member this.AppendModel(path: string, gd: GraphicsDevice) =
+        async {
+            let! newModel = loadGameModel gd gd.ResourceFactory path
+            let renderModel = createRenderModel gd gd.ResourceFactory newModel
+            models <- models @ [renderModel]
+        } |> Async.StartImmediate
+
 
     member this.UpdateRender(gd: GraphicsDevice) =
         gd.WaitForIdle()

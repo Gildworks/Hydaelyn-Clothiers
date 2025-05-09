@@ -3,8 +3,12 @@
 open System
 open System.Numerics
 open xivModdingFramework.Materials.DataContainers
+open xivModdingFramework.Materials.FileTypes
 open xivModdingFramework.Textures.FileTypes
 open xivModdingFramework.Textures.Enums
+open xivModdingFramework.Models.ModelTextures
+open xivModdingFramework.Mods
+
 open Shared
 
 module Interpreter =
@@ -37,6 +41,12 @@ module Interpreter =
                     }
                 )
             Some { Rows = rows |> List.toArray; DyeData = if xivMtrl.ColorSetDyeData.Length > 0 then Some xivMtrl.ColorSetDyeData else None}
+
+    let getColorizeDiffuseFromModelMaps (mtrl: XivMtrl) : byte[] * int * int =
+        let colors = ModelTexture.GetCustomColors()
+        let modelMapsTask = ModelTexture.GetModelMaps(mtrl, false, colors, -1, ModTransaction.BeginReadonlyTransaction())
+        let modelMaps = modelMapsTask.Result
+        modelMaps.Diffuse, modelMaps.Width, modelMaps.Height
 
     let fromXivMtrl (xivMtrl: XivMtrl) (loadedTextures: LoadedTexture list) : InterpretedMaterial =
         let findTex texType =
@@ -77,4 +87,5 @@ module Interpreter =
             ShaderConstants = shaderConstants
             ShaderKeys = shaderKeys
             ColorSetData = parseColorSet xivMtrl
+            RawMtrl = xivMtrl
         }

@@ -20,10 +20,10 @@ layout(location = 6) in vec3 fs_Unknown1;
 layout(location = 0) out vec4 fsout_Color;
 
 vec4 getColorSetColor(float redIndex, float greenIndex) {
-	int row = int(redIndex * 31.0 + 0.5);
-	int col = int(greenIndex * 7.0 + 0.5);
-	int linearIndex = clamp(row * 8 + col, 0, 255);
-	return colorSet[linearIndex];
+	int row = int(redIndex * 7.0 + 0.5);
+	vec4 a = colorSet[row * 2];
+	vec4 b = colorSet[row * 4];
+	return mix(a, b, clamp(greenIndex, 0.0, 1.0));
 }
 
 void main() {
@@ -54,7 +54,9 @@ void main() {
 	// ColorSet tinting (if you want it visually)
 	vec4 colorSetColor = getColorSetColor(indexSample.r, indexSample.g);
 
-	vec3 litColor = baseColor.rgb * (diffuse + fill + 0.65) + colorSetColor.rgb * 0.005 + rim * maskSample.b;
+	vec3 baseTinted = baseColor.rgb * colorSetColor.rgb;
+
+	vec3 litColor = baseColor.rgb * (diffuse + fill + 0.65) + rim * maskSample.b;
 
 	fsout_Color =  vec4(litColor, baseColor.a);
 }

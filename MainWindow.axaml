@@ -9,7 +9,12 @@
 	<Grid ColumnDefinitions="Auto, 5, *">
 		<StackPanel Grid.Column="0">
 			<TextBlock Text="Controls Area" HorizontalAlignment="Stretch" Margin="10"/>
-			<ComboBox x:Name="Minions" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			
 		</StackPanel>
 
 		<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />

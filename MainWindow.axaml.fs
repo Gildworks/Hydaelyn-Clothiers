@@ -51,29 +51,151 @@ type MainWindow () as this =
                 | :? VeldridView as render ->
                     render.AttachInputHandlers(overlay)
                     let! minions = render.GetMinions()
-                    let names = minions |> List.map (fun m -> m.Name)
+                    let! gear = render.GetEquipment()
 
-                    let combo = this.FindControl<ComboBox>("Minions")
-                    combo.ItemsSource <- names
-                    printfn "Names added! %d" names.Length
+                    let headGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Head")
+                    let bodyGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Body")
+                    let handGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Hands")
+                    let legsGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Legs")
+                    let feetGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Feet")
 
-                    match minions |> List.tryFind (fun m -> m.Name = defaultModel) with
-                    | Some defaultEntry ->
-                        render.InitialModelPath <- Some defaultEntry.MdlPath
-                        combo.SelectedIndex <- names |> List.findIndex (fun n -> n = defaultModel)
-                    | None ->
-                        failwith "Default model not found!"
-
+                    let headNames = headGear |> List.map (fun m -> m.Name)
+                    let bodyNames = bodyGear |> List.map (fun m -> m.Name)
+                    let handNames = handGear |> List.map (fun m -> m.Name)
+                    let legsNames = legsGear |> List.map (fun m -> m.Name)
+                    let feetNames = feetGear |> List.map (fun m -> m.Name)
                     
 
 
+                    let names = minions |> List.map (fun m -> m.Name)
 
-                    combo.SelectionChanged.Add(fun _ ->
-                        let idx = combo.SelectedIndex
-                        if idx >= 0 && idx < minions.Length then
-                            let entry = minions[idx]
-                            render.ChangeModel(entry.MdlPath)
+                    let headSlot = this.FindControl<ComboBox>("HeadSlot")
+                    headSlot.ItemsSource <- headNames
+
+                    let bodySlot = this.FindControl<ComboBox>("BodySlot")
+                    bodySlot.ItemsSource <- bodyNames
+
+                    let handSlot = this.FindControl<ComboBox>("HandSlot")
+                    handSlot.ItemsSource <- handNames
+
+                    let legsSlot = this.FindControl<ComboBox>("LegsSlot")
+                    legsSlot.ItemsSource <- legsNames
+
+                    let feetSlot = this.FindControl<ComboBox>("FeetSlot")
+                    feetSlot.ItemsSource <- feetNames
+
+
+                    headSlot.SelectionChanged.Add(fun _ ->
+                        let idx = headSlot.SelectedIndex
+                        if idx >= 0 && idx < headGear.Length then
+                            let entry = headGear[idx]
+                            let slot =
+                                match entry.SecondaryCategory with
+                                | "Head" -> "met"
+                                | "Body" -> "top"
+                                | "Hands" -> "glv"
+                                | "Legs" -> "dwn"
+                                | "Feet" -> "sho"
+                                | _ -> ""
+
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
+                            if render.ModelCount > 0 then
+                                render.ReplaceTrigger(0, path)
+                                
+                            else
+                                render.AppendTrigger(path)
+                                
                     )
+
+                    bodySlot.SelectionChanged.Add(fun _ ->
+                        let idx = bodySlot.SelectedIndex
+                        if idx >= 0 && idx < bodyGear.Length then
+                            let entry = bodyGear[idx]
+                            let slot =
+                                match entry.SecondaryCategory with
+                                | "Head" -> "met"
+                                | "Body" -> "top"
+                                | "Hands" -> "glv"
+                                | "Legs" -> "dwn"
+                                | "Feet" -> "sho"
+                                | _ -> ""
+
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
+                            if render.ModelCount > 1 then
+                                render.ReplaceTrigger(1, path)
+                                
+                            else
+                                render.AppendTrigger(path)
+                                
+                    )
+
+                    handSlot.SelectionChanged.Add(fun _ ->
+                        let idx = handSlot.SelectedIndex
+                        if idx >= 0 && idx < handGear.Length then
+                            let entry = handGear[idx]
+                            let slot =
+                                match entry.SecondaryCategory with
+                                | "Head" -> "met"
+                                | "Body" -> "top"
+                                | "Hands" -> "glv"
+                                | "Legs" -> "dwn"
+                                | "Feet" -> "sho"
+                                | _ -> ""
+
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
+                            if render.ModelCount > 2 then
+                                render.ReplaceTrigger(2, path)
+                                
+                            else
+                                render.AppendTrigger(path)
+                                
+                    )
+
+                    legsSlot.SelectionChanged.Add(fun _ ->
+                        let idx = legsSlot.SelectedIndex
+                        if idx >= 0 && idx < legsGear.Length then
+                            let entry = legsGear[idx]
+                            let slot =
+                                match entry.SecondaryCategory with
+                                | "Head" -> "met"
+                                | "Body" -> "top"
+                                | "Hands" -> "glv"
+                                | "Legs" -> "dwn"
+                                | "Feet" -> "sho"
+                                | _ -> ""
+
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
+                            if render.ModelCount > 3 then
+                                render.ReplaceTrigger(3, path)
+                                
+                            else
+                                render.AppendTrigger(path)
+                                
+                    )
+
+                    feetSlot.SelectionChanged.Add(fun _ ->
+                        let idx = feetSlot.SelectedIndex
+                        if idx >= 0 && idx < feetGear.Length then
+                            let entry = feetGear[idx]
+                            let slot =
+                                match entry.SecondaryCategory with
+                                | "Head" -> "met"
+                                | "Body" -> "top"
+                                | "Hands" -> "glv"
+                                | "Legs" -> "dwn"
+                                | "Feet" -> "sho"
+                                | _ -> ""
+
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
+                            if render.ModelCount > 4 then
+                                render.ReplaceTrigger(4, path)
+                                
+                            else
+                                render.AppendTrigger(path)
+                                
+                    )
+
+
                 | _ -> ()
             | _ -> ()
         } |> Async.StartImmediate
