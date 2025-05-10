@@ -30,6 +30,13 @@ type LoadedTexture =
         Height                  : int
     }
 
+type EquipmentSlot =
+    | Head
+    | Body
+    | Hands
+    | Legs
+    | Feet
+
 type ColorSetRow =
     {
         DiffuseColor            : Vector3
@@ -74,24 +81,18 @@ type LoadedModel =
 
 type PreparedMaterial =
     {
-        MaterialName            : string
-        ResourceLayout          : ResourceLayout
+        DiffuseTexture          : Texture
+        NormalTexture           : Texture option
+        SpecularTexture         : Texture option
+        EmissiveTexture         : Texture option
+        RoughnessTexture        : Texture option
+        MetalnessTexture        : Texture option
+        OcclusionTexture        : Texture option
+        SubsurfaceTexture       : Texture option
         ResourceSet             : ResourceSet
-        ColorSetBuffer          : DeviceBuffer
+        Mtrl                    : XivMtrl
     }
 
-type RenderModel =
-    {
-        Vertices                : DeviceBuffer
-        Indices                 : DeviceBuffer
-        IndexCount              : uint32
-        MVPBuffer               : DeviceBuffer
-        MVPSet                  : ResourceSet
-        MaterialSet             : ResourceSet
-        MaterialLayout          : ResourceLayout
-        Pipeline                : Pipeline option
-        RawModel                : LoadedModel
-    }
 
 type MdlEntry = {
     Name: string
@@ -102,4 +103,16 @@ type GearEntry = {
     Name: string
     MdlPath: string
     Slot: int
+}
+
+type RenderMesh = {
+    VertexBuffer                : DeviceBuffer
+    IndexBuffer                 : DeviceBuffer
+    IndexCount                  : int
+    Material                    : PreparedMaterial
+}
+
+type RenderModel = {
+    Meshes                      : RenderMesh list
+    Original                    : TTModel
 }

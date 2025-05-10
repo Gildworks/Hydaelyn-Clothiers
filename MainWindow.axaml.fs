@@ -89,110 +89,41 @@ type MainWindow () as this =
                         let idx = headSlot.SelectedIndex
                         if idx >= 0 && idx < headGear.Length then
                             let entry = headGear[idx]
-                            let slot =
-                                match entry.SecondaryCategory with
-                                | "Head" -> "met"
-                                | "Body" -> "top"
-                                | "Hands" -> "glv"
-                                | "Legs" -> "dwn"
-                                | "Feet" -> "sho"
-                                | _ -> ""
-
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
-                            if render.ModelCount > 0 then
-                                render.ReplaceTrigger(0, path)
-                                
-                            else
-                                render.AppendTrigger(path)
-                                
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_met.mdl"
+                            render.AssignTrigger(Shared.EquipmentSlot.Head, path)
                     )
 
                     bodySlot.SelectionChanged.Add(fun _ ->
                         let idx = bodySlot.SelectedIndex
                         if idx >= 0 && idx < bodyGear.Length then
                             let entry = bodyGear[idx]
-                            let slot =
-                                match entry.SecondaryCategory with
-                                | "Head" -> "met"
-                                | "Body" -> "top"
-                                | "Hands" -> "glv"
-                                | "Legs" -> "dwn"
-                                | "Feet" -> "sho"
-                                | _ -> ""
-
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
-                            if render.ModelCount > 1 then
-                                render.ReplaceTrigger(1, path)
-                                
-                            else
-                                render.AppendTrigger(path)
-                                
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_top.mdl"
+                            printfn $"Path: {path}"
+                            render.AssignTrigger(Shared.EquipmentSlot.Body, path)
                     )
 
                     handSlot.SelectionChanged.Add(fun _ ->
                         let idx = handSlot.SelectedIndex
                         if idx >= 0 && idx < handGear.Length then
                             let entry = handGear[idx]
-                            let slot =
-                                match entry.SecondaryCategory with
-                                | "Head" -> "met"
-                                | "Body" -> "top"
-                                | "Hands" -> "glv"
-                                | "Legs" -> "dwn"
-                                | "Feet" -> "sho"
-                                | _ -> ""
-
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
-                            if render.ModelCount > 2 then
-                                render.ReplaceTrigger(2, path)
-                                
-                            else
-                                render.AppendTrigger(path)
-                                
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_glv.mdl"
+                            render.AssignTrigger(Shared.EquipmentSlot.Hands, path)
                     )
 
                     legsSlot.SelectionChanged.Add(fun _ ->
                         let idx = legsSlot.SelectedIndex
                         if idx >= 0 && idx < legsGear.Length then
                             let entry = legsGear[idx]
-                            let slot =
-                                match entry.SecondaryCategory with
-                                | "Head" -> "met"
-                                | "Body" -> "top"
-                                | "Hands" -> "glv"
-                                | "Legs" -> "dwn"
-                                | "Feet" -> "sho"
-                                | _ -> ""
-
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
-                            if render.ModelCount > 3 then
-                                render.ReplaceTrigger(3, path)
-                                
-                            else
-                                render.AppendTrigger(path)
-                                
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_dwn.mdl"
+                            render.AssignTrigger(Shared.EquipmentSlot.Legs, path)
                     )
 
                     feetSlot.SelectionChanged.Add(fun _ ->
                         let idx = feetSlot.SelectedIndex
                         if idx >= 0 && idx < feetGear.Length then
                             let entry = feetGear[idx]
-                            let slot =
-                                match entry.SecondaryCategory with
-                                | "Head" -> "met"
-                                | "Body" -> "top"
-                                | "Hands" -> "glv"
-                                | "Legs" -> "dwn"
-                                | "Feet" -> "sho"
-                                | _ -> ""
-
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_{slot}.mdl"
-                            if render.ModelCount > 4 then
-                                render.ReplaceTrigger(4, path)
-                                
-                            else
-                                render.AppendTrigger(path)
-                                
+                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_sho.mdl"
+                            render.AssignTrigger(Shared.EquipmentSlot.Feet, path)
                     )
 
 

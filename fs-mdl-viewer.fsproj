@@ -13,26 +13,27 @@
     </ItemGroup>
     
     <ItemGroup>
-		
-		
-		
-		<Compile Include="ShaderUtils.fs" />
-		
-		
-		
+
+
 		<Compile Include="CommonTypes.fs" />
-		<Compile Include="MaterialInterpreter.fs" />
+		<Compile Include="MaterialBuilder.fs" />
 		
+		
+		
+		<Compile Include="ShaderUtils.fs" />		
+		
+		<Compile Include="MaterialInterpreter.fs" />		
 		<Compile Include="TextureUtils.fs" />
-		<Compile Include="MaterialHelper.fs" />
+		<!-- <Compile Include="MaterialHelper.fs"  -->
+		<None Include="shaders\empty.frag" />
+		<None Include="shaders\empty.vert" />
 		<None Include="shaders\fragment.frag" />
 		<None Include="shaders\vertex.vert" />
 		<Compile Include="ShaderBuilder.fs" />
 		<Compile Include="SharpToNumerics.fs" />
 		<Compile Include="MaterialLoader.fs" />
-		<Compile Include="ModelLoaderRedux.fs" />
-        <Compile Include="ModelLoader.fs" />
-		
+		<!-- <Compile Include="ModelLoaderRedux.fs" /> -->
+        <Compile Include="ModelLoader.fs" />		
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
         <Compile Include="CustomVeldridControl.fs" />

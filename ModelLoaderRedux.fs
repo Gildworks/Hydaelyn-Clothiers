@@ -70,7 +70,7 @@ let loadGameModel (gd: GraphicsDevice) (factory: ResourceFactory) (mdlPath: stri
         }
     }
 
-let createRenderModel (gd: GraphicsDevice) (factory: ResourceFactory) (model: LoadedModel) : RenderModel =
+let createRenderModel (gd: GraphicsDevice) (factory: ResourceFactory) (model: LoadedModel) (slot: EquipmentSlot): RenderModel =
     printfn "Creating buffers..."
     let vBuff = factory.CreateBuffer(BufferDescription(uint32 (model.Vertices.Length * Marshal.SizeOf<VertexPositionColorUv>()), BufferUsage.VertexBuffer))
     let iBuff = factory.CreateBuffer(BufferDescription(uint32 (model.Indices.Length * Marshal.SizeOf<uint32>()), BufferUsage.IndexBuffer))
@@ -123,4 +123,5 @@ let createRenderModel (gd: GraphicsDevice) (factory: ResourceFactory) (model: Lo
         MaterialLayout = matLayout
         Pipeline = None
         RawModel = model
+        Slot = slot
     }
