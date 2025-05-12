@@ -9,7 +9,7 @@ open Veldrid
 
 
 [<Struct; StructLayout(LayoutKind.Sequential, Pack = 16)>]
-type VertexPositionColorUv =
+type VertexPositionColorUvUnused =
     val Position        : Vector3
     val Color           : Vector4
     val Color2          : Vector4
@@ -18,6 +18,19 @@ type VertexPositionColorUv =
     val BiTangent       : Vector3
     val Unknown1        : Vector3
     new(pos, col, col2, uv, nor, bitan, un1) = { Position = pos; Color = col; Color2 = col2; UV = uv; Normal = nor; BiTangent = bitan; Unknown1 = un1 }
+
+[<Struct>]
+type VertexPositionColorUv =
+    val Position        : Vector3
+    val Color           : Vector4
+    val UV              : Vector2
+    val Normal          : Vector3
+    new (pos, col, uv, normal) = {
+        Position = pos
+        Color = col
+        UV = uv
+        Normal = normal
+    }
 
 
 
@@ -82,13 +95,14 @@ type LoadedModel =
 type PreparedMaterial =
     {
         DiffuseTexture          : Texture
-        NormalTexture           : Texture option
-        SpecularTexture         : Texture option
-        EmissiveTexture         : Texture option
-        RoughnessTexture        : Texture option
-        MetalnessTexture        : Texture option
-        OcclusionTexture        : Texture option
-        SubsurfaceTexture       : Texture option
+        NormalTexture           : Texture 
+        SpecularTexture         : Texture
+        EmissiveTexture         : Texture
+        AlphaTexture            : Texture
+        RoughnessTexture        : Texture
+        MetalnessTexture        : Texture
+        OcclusionTexture        : Texture
+        SubsurfaceTexture       : Texture
         ResourceSet             : ResourceSet
         Mtrl                    : XivMtrl
     }
@@ -115,4 +129,15 @@ type RenderMesh = {
 type RenderModel = {
     Meshes                      : RenderMesh list
     Original                    : TTModel
+}
+
+type PipelineKey = {
+    VertexLayout                : VertexLayoutDescription
+    FragmentLayout              : ResourceLayout
+    OutputDescription           : OutputDescription
+}
+
+type ComboOption = {
+    Display: string
+    Value: string
 }

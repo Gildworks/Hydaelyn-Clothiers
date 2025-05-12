@@ -16,3 +16,11 @@ let col (v: SharpDX.Color) =
     )
 
 let vec4col (v: SharpDX.Color) = Vector4(float32 v.R, float32 v.G, float32 v.B, float32 v.A)
+
+let convertColor (rgba: byte[]) =
+    Vector4(
+        float32 rgba.[0] / 255.0f,
+        float32 rgba.[1] / 255.0f,
+        float32 rgba.[2] / 255.0f,
+        float32 rgba.[3] / 255.0f
+    )

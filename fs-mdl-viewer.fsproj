@@ -36,7 +36,7 @@
         <Compile Include="ModelLoader.fs" />		
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
-        <Compile Include="CustomVeldridControl.fs" />
+        <!--<Compile Include="CustomVeldridControl.fs" /> -->
 		<Compile Include="VeldridView.fs" />
 		<Compile Include="ViewModel.fs" />
         <Compile Include="MainWindow.axaml.fs" />

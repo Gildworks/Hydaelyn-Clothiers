@@ -2,61 +2,62 @@
 
 layout(set = 1, binding = 0) uniform texture2D tex_Diffuse;
 layout(set = 1, binding = 1) uniform texture2D tex_Normal;
-layout(set = 1, binding = 2) uniform texture2D tex_Mask;
-layout(set = 1, binding = 3) uniform texture2D tex_Index;
-layout(set = 1, binding = 4) uniform sampler SharedSampler;
-layout(set = 1, binding = 5) uniform ColorSetBuffer {
-	vec4 colorSet[256];
-};
+layout(set = 1, binding = 2) uniform texture2D tex_Specular;
+layout(set = 1, binding = 3) uniform texture2D tex_Emissive;
+layout(set = 1, binding = 4) uniform texture2D tex_Alpha;
+layout(set = 1, binding = 5) uniform texture2D tex_Roughness;
+layout(set = 1, binding = 6) uniform texture2D tex_Metalness;
+layout(set = 1, binding = 7) uniform texture2D tex_Occlusion;
+layout(set = 1, binding = 8) uniform texture2D tex_Subsurface;
+layout(set = 1, binding = 9) uniform sampler SharedSampler;
 
 layout(location = 0) in vec3 fs_Position;
 layout(location = 1) in vec4 fs_Color;
-layout(location = 2) in vec4 fs_Color2;
-layout(location = 3) in vec2 fs_UV;
-layout(location = 4) in vec3 fs_Normal;
-layout(location = 5) in vec3 fs_BiTangent;
-layout(location = 6) in vec3 fs_Unknown1;
+layout(location = 2) in vec2 fs_UV;
+layout(location = 3) in vec3 fs_Normal;
 
 layout(location = 0) out vec4 fsout_Color;
 
-vec4 getColorSetColor(float redIndex, float greenIndex) {
-	int row = int(redIndex * 7.0 + 0.5);
-	vec4 a = colorSet[row * 2];
-	vec4 b = colorSet[row * 4];
-	return mix(a, b, clamp(greenIndex, 0.0, 1.0));
-}
-
 void main() {
-	vec4 baseColor = texture(sampler2D(tex_Diffuse, SharedSampler), fs_UV);
-	vec4 maskSample = texture(sampler2D(tex_Mask, SharedSampler), fs_UV);
-	vec3 sampledNormal = texture(sampler2D(tex_Normal, SharedSampler), fs_UV).rgb;
-	vec4 indexSample = texture(sampler2D(tex_Index, SharedSampler), fs_UV);
+    vec4 baseColor = texture(sampler2D(tex_Diffuse, SharedSampler), fs_UV);
+    vec4 baseSpec = texture(sampler2D(tex_Specular, SharedSampler), fs_UV);
+    vec3 sampledNormal = texture(sampler2D(tex_Normal, SharedSampler), fs_UV).rgb;
+    vec3 emissiveColor = texture(sampler2D(tex_Emissive, SharedSampler), fs_UV).rgb;
+    vec3 specularColor = texture(sampler2D(tex_Specular, SharedSampler), fs_UV).rgb;
 
-	// Alpha Cutout
-	float alphaCutoff = 0.5; // ideally passed as a uniform
-	if (sampledNormal.b < alphaCutoff)
-		discard;
+    // Cutout alpha test
+    float alphaCutoff = 0.5;
+    if (baseColor.a < alphaCutoff)
+        discard;
 
+    // Decode normals from normal map (tangent-space to [-1,1])
+    sampledNormal.g = 1.0 - sampledNormal.g;
+    vec3 normal = normalize(sampledNormal * 2.0);
+    vec3 viewNormal = normalize(normal);
 
-	// Decode normal
-	vec3 normal = normalize(sampledNormal * 2.0 - 1.0);
-	vec3 worldNormal = normalize(normal);
+    // Directional light from top-left of camera view
+    vec3 lightDir = normalize(vec3(-0.4, -1.0, -0.3));
+    float diff = max(dot(viewNormal, -lightDir), 0.0);
 
-	// --- Lighting ---
-	vec3 lightDir = normalize(vec3(-0.4, -1.0, -0.3));
-	float diffuse = max(dot(worldNormal, -lightDir), 0.0);
+    // Simple specular from light reflection
+    vec3 viewDir = normalize(-fs_Position);
+    vec3 reflectDir = reflect(lightDir, viewNormal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
 
-	vec3 fillDir = normalize(vec3(0.3, 1.0, 0.2));
-	float fill = max(dot(worldNormal, -fillDir), 0.0) * 0.3;
+    // Soft fill light
+    vec3 fillDir = normalize(vec3(0.3, 1.0, 0.2));
+    float fill = max(dot(viewNormal, -fillDir), 0.0) * 0.3;
 
-	float rim = pow(1 - max(dot(worldNormal, normalize(fs_Position)), 0.0), 8.0) / 8.0;
+    // Optional rim light (can remove if not desired)
+    float rim = pow(1.0 - max(dot(viewNormal, viewDir), 0.0), 3.0) * 0.15;
 
-	// ColorSet tinting (if you want it visually)
-	vec4 colorSetColor = getColorSetColor(indexSample.r, indexSample.g);
+    vec3 lighting = (diff + fill + 0.15) * baseColor.rgb + spec * 0.1 * specularColor;
 
-	vec3 baseTinted = baseColor.rgb * colorSetColor.rgb;
+    // Emissive is added *unlit*
+    lighting += emissiveColor;
 
-	vec3 litColor = baseColor.rgb * (diffuse + fill + 0.65) + rim * maskSample.b;
+    fsout_Color = vec4(lighting, baseColor.a);
 
-	fsout_Color =  vec4(litColor, baseColor.a);
+    // Texture testing out color
+    //fsout_Color = vec4(baseSpec);
 }

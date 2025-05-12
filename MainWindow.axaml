@@ -4,17 +4,36 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="fs_mdl_viewer.MainWindow"
+		xmlns:local="clr-namespace:fs_mdl_viewer"
+		xmlns:shared="clr-namespace:Shared"
         Title="fs_mdl_viewer"
-        d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}">
+        d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
+		x:DataType="vm:VeldridWindowViewModel">
 	<Grid ColumnDefinitions="Auto, 5, *">
 		<StackPanel Grid.Column="0">
-			<TextBlock Text="Controls Area" HorizontalAlignment="Stretch" Margin="10"/>
-			<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-			<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-			<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-			<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-			<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-			
+			<StackPanel>
+				<TextBlock Text="Chaacter Builder" HorizontalAlignment="Stretch" Margin="19" />
+				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
+					<ComboBox.ItemTemplate>
+						<DataTemplate x:DataType="shared:ComboOption">
+							<TextBlock Text="{Binding Display}" />
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
+				<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
+				
+			</StackPanel>
+			<StackPanel>
+				<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
+				<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+			</StackPanel>
+
 		</StackPanel>
 
 		<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
