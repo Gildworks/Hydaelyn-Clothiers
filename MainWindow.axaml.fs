@@ -12,19 +12,49 @@ open xivModdingFramework.General.Enums
 open xivModdingFramework.Items.Categories
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.Items.Enums
+open xivModdingFramework.Models.FileTypes
+open xivModdingFramework.Mods
 
 open Shared
 
 type MainWindow () as this = 
     inherit Window ()
 
-    let viewModel = new VeldridWindowViewModel()    
+    let viewModel = new VeldridWindowViewModel()
 
     do 
+        let mutable characterRace   : XivRace option    = None
+        
         if not XivCache.Initialized then
             let gdp = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"
             let info = xivModdingFramework.GameInfo(DirectoryInfo(gdp), XivLanguage.English)
             XivCache.SetGameInfo(info) |> ignore
+
+        let rec findCharacterPart (currentRaceInTree: XivRace) (partId: int) (partCategory: string) (characterItems: XivCharacter list): XivCharacter option =
+                let foundPart =
+                    characterItems
+                    |> List.tryFind (fun item ->
+                        item.TertiaryCategory = currentRaceInTree.GetDisplayName() &&
+                        item.SecondaryCategory = partCategory &&
+                        item.ModelInfo.SecondaryID = partId
+                    )
+
+                match foundPart with
+                | Some part -> Some part
+                | None ->
+                    let parentNode = XivRaceTree.GetNode(currentRaceInTree).Parent
+                    if parentNode <> null && parentNode.Race <> XivRace.All_Races then
+                        findCharacterPart parentNode.Race partId partCategory characterItems
+                    else
+                        None
+
+        let getCustomizableParts (targetRace: XivRace) (partCategory: string) (characterItems: XivCharacter list) : XivCharacter list =
+            characterItems
+            |> List.filter (fun item ->
+                item.TertiaryCategory = targetRace.GetDisplayName() &&
+                item.SecondaryCategory = partCategory
+            )
+            |> List.sortBy (fun item -> item.ModelInfo.SecondaryID)
 
         this.InitializeComponent()
         let viewer = this.FindControl<EmbeddedWindowVeldrid>("ViewerControl")
@@ -61,6 +91,9 @@ type MainWindow () as this =
 
                     let! gear = render.GetEquipment()
                     let! chara = render.GetChara()
+                    let eqpCategory = Eqp()
+                    let tx = ModTransaction.BeginReadonlyTransaction()
+
                     
                     let raceOptions = [
                         { Display = "Hyur"; Value = "Hyur"}
@@ -208,43 +241,44 @@ type MainWindow () as this =
 
                         match Enum.TryParse<XivRace>(raceValue) with
                         | true, parsedRace ->
+                            Async.StartImmediate <|
                             async {
-                                let chara = Character()
-                                let! charaList = chara.GetCharacterList() |> Async.AwaitTask
+                                characterRace <- Some parsedRace
+                                let effectiveBodyItem = findCharacterPart parsedRace 1 "Body" chara
+                                let effectiveFaceItem = findCharacterPart parsedRace 1 "Face" chara
 
-                                let getDefaultCharaPart (race: XivRace) (part: string) =
-                                    let displayName = race.GetDisplayName()
-                                    charaList
-                                    |> Seq.tryFind (fun x ->
-                                        x.Name = $"{displayName} {part} 1"
-                                    )
+                                let availableHairs = getCustomizableParts parsedRace "Hair" chara
+                                let availableEars = getCustomizableParts parsedRace "Ear" chara
+                                let availableTails = getCustomizableParts parsedRace "Tail" chara
 
-                                match getDefaultCharaPart parsedRace "Hair" with
-                                | Some defaultBody ->
-                                    printfn $"Default Body Part: {defaultBody.Name}"
-                                | None ->
-                                    let distinctNames =
-                                        charaList
-                                        |> Seq.map (fun x -> x.Name)
-                                        |> Seq.distinct
-                                        |> String.concat", "
+                                let defaultHair = availableHairs |> List.tryHead
+                                let defaultEar = availableEars |> List.tryHead
+                                let defaultTail = availableTails |> List.tryHead
 
-                                    let distinctCategories =
-                                        charaList
-                                        |> Seq.map (fun x -> x.SecondaryCategory)
-                                        |> Seq.distinct
-                                        |> String.concat", "
+                                match effectiveBodyItem, effectiveFaceItem with
+                                | Some body, Some face ->
+                                    printfn $"Effective Body: {body.Name} (Model from {body.TertiaryCategory})"
+                                    printfn $"Effective Face: {face.Name} (Model from {face.TertiaryCategory})"
+                                    printfn $"Effective Path: {body.ModelInfo.PrimaryID:D4} {body.ModelInfo.SecondaryID:D4} {body.ModelInfo.ImcSubsetID:D4}"
+                                    defaultHair |> Option.iter (fun h -> printfn $"Default Hair: {h.Name}")
+                                    defaultEar |> Option.iter (fun e -> printfn $"Default Ear: {e.Name}")
+                                    defaultTail |> Option.iter (fun t -> printfn $"Default Tail: {t.Name}")
+                                | _ ->
+                                    printfn $"Could not determine effective body or face for {parsedRace.GetDisplayName()}"
 
-                                    printfn "Body logic failed."
-                                    printfn "Diagnostics:"
-                                    printfn $"Race Display Name: {parsedRace.GetDisplayName()}"
-                                    printfn $"Passed name: {parsedRace.GetDisplayName()} Hair 1"
-                                    //printfn $"Distinct Character Names: {distinctNames}"
-                                    //printfn $"Distinct Parts: {distinctCategories}"
-                            } |> Async.StartImmediate
+                                do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace)
+                                do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace)
+                                match defaultEar with
+                                | Some ear -> do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace)
+                                | None -> ()
+                                match defaultTail with
+                                |Some tail -> do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace)
+                                | None -> ()
+                            }
 
                         | false, _ ->
                             printfn "Invalid race string. Could not parse into XivRace"
+
                     )
 
 
@@ -253,7 +287,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < headGear.Length then
                             let entry = headGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_met.mdl"
-                            render.AssignTrigger(Shared.EquipmentSlot.Head, entry)
+                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace.Value) |> ignore
                     )
 
                     bodySlot.SelectionChanged.Add(fun _ ->
@@ -262,7 +296,7 @@ type MainWindow () as this =
                             let entry = bodyGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_top.mdl"
                             printfn $"Path: {path}"
-                            render.AssignTrigger(Shared.EquipmentSlot.Body, entry)
+                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace.Value) |> ignore
                     )
 
                     handSlot.SelectionChanged.Add(fun _ ->
@@ -270,7 +304,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < handGear.Length then
                             let entry = handGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_glv.mdl"
-                            render.AssignTrigger(Shared.EquipmentSlot.Hands, entry)
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace.Value) |> ignore
                     )
 
                     legsSlot.SelectionChanged.Add(fun _ ->
@@ -278,7 +312,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < legsGear.Length then
                             let entry = legsGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_dwn.mdl"
-                            render.AssignTrigger(Shared.EquipmentSlot.Legs, entry)
+                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace.Value) |> ignore
                     )
 
                     feetSlot.SelectionChanged.Add(fun _ ->
@@ -286,8 +320,10 @@ type MainWindow () as this =
                         if idx >= 0 && idx < feetGear.Length then
                             let entry = feetGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_sho.mdl"
-                            render.AssignTrigger(Shared.EquipmentSlot.Feet, entry)
+                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace.Value) |> ignore
                     )
+
+                    
 
 
                 | _ -> ()

@@ -37,7 +37,8 @@ type VeldridView() =
     let mutable modelMap : Map<EquipmentSlot, RenderModel option> =
         allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
 
-    let mutable gearItem        : IItemModel option                = None
+    let mutable gearItem        : IItemModel option             = None
+    let mutable modelRace       : XivRace option                = None
     let mutable modelSlot       : EquipmentSlot option          = None
     let mutable assignModel     : bool                          = false
 
@@ -62,10 +63,23 @@ type VeldridView() =
     let mutable isResizing      : bool                          = false
     let mutable resizeTimer     : System.Timers.Timer option    = None
     let mutable firstRender     : bool                          = false
+  
+    let agent = MailboxProcessor.Start(fun inbox ->
+        let rec loop () = async {
+            let! (slot, item, race, reply: AsyncReplyChannel<unit>) = inbox.Receive()
+            gearItem <- Some item
+            modelSlot <- Some slot
+            modelRace <- Some race
+            assignModel <- true
 
-    // === Constants ===
-    let gdp = @"F:\\Games\\SquareEnix\\FINAL FANTASY XIV - A Realm Reborn\\game\\sqpack\\ffxiv" // Will need to be mutable for final app so user can select game directory
-    let info = xivModdingFramework.GameInfo(DirectoryInfo(gdp), XivLanguage.English)
+            while assignModel do
+                do! Async.Sleep 10
+            
+            reply. Reply(())
+            return! loop ()
+        }
+        loop ()
+    )
 
     member this.ModelCount = models.Length
 
@@ -87,7 +101,7 @@ type VeldridView() =
 
     override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain): unit = 
         if assignModel then
-            this.AssignGear(modelSlot.Value, gearItem.Value, gd)
+            this.AssignGear(modelSlot.Value, gearItem.Value, modelRace.Value, gd)
             assignModel <- false
 
         if isResizing then () else
@@ -194,9 +208,16 @@ type VeldridView() =
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, gd: GraphicsDevice) =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, gd: GraphicsDevice) =
+        printfn $"Loading model with the following parameters:"
+        printfn $"Slot: {slot}"
+        printfn $"Item: {item}"
+        printfn $"Race: {race}"
+
         async {
-            let tx = ModTransaction.BeginReadonlyTransaction()            
+            let tx = ModTransaction.BeginReadonlyTransaction()
+            let eqp = new Eqp()       
+
             printfn "Creating texture layout..."
             let textureLayout =
                 gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(
@@ -210,33 +231,124 @@ type VeldridView() =
                     ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                     ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                     ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
-                ))
-
-            
+                ))            
             printfn "Texture layout created!"
           
             printfn "Building material..."
             let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout
             printfn "Material built!"
             printfn "Loading model..."
-            let! renderModel =
-                try
-                    ModelLoader.loadRenderModelFromItem
-                        gd.ResourceFactory gd tx gearItem.Value XivRace.Hyur_Midlander_Male materialBuilder
-                    |> Async.AwaitTask
-                with ex ->
-                    printfn $"Error loading model: {ex.Message}"
-                    raise ex
+            //let! renderModel2 =
+            //    try
+            //        ModelLoader.loadRenderModelFromItem
+            //            gd.ResourceFactory gd tx gearItem.Value XivRace.Hyur_Midlander_Female materialBuilder
+            //        |> Async.AwaitTask
+            //    with ex ->
+            //        printfn $"Error loading model: {ex.Message}"
+            //        raise ex
 
+            let! renderModel =
+                printfn "Reached renderModel loading!"
+                async{    
+                    match slot with
+                    | EquipmentSlot.Face
+                    | EquipmentSlot.Hair
+                    | EquipmentSlot.Tail
+                    | EquipmentSlot.Ear ->
+                        printfn "Loading character model!"
+                        let category, prefix, suffix  =
+                            match slot with
+                            | EquipmentSlot.Face -> "face", "f", "fac"
+                            | EquipmentSlot.Hair -> "hair", "h", "hir"
+                            | EquipmentSlot.Ear -> "zear", "z", "zer"
+                            | EquipmentSlot.Tail -> "tail", "t", "til"
+                            | _ -> "error", "error", "error"
+                        let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
+                        try
+                            return! ModelLoader.loadRenderModelFromPart gd.ResourceFactory gd tx mdlPath race materialBuilder |> Async.AwaitTask
+                        with ex ->
+                            printfn $"[Character Part Loading | Path: {mdlPath}] Error loading model: {ex.Message}"
+                            return raise ex
+                    | _ ->
+                        printfn "Loading gear model!"
+                        let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot) : Async<XivRace> =
+                            let swapRaceGender (race: XivRace) : XivRace option =
+                                let name = race.ToString()
+                                if name.EndsWith("_Male") then
+                                    let swapped = name.Replace("_Male", "_Female")
+                                    match Enum.TryParse<XivRace>(swapped) with
+                                    | true, r -> Some r
+                                    | _ -> None
+                                elif name.EndsWith("_Female") then
+                                    let swapped = name.Replace("_Female", "_Male")
+                                    match Enum.TryParse<XivRace>(swapped) with
+                                    | true, r -> Some r
+                                    | _ -> None
+                                else None
+
+                            let searchSlot = 
+                                match slot with
+                                | EquipmentSlot.Body -> "top"
+                                | EquipmentSlot.Head -> "met"
+                                | EquipmentSlot.Hands -> "glv"
+                                | EquipmentSlot.Legs -> "dwn"
+                                | EquipmentSlot.Feet -> "sho"
+                                | _ -> ""
+                            async{
+                                let! eqdp = eqp.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
+                                match eqdp.TryGetValue(race) with
+                                | true, param when param.HasModel ->
+                                    printfn $"For this item:"
+                                    for kvp in eqdp do
+                                        printfn $"Race: {kvp.Key} | HasModel: {kvp.Value.HasModel}"
+                                    return race
+                                | _ ->
+                                    match swapRaceGender race with
+                                    | Some alt ->
+                                        match eqdp.TryGetValue(alt) with
+                                        | true, param when param.HasModel -> return alt
+                                        | _ -> return race
+                                    | _ ->
+                                        let parent = XivRaceTree.GetNode(race).Parent
+                                        if parent <> null && parent.Race <> XivRace.All_Races then
+                                            return! resolveModelRace (item, parent.Race, slot)
+                                        else
+                                            return XivRace.Hyur_Midlander_Male
+                            }
+                    
+                        try
+                            let! resolvedRace = resolveModelRace(item, race, slot)
+                            printfn $"Attempting to load model with {resolvedRace.ToString()}"
+                            return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value resolvedRace materialBuilder |> Async.AwaitTask
+                        with _ ->
+                            let! resolvedRace = resolveModelRace(item, race, slot)
+                            match resolvedRace with
+                            | XivRace.Lalafell_Female ->
+                                try
+                                    return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value XivRace.Lalafell_Male materialBuilder |> Async.AwaitTask
+                                with ex ->
+                                    printfn $"Error loading model: {ex.Message}"
+                                    return raise ex
+                            | _ -> 
+                                try
+                                    return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value XivRace.Hyur_Midlander_Female materialBuilder |> Async.AwaitTask
+                                with _ ->
+                                    printfn "Apparently everything else failed, defaulting to Hyur Midlander Male and hoping for the best."
+                                    try
+                                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value XivRace.Hyur_Midlander_Male materialBuilder |> Async.AwaitTask
+                                    with ex ->
+                                        printfn "If you're seeing this, everything has failed and I'm not even sure the item you're trying to view actually exists. Why are you doing this to me?"
+                                        return raise ex
+                }
+            
             modelMap <- modelMap.Add(slot, Some renderModel)
             printfn "Model loaded!"
             texLayout <- Some textureLayout
         } |> Async.StartImmediate
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel) =
-        gearItem <- Some item
-        modelSlot <- Some slot
-        assignModel <- true
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace) : Async<unit> =
+        agent.PostAndAsyncReply(fun reply -> (slot, item, race, reply))
+        
 
     member this.RequestResize (w: uint32, h: uint32) =
         isResizing <- true

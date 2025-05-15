@@ -3,6 +3,8 @@
 open xivModdingFramework.Textures.Enums
 open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Materials.DataContainers
+open xivModdingFramework.Items.DataContainers
+open xivModdingFramework.General.Enums
 open System.Numerics
 open System.Runtime.InteropServices
 open Veldrid
@@ -49,6 +51,10 @@ type EquipmentSlot =
     | Hands
     | Legs
     | Feet
+    | Face
+    | Hair
+    | Tail
+    | Ear
 
 type ColorSetRow =
     {
@@ -140,4 +146,13 @@ type PipelineKey = {
 type ComboOption = {
     Display: string
     Value: string
+}
+
+type CharacterCustomizationOptions = {
+    Race                        : XivRace
+    AvailableBodyParts          : XivCharacter list
+    AvailableFaceParts          : XivCharacter list
+    AvailableHairParts          : XivCharacter list
+    AvailableTailParts          : XivCharacter list
+    AvailableEarParts           : XivCharacter list
 }
