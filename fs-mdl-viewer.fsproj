@@ -56,10 +56,10 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Lumina" Version="5.6.1" />
+        <PackageReference Include="MessageBox.Avalonia" Version="3.2.0" />
         <PackageReference Include="Veldrid" Version="4.9.0" />
         <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
         <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
-	  
     </ItemGroup>
 
     
