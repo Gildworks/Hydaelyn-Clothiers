@@ -3,6 +3,7 @@ namespace fs_mdl_viewer
 open System
 open System.Collections.ObjectModel
 open System.IO
+open System.Text.Json
 open Avalonia
 open Avalonia.Controls
 open Avalonia.Markup.Xaml
@@ -195,43 +196,6 @@ type MainWindow () as this =
                                 submitCharacter.IsEnabled <- false
                     )
 
-                    //submitCharacter.Click.Add(fun _ ->
-                    //    if race.Value = "Hyur" then
-                    //        let raceValue = $"{race.Value}_{clan.Value}_{gender.Value}"
-                    //        charRace <- Some raceValue
-                    //    else
-                    //        let raceValue = $"{race.Value}_{gender.Value}"
-                    //        charRace <- Some raceValue
-
-                    //    printfn $"Constructed XivRace: {charRace.Value}"
-                    //    let parsedRace =
-                    //        match Enum.TryParse<XivRace>(charRace.Value) with
-                    //        | true, value -> Some value
-                    //        | false, _ -> None
-
-                    //    finalRace <- parsedRace
-                    //    if finalRace.IsSome then
-                    //        printfn "Successfully generated XivRace!"
-                    //    else
-                    //        printfn "No matching race found..."
-
-                    //    async {
-                    //        let chara = new Character()
-                    //        let! charaList = chara.GetCharacterList() |> Async.AwaitTask
-
-                    //        let getDefaultCharaPart (race: XivRace) (part: XivItemType) =
-                    //            charaList
-                    //            |> List.ofSeq
-                    //            |> List.tryFind (fun x ->
-                    //                x.Name = race.GetDisplayName() &&
-                    //                x.SecondaryCategory = part.ToString() &&
-                    //                x.ModelInfo.PrimaryID = 1
-                    //            )
-
-                    //        let defaultBody = getDefaultCharaPart finalRace.Value XivItemType.body
-                    //        printfn $"Default Body Part: {defaultBody.Value.Name}"
-                    //    } |> Async.StartImmediate
-                    //)
                     submitCharacter.Click.Add(fun _ ->
                         let raceValue =
                             if race.Value = "Hyur" then
