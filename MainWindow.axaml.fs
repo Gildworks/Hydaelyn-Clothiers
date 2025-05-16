@@ -22,9 +22,31 @@ type MainWindow () as this =
     inherit Window ()
 
     let viewModel = new VeldridWindowViewModel()
+    let configPath =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "fs-mdl-viewer", "config.json")
+
+    let saveConfig (config: Config) =
+        let dir = Path.GetDirectoryName(configPath)
+        if not (Directory.Exists(dir)) then Directory.CreateDirectory(dir) |> ignore
+        let json = JsonSerializer.Serialize(config)
+        File.WriteAllText(configPath, json)
+
+    let loadConfig () =
+        if File.Exists(configPath) then
+            let json = File.ReadAllText(configPath)
+            JsonSerializer.Deserialize<Config>(json)
+        else
+            null
 
     do 
         let mutable characterRace   : XivRace option    = None
+        let mutable gamePath =
+            match loadConfig () with
+            | null ->
+                let selected = ""
+                saveConfig {GamePath = selected}
+                selected
+            | config -> config.GamePath
         
         if not XivCache.Initialized then
             let gdp = @"F:\Games\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack\ffxiv"

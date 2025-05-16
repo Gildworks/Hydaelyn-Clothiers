@@ -156,3 +156,7 @@ type CharacterCustomizationOptions = {
     AvailableTailParts          : XivCharacter list
     AvailableEarParts           : XivCharacter list
 }
+
+type Config = {
+    GamePath: string
+}
