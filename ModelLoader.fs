@@ -19,16 +19,24 @@ open xivModdingFramework.Materials.FileTypes
 open Shared
 
 let loadRenderModelFromItem
-    (factory    : ResourceFactory)
-    (gd         : GraphicsDevice)
-    (tx         : ModTransaction)
-    (item       : IItemModel)
-    (race       : XivRace)
+    (factory           : ResourceFactory)
+    (gd                : GraphicsDevice)
+    (tx                : ModTransaction)
+    (item              : IItemModel)
+    (matchedRace       : XivRace)
+    (targetRace        : XivRace)
     (mtlBuilder : XivMtrl -> Task<PreparedMaterial>)
     : Task<RenderModel> =
     task {
-        printfn "Loading raw model..."
-        let! ttModel = Mdl.GetTTModel(item, race)
+        printfn $"Loading raw model... matched race: {matchedRace.GetDisplayName()} | target race {targetRace.GetDisplayName()}"
+        let! ttModel = Mdl.GetTTModel(item, matchedRace)
+        let mergedModel = ModelModifiers.MergeModels(ttModel, ttModel)
+
+        //do! ModelModifiers.ApplyRacialDeform(ttModel, targetRace, false, null, tx) |> Async.AwaitTask
+        
+
+        
+
         
 
         for mat in ttModel.Materials do
@@ -78,6 +86,7 @@ let loadRenderModelFromItem
         printfn "Create materialDict..."
         let materialDict = materialAssoc |> dict
         printfn "materialDict created!"
+        
 
         printfn "Making render meshes..."
         let renderMeshes =
@@ -126,6 +135,7 @@ let loadRenderModelFromItem
                         IndexBuffer = indexBuffer
                         IndexCount = indices.Length
                         Material = material
+                        RawModel = ttModel
                     }
                 )
             )
@@ -247,6 +257,7 @@ let loadRenderModelFromPart
                         IndexBuffer = indexBuffer
                         IndexCount = indices.Length
                         Material = material
+                        RawModel = ttModel
                     }
                 )
             )

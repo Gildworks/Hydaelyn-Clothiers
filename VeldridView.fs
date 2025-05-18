@@ -303,7 +303,7 @@ type VeldridView() =
                         let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
                         let! resolvedRace = resolveModelRace(item, race, slot, priorityList)                        
 
-                        let rec racialFallbacks (item: IItemModel) (races: XivRace list): Async<RenderModel> =
+                        let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<RenderModel> =
                             async {
                                 match races with
                                 | [] ->
@@ -312,17 +312,17 @@ type VeldridView() =
                                 | race::rest ->
                                     try
                                         printfn $"Trying {race} as a fallback..."
-                                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx item race materialBuilder |> Async.AwaitTask
+                                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx item race targetRace materialBuilder |> Async.AwaitTask
                                     with ex ->
                                         printfn $"Fallback failed for {race}: {ex.Message}"
-                                        return! racialFallbacks item rest
+                                        return! racialFallbacks item rest targetRace
                             }
                         
                         try
                             printfn $"Attempting to load model with {resolvedRace.ToString()}"
-                            return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value resolvedRace materialBuilder |> Async.AwaitTask
+                            return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value resolvedRace race materialBuilder |> Async.AwaitTask
                         with _ ->
-                            return! racialFallbacks item priorityList
+                            return! racialFallbacks item priorityList race
                 }
             
             modelMap <- modelMap.Add(slot, Some renderModel)

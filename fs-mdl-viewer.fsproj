@@ -5,12 +5,21 @@
 		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Platforms>AnyCPU;x64</Platforms>
 	</PropertyGroup>
 	
 	<ItemGroup>
 	    <ProjectReference Include="lib\xivModdingFramework\xivModdingFramework\xivModdingFramework.csproj" />
 		<ProjectReference Include="lib\AvaloniaRender\src\AvaloniaRender.Veldrid\AvaloniaRender.Veldrid.csproj" />
     </ItemGroup>
+
+	<ItemGroup>
+		<Content Include="shaders\**\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
     
     <ItemGroup>
 
@@ -61,6 +70,13 @@
         <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
         <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
     </ItemGroup>
+
+	<ItemGroup>
+		<None Update="runtimes\**\native\SQLite.Interop.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</None>
+	</ItemGroup>
 
     
 </Project>
