@@ -192,6 +192,7 @@ type MainWindow () as this =
                     )
 
                     submitCharacter.Click.Add(fun _ ->
+                        render.clearCharacter()
                         let raceValue =
                             if race.Value = "Hyur" then
                                 $"{race.Value}_{clan.Value}_{gender.Value}"
@@ -233,6 +234,32 @@ type MainWindow () as this =
                                 match defaultTail with
                                 |Some tail -> do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace)
                                 | None -> ()
+
+                                let baseCharacter (slot: ComboBox) (gearList: XivGear list) (nameFilter: string) =
+                                    if slot.SelectedIndex = -1 then
+                                        gearList
+                                        |> List.tryFind( fun g -> g.Name.Contains(nameFilter))
+                                        |> Option.iter (fun sc ->
+                                            let idx = gearList |> List.findIndex (fun g -> g = sc)
+                                            slot.SelectedIndex <- idx
+                                            )
+
+                                let reloadGear (slot: ComboBox) =
+                                    let current = slot.SelectedIndex
+                                    if current >= 0 then
+                                        slot.SelectedIndex <- -1
+                                        slot.SelectedIndex <- current
+
+                                baseCharacter bodySlot bodyGear "SmallClothes"
+                                baseCharacter handSlot handGear "SmallClothes"
+                                baseCharacter legsSlot legsGear "SmallClothes"
+                                baseCharacter feetSlot feetGear "SmallClothes"
+
+                                reloadGear headSlot
+                                reloadGear bodySlot
+                                reloadGear handSlot
+                                reloadGear legsSlot
+                                reloadGear feetSlot
                             }
 
                         | false, _ ->

@@ -424,3 +424,12 @@ type VeldridView() =
         emptyPipeline <- Some pipeline
         emptyMVPBuffer <- Some dummyMVP
         emptyMVPSet <- Some mvpSet
+
+    member this.clearCharacter () =
+        modelMap <-
+        modelMap
+        |> Map.add Face None
+        |> Map.add Hair None
+        |> Map.add Tail None
+        |> Map.add Ear None
+

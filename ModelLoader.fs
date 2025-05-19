@@ -30,14 +30,8 @@ let loadRenderModelFromItem
     task {
         printfn $"Loading raw model... matched race: {matchedRace.GetDisplayName()} | target race {targetRace.GetDisplayName()}"
         let! ttModel = Mdl.GetTTModel(item, matchedRace)
-        let mergedModel = ModelModifiers.MergeModels(ttModel, ttModel)
 
-        //do! ModelModifiers.ApplyRacialDeform(ttModel, targetRace, false, null, tx) |> Async.AwaitTask
-        
-
-        
-
-        
+        do! ModelModifiers.RaceConvert(ttModel, targetRace, null, tx) |> Async.AwaitTask
 
         for mat in ttModel.Materials do
             printfn $"Material path: {mat}"
