@@ -51,7 +51,7 @@ void main() {
     // Optional rim light (can remove if not desired)
     float rim = pow(1.0 - max(dot(viewNormal, viewDir), 0.0), 3.0) * 0.15;
 
-    vec3 lighting = (diff + fill + 0.15) * baseColor.rgb + spec * 0.1 * specularColor;
+    vec3 lighting = (diff + fill + 0.05) * baseColor.rgb + spec * 0.1 * specularColor;
 
     // Emissive is added *unlit*
     lighting += emissiveColor;

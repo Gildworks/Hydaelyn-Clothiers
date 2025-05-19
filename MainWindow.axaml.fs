@@ -24,10 +24,10 @@ type MainWindow () as this =
     let viewModel = new VeldridWindowViewModel()
     
     do 
-        let mutable characterRace   : XivRace option    = None
+        let mutable characterRace   : XivRace = XivRace.Hyur_Midlander_Male
 
         let rec findCharacterPart (currentRaceInTree: XivRace) (partId: int) (partCategory: string) (characterItems: XivCharacter list): XivCharacter option =
-                let foundPart =
+                let tryFindWithId id =
                     characterItems
                     |> List.tryFind (fun item ->
                         item.TertiaryCategory = currentRaceInTree.GetDisplayName() &&
@@ -35,14 +35,17 @@ type MainWindow () as this =
                         item.ModelInfo.SecondaryID = partId
                     )
 
-                match foundPart with
+                match tryFindWithId partId with
                 | Some part -> Some part
                 | None ->
-                    let parentNode = XivRaceTree.GetNode(currentRaceInTree).Parent
-                    if parentNode <> null && parentNode.Race <> XivRace.All_Races then
-                        findCharacterPart parentNode.Race partId partCategory characterItems
-                    else
-                        None
+                    match tryFindWithId 5 with
+                    | Some alt -> Some alt
+                    | None ->
+                        let parentNode = XivRaceTree.GetNode(currentRaceInTree).Parent
+                        if parentNode <> null && parentNode.Race <> XivRace.All_Races then
+                            findCharacterPart parentNode.Race partId partCategory characterItems
+                        else
+                            None
 
         let getCustomizableParts (targetRace: XivRace) (partCategory: string) (characterItems: XivCharacter list) : XivCharacter list =
             characterItems
@@ -116,7 +119,25 @@ type MainWindow () as this =
                     let legsNames = legsGear |> List.map (fun m -> m.Name)
                     let feetNames = feetGear |> List.map (fun m -> m.Name)
 
+                    let clearSelection (slot: ComboBox)  (gearList: XivGear list) =
+                        let index =
+                            let mutable index: int = -1
+                            gearList
+                            |> List.tryFind( fun g -> g.Name.Contains("SmallClothes"))
+                            |> Option.iter (fun sc ->
+                                let idx = gearList |> List.findIndex (fun g -> g = sc)
+                                index <- idx
+                                )
+                            index
+                               
+                        if index >= 0 then
+                            slot.SelectedIndex <- index
+                        else
+                            render.ClearGearSlot EquipmentSlot.Head
+                            slot.SelectedIndex <- -1
 
+
+                    // === Character Selection Boxes ===
                     let raceSelector = this.FindControl<ComboBox>("RaceSelector")
                     raceSelector.ItemsSource <- raceOptions
                     
@@ -130,19 +151,30 @@ type MainWindow () as this =
                     let submitCharacter = this.FindControl<Button>("SubmitCharacter")
                     submitCharacter.IsEnabled <- false
 
+                    // === Gear Selection Boxes ===
                     let headSlot = this.FindControl<ComboBox>("HeadSlot")
+                    let headClear = this.FindControl<Button>("HeadClear")
+                    headClear.Click.Add(fun _ -> clearSelection headSlot headGear)
                     headSlot.ItemsSource <- headNames
 
                     let bodySlot = this.FindControl<ComboBox>("BodySlot")
+                    let bodyClear = this.FindControl<Button>("BodyClear")
+                    bodyClear.Click.Add(fun _ -> clearSelection bodySlot bodyGear)
                     bodySlot.ItemsSource <- bodyNames
 
                     let handSlot = this.FindControl<ComboBox>("HandSlot")
+                    let handClear = this.FindControl<Button>("HandClear")
+                    handClear.Click.Add(fun _ -> clearSelection handSlot handGear)
                     handSlot.ItemsSource <- handNames
 
                     let legsSlot = this.FindControl<ComboBox>("LegsSlot")
+                    let legClear = this.FindControl<Button>("LegClear")
+                    legClear.Click.Add(fun _ -> clearSelection legsSlot legsGear)
                     legsSlot.ItemsSource <- legsNames
 
                     let feetSlot = this.FindControl<ComboBox>("FeetSlot")
+                    let feetClear = this.FindControl<Button>("FeetClear")
+                    feetClear.Click.Add(fun _ -> clearSelection feetSlot feetGear)
                     feetSlot.ItemsSource <- feetNames
 
 
@@ -203,14 +235,16 @@ type MainWindow () as this =
                         | true, parsedRace ->
                             Async.StartImmediate <|
                             async {
-                                characterRace <- Some parsedRace
-                                let effectiveBodyItem = findCharacterPart parsedRace 1 "Body" chara
-                                let effectiveFaceItem = findCharacterPart parsedRace 1 "Face" chara
+                                characterRace <- parsedRace
+                                let availableBodyItems = getCustomizableParts parsedRace "Body" chara
+                                let availableFaceItem = getCustomizableParts parsedRace "Face" chara
 
                                 let availableHairs = getCustomizableParts parsedRace "Hair" chara
                                 let availableEars = getCustomizableParts parsedRace "Ear" chara
                                 let availableTails = getCustomizableParts parsedRace "Tail" chara
 
+                                let effectiveBodyItem = availableBodyItems |> List.tryHead
+                                let effectiveFaceItem = availableFaceItem |> List.tryHead
                                 let defaultHair = availableHairs |> List.tryHead
                                 let defaultEar = availableEars |> List.tryHead
                                 let defaultTail = availableTails |> List.tryHead
@@ -273,7 +307,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < headGear.Length then
                             let entry = headGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_met.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace.Value) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace) |> ignore
                     )
 
                     bodySlot.SelectionChanged.Add(fun _ ->
@@ -282,7 +316,7 @@ type MainWindow () as this =
                             let entry = bodyGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_top.mdl"
                             printfn $"Path: {path}"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace.Value) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace) |> ignore
                     )
 
                     handSlot.SelectionChanged.Add(fun _ ->
@@ -290,7 +324,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < handGear.Length then
                             let entry = handGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_glv.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace.Value) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace) |> ignore
                     )
 
                     legsSlot.SelectionChanged.Add(fun _ ->
@@ -298,7 +332,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < legsGear.Length then
                             let entry = legsGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_dwn.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace.Value) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace) |> ignore
                     )
 
                     feetSlot.SelectionChanged.Add(fun _ ->
@@ -306,7 +340,7 @@ type MainWindow () as this =
                         if idx >= 0 && idx < feetGear.Length then
                             let entry = feetGear[idx]
                             let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_sho.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace.Value) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace) |> ignore
                     )
 
                     

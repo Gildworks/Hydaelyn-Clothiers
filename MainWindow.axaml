@@ -9,10 +9,10 @@
         Title="fs_mdl_viewer"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
-	<Grid ColumnDefinitions="Auto, 5, *">
+	<Grid ColumnDefinitions="*, 5, 3*">
 		<StackPanel Grid.Column="0">
 			<StackPanel>
-				<TextBlock Text="Chaacter Builder" HorizontalAlignment="Stretch" Margin="19" />
+				<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
 				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
 					<ComboBox.ItemTemplate>
 						<DataTemplate x:DataType="shared:ComboOption">
@@ -27,11 +27,26 @@
 			</StackPanel>
 			<StackPanel>
 				<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
-				<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-				<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-				<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-				<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-				<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+				<Grid ColumnDefinitions="9*, *">
+					<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" />
+					<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+				</Grid>
+				<Grid ColumnDefinitions="9*, *">
+					<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+					<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+				</Grid>
+				<Grid ColumnDefinitions="9*, *">
+					<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+					<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+				</Grid>
+				<Grid ColumnDefinitions="9*, *">
+					<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+					<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+				</Grid>
+				<Grid ColumnDefinitions="9*, *">
+					<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+					<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+				</Grid>				
 			</StackPanel>
 
 		</StackPanel>

@@ -151,11 +151,11 @@ type VeldridView() =
                     comparisonKind = ComparisonKind.LessEqual
                 ),
                 RasterizerStateDescription(
-                    cullMode = FaceCullMode.None,
+                    cullMode = FaceCullMode.Back,
                     fillMode = PolygonFillMode.Solid,
                     frontFace = FrontFace.Clockwise,
-                    depthClipEnabled = false,
-                    scissorTestEnabled = false
+                    depthClipEnabled = true,
+                    scissorTestEnabled = true
                 ),
                 PrimitiveTopology.TriangleList,
                 shaderSet,
