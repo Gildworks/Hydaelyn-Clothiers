@@ -29,6 +29,7 @@ open xivModdingFramework.Mods
 open MaterialBuilder
 open ModelLoader
 open CameraController
+open ApplyFlags
 open Shared
 
 type VeldridView() as this =
@@ -351,11 +352,12 @@ type VeldridView() as this =
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
             ttModelMap <- ttModelMap.Add(slot, Some ttModel)
-            printfn $"Model obtained! {ttModel.Source}"
+            let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
+            ttModelMap <- adjustedModels
             let! renderModel =
                 async{
                     try
-                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx ttModel item race materialBuilder |> Async.AwaitTask
+                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx ttModelMap[slot].Value item race materialBuilder |> Async.AwaitTask
                     with ex ->
                         printfn $"Error loading model: {ex.Message}"
                         return raise ex 

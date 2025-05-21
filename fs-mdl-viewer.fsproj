@@ -15,7 +15,7 @@
     </ItemGroup>
 
 	<ItemGroup>
-		<Compile Include="ApplyFlags.fs" />
+		
 		<Content Include="shaders\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
@@ -23,11 +23,9 @@
 	</ItemGroup>
     
     <ItemGroup>
-
-
 		<Compile Include="CommonTypes.fs" />
 		<Compile Include="MaterialBuilder.fs" />
-		
+		<Compile Include="ApplyFlags.fs" />
 		
 		
 		<Compile Include="ShaderUtils.fs" />		
