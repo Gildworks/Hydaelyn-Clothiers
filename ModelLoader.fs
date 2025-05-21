@@ -22,19 +22,16 @@ let loadRenderModelFromItem
     (factory           : ResourceFactory)
     (gd                : GraphicsDevice)
     (tx                : ModTransaction)
+    (ttModel           : TTModel)
     (item              : IItemModel)
-    (matchedRace       : XivRace)
-    (targetRace        : XivRace)
+    (race              : XivRace)
     (mtlBuilder : XivMtrl -> Task<PreparedMaterial>)
     : Task<RenderModel> =
     task {
-        printfn $"Loading raw model... matched race: {matchedRace.GetDisplayName()} | target race {targetRace.GetDisplayName()}"
-        let! ttModel = Mdl.GetTTModel(item, matchedRace)
+        //for mat in ttModel.Materials do
+        //    printfn $"Material path: {mat}"
+        //do! ModelModifiers.FixUpSkinReferences(ttModel, race)
 
-        do! ModelModifiers.RaceConvert(ttModel, targetRace, null, tx) |> Async.AwaitTask
-
-        for mat in ttModel.Materials do
-            printfn $"Material path: {mat}"
 
         printfn "Generating material map..."
         let materialMap =
@@ -47,10 +44,11 @@ let loadRenderModelFromItem
             
                     let finalPath =
                         try
-                            let material = Mtrl.GetXivMtrl(path, item, true, tx)
+                            let material = Mtrl.GetXivMtrl(path, item, false)
                             material.Result.MTRLPath
                         with
                         | _ ->
+                            printfn $"Using fallback logic for material: {path}"
                             Mtrl.GetMtrlPath(ttModel.Source, path)
                     printfn $"Full internal path: {finalPath}"
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
@@ -61,8 +59,8 @@ let loadRenderModelFromItem
                     printfn "Material prepared!"
                     return path, prepared
                 with ex ->
-                    let! finalPath = Mtrl.GetXivMtrl(path, item, true, tx)
-                    printfn $"Failed to load material for {finalPath.MTRLPath}: {ex.Message}"
+                    let finalPath = Mtrl.GetMtrlPath(ttModel.Source, path)
+                    printfn $"Failed to load material for {finalPath}: {ex.Message}"
                     return raise ex
             })
             |> Task.WhenAll

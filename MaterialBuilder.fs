@@ -7,6 +7,7 @@ open xivModdingFramework.Materials.FileTypes
 open xivModdingFramework.Models.ModelTextures
 open xivModdingFramework.Textures.DataContainers
 open xivModdingFramework.Textures.FileTypes
+open xivModdingFramework.General.Enums
 open Shared
 
 let materialBuilder

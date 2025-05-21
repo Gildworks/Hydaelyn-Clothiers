@@ -15,6 +15,7 @@
     </ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="ApplyFlags.fs" />
 		<Content Include="shaders\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

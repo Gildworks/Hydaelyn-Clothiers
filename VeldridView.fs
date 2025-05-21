@@ -22,6 +22,8 @@ open xivModdingFramework.Items.Categories
 open xivModdingFramework.General.Enums
 open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Models.FileTypes
+open xivModdingFramework.Models.DataContainers
+open xivModdingFramework.Models.Helpers
 open xivModdingFramework.Mods
 
 open MaterialBuilder
@@ -29,13 +31,15 @@ open ModelLoader
 open CameraController
 open Shared
 
-type VeldridView() =
+type VeldridView() as this =
     inherit VeldridRender()
 
     // === Model Resources ===
     let allSlots = [ Head; Body; Hands; Legs; Feet ]
-    let mutable modelMap : Map<EquipmentSlot, RenderModel option> =
-        allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
+    let mutable ttModelMap : Map<EquipmentSlot, TTModel option> = Map.empty
+        //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
+    let mutable modelMap : Map<EquipmentSlot, RenderModel option> = Map.empty
+        //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
 
     let mutable gearItem        : IItemModel option             = None
     let mutable modelRace       : XivRace option                = None
@@ -67,13 +71,21 @@ type VeldridView() =
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
             let! (slot, item, race, reply: AsyncReplyChannel<unit>) = inbox.Receive()
-            gearItem <- Some item
-            modelSlot <- Some slot
-            modelRace <- Some race
-            assignModel <- true
+            printfn "\n\n========================================================="
+            printfn $"[Mailbox] Assigning model for: Slot {slot} | Race {race} | Item {item}"
+            printfn"============================================"
+            //gearItem <- Some item
+            //modelSlot <- Some slot
+            //modelRace <- Some race
+            //assignModel <- true
 
-            while assignModel do
-                do! Async.Sleep 10
+            //while assignModel do
+            //    do! Async.Sleep 10
+
+            let! _ =
+                async {
+                    do! this.AssignGear(slot, item, race, device.Value )
+                }
             
             reply. Reply(())
             return! loop ()
@@ -100,9 +112,9 @@ type VeldridView() =
         mvpSet    <- Some set
 
     override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain): unit = 
-        if assignModel then
-            this.AssignGear(modelSlot.Value, gearItem.Value, modelRace.Value, gd)
-            assignModel <- false
+        //if assignModel then
+        //    this.AssignGear(modelSlot.Value, gearItem.Value, modelRace.Value, gd)
+        //    assignModel <- false
 
         if isResizing then () else
 
@@ -151,7 +163,7 @@ type VeldridView() =
                     comparisonKind = ComparisonKind.LessEqual
                 ),
                 RasterizerStateDescription(
-                    cullMode = FaceCullMode.Back,
+                    cullMode = FaceCullMode.Front,
                     fillMode = PolygonFillMode.Solid,
                     frontFace = FrontFace.Clockwise,
                     depthClipEnabled = true,
@@ -170,7 +182,7 @@ type VeldridView() =
             let aspect = w / h
             let view = camera.GetViewMatrix()
             let proj = camera.GetProjectionMatrix(aspect)
-            let mvpMatrix = Matrix4x4.CreateScale(2.5f) * view * proj
+            let mvpMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f) * view * proj
 
             cmdList.Begin()
             cmdList.SetFramebuffer(fb)
@@ -208,7 +220,7 @@ type VeldridView() =
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, gd: GraphicsDevice) =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, gd: GraphicsDevice) : Async<unit> =
         printfn $"Loading model with the following parameters:"
         printfn $"Slot: {slot}"
         printfn $"Item: {item}"
@@ -247,7 +259,7 @@ type VeldridView() =
             //        printfn $"Error loading model: {ex.Message}"
             //        raise ex
 
-            let! renderModel =
+            let! ttModel =
                 printfn "Reached renderModel loading!"
                 async{    
                     match slot with
@@ -265,7 +277,8 @@ type VeldridView() =
                             | _ -> "error", "error", "error"
                         let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
                         try
-                            return! ModelLoader.loadRenderModelFromPart gd.ResourceFactory gd tx mdlPath race materialBuilder |> Async.AwaitTask
+                            //return! ModelLoader.loadRenderModelFromPart gd.ResourceFactory gd tx mdlPath race materialBuilder |> Async.AwaitTask
+                            return! Mdl.GetTTModel(mdlPath, true, tx) |> Async.AwaitTask
                         with ex ->
                             printfn $"[Character Part Loading | Path: {mdlPath}] Error loading model: {ex.Message}"
                             return raise ex
@@ -301,9 +314,16 @@ type VeldridView() =
                             }
                         
                         let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
-                        let! resolvedRace = resolveModelRace(item, race, slot, priorityList)                        
+                        let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
+                        
+                        let loadModel (item: IItemModel) (race: XivRace) =
+                            task {
+                                let! model = Mdl.GetTTModel(item, race)
+                                printfn $"Model loaded: {model.Source}"
+                                return model
+                            }
 
-                        let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<RenderModel> =
+                        let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
                             async {
                                 match races with
                                 | [] ->
@@ -312,23 +332,38 @@ type VeldridView() =
                                 | race::rest ->
                                     try
                                         printfn $"Trying {race} as a fallback..."
-                                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx item race targetRace materialBuilder |> Async.AwaitTask
+                                        //return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx item race targetRace materialBuilder |> Async.AwaitTask
+                                        return! loadModel item race |> Async.AwaitTask
                                     with ex ->
                                         printfn $"Fallback failed for {race}: {ex.Message}"
-                                        return! racialFallbacks item rest targetRace
+                                        return! racialFallbacks item rest race
                             }
+
                         
                         try
-                            printfn $"Attempting to load model with {race.ToString()}"
-                            return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value race race materialBuilder |> Async.AwaitTask
+                            printfn $"Attempting to load model with {resolvedRace.ToString()}"
+                            //return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value race race materialBuilder |> Async.AwaitTask
+                            return! loadModel item race |> Async.AwaitTask
                         with _ ->
-                            return! racialFallbacks item priorityList race
+                            
+                            return! racialFallbacks item priorityList resolvedRace
                 }
-            
+            do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
+            ModelModifiers.FixUpSkinReferences(ttModel, race)
+            ttModelMap <- ttModelMap.Add(slot, Some ttModel)
+            printfn $"Model obtained! {ttModel.Source}"
+            let! renderModel =
+                async{
+                    try
+                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx ttModel item race materialBuilder |> Async.AwaitTask
+                    with ex ->
+                        printfn $"Error loading model: {ex.Message}"
+                        return raise ex 
+                }
             modelMap <- modelMap.Add(slot, Some renderModel)
-            printfn "Model loaded!"
+            printfn $"Model loaded!"
             texLayout <- Some textureLayout
-        } |> Async.StartImmediate
+        }
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace) : Async<unit> =
         agent.PostAndAsyncReply(fun reply -> (slot, item, race, reply))
