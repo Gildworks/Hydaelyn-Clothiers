@@ -37,9 +37,9 @@ type VeldridView() as this =
 
     // === Model Resources ===
     let allSlots = [ Head; Body; Hands; Legs; Feet ]
-    let mutable ttModelMap : Map<EquipmentSlot, TTModel option> = Map.empty
+    let mutable ttModelMap : Map<EquipmentSlot, TTModel * IItemModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
-    let mutable modelMap : Map<EquipmentSlot, RenderModel option> = Map.empty
+    let mutable modelMap : Map<EquipmentSlot, RenderModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
 
     let mutable gearItem        : IItemModel option             = None
@@ -190,7 +190,7 @@ type VeldridView() as this =
             cmdList.ClearColorTarget(0u, RgbaFloat.Grey)
             cmdList.ClearDepthStencil(1.0f)
 
-            let visibleModels = modelMap |> Map.values |> Seq.choose id |> Seq.toList
+            let visibleModels = modelMap |> Map.values |> Seq.toList
 
             if visibleModels.IsEmpty then
                 if pipeline.IsNone then
@@ -351,18 +351,19 @@ type VeldridView() as this =
                 }
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
-            ttModelMap <- ttModelMap.Add(slot, Some ttModel)
+            ttModelMap <- ttModelMap.Add(slot, (ttModel,  item))
             let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
             ttModelMap <- adjustedModels
             let! renderModel =
                 async{
                     try
-                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx ttModelMap[slot].Value item race materialBuilder |> Async.AwaitTask
+                        let (fixedModel, _) = ttModelMap[slot]
+                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
                     with ex ->
                         printfn $"Error loading model: {ex.Message}"
                         return raise ex 
                 }
-            modelMap <- modelMap.Add(slot, Some renderModel)
+            modelMap <- modelMap.Add(slot, renderModel)
             printfn $"Model loaded!"
             texLayout <- Some textureLayout
         }
@@ -430,7 +431,7 @@ type VeldridView() as this =
         }
 
     member this.ClearGearSlot(slot: EquipmentSlot) =
-        modelMap <- modelMap.Add(slot, None)
+        modelMap <- modelMap.Remove(slot)
 
     member this.CreateEmptyPipeline (gd: GraphicsDevice) (outputDesc: OutputDescription) =
         let factory = gd.ResourceFactory
@@ -465,8 +466,8 @@ type VeldridView() as this =
     member this.clearCharacter () =
         modelMap <-
         modelMap
-        |> Map.add Face None
-        |> Map.add Hair None
-        |> Map.add Tail None
-        |> Map.add Ear None
+        |> Map.remove Face
+        |> Map.remove Hair
+        |> Map.remove Tail
+        |> Map.remove Ear
 
