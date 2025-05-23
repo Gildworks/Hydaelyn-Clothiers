@@ -82,9 +82,9 @@ type MainWindow () as this =
                 | :? VeldridView as render ->
                     render.AttachInputHandlers(overlay)
 
-                    let mutable race        : string option     = None
-                    let mutable clan        : string option     = None
-                    let mutable gender      : string option     = None
+                    let mutable race        : XivBaseRace option     = None
+                    let mutable clan        : XivSubRace option     = None
+                    let mutable gender      : XivGender option     = None
                     let mutable charRace    : string option     = None
                     let mutable finalRace   : XivRace option    = None
 
@@ -94,18 +94,24 @@ type MainWindow () as this =
                     let tx = ModTransaction.BeginReadonlyTransaction()
 
                     
-                    let raceOptions = [
-                        { Display = "Hyur"; Value = "Hyur"}
-                        { Display = "Elezen"; Value = "Elezen"}
-                        { Display = "Lalafell"; Value = "Lalafell"}
-                        { Display = "Miqo'te"; Value = "Miqote"}
-                        { Display = "Roegadyn"; Value = "Roegadyn"}
-                        { Display = "Au Ra"; Value = "AuRa"}
-                        { Display = "Hrothgar"; Value = "Hrothgar"}
-                        { Display = "Viera"; Value = "Viera"}
-                    ]
-                    let genderOptions = ["Male"; "Female"]
-                    let clanOptions = ["Midlander"; "Highlander"]
+                    let baseRaces =
+                        Enum.GetValues(typeof<XivBaseRace>)
+                        |> Seq.cast<XivBaseRace>
+                        |> Seq.toList
+
+                    let clanMap =
+                        Enum.GetValues(typeof<XivSubRace>)
+                        |> Seq.cast<XivSubRace>
+                        |> Seq.groupBy (fun sub ->
+                            let name = sub.ToString()
+                            Enum.Parse<XivBaseRace>(name.Split('_')[0])
+                        )
+                        |> Map.ofSeq
+                    
+                    let genderOptions =
+                        Enum.GetValues(typeof<XivGender>)
+                        |> Seq.cast<XivGender>
+                        |> Seq.toList
 
                     let headGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Head")
                     let bodyGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Body")
@@ -139,10 +145,9 @@ type MainWindow () as this =
 
                     // === Character Selection Boxes ===
                     let raceSelector = this.FindControl<ComboBox>("RaceSelector")
-                    raceSelector.ItemsSource <- raceOptions
+                    raceSelector.ItemsSource <- baseRaces
                     
                     let clanSelector = this.FindControl<ComboBox>("ClanSelector")
-                    clanSelector.ItemsSource <- clanOptions
                     clanSelector.IsEnabled <- false
 
                     let genderSelector = this.FindControl<ComboBox>("GenderSelector")
@@ -179,28 +184,23 @@ type MainWindow () as this =
 
 
                     raceSelector.SelectionChanged.Add(fun _ ->
+                        let baseRaceSelection = raceSelector.SelectedValue :?> XivBaseRace
+                        race <- Some baseRaceSelection
                         match raceSelector.SelectedValue with
-                        | :? ComboOption as selected ->
-                            race <- Some selected.Value
-                            if selected.Value = "Hyur" then
+                        | :? XivBaseRace as selectedBase ->
+                            match clanMap.TryFind(selectedBase) with
+                            | Some subraces ->
+                                clanSelector.ItemsSource <- subraces
                                 clanSelector.IsEnabled <- true
-                                if race.IsSome && clan.IsSome && gender.IsSome then
-                                    submitCharacter.IsEnabled <- true
-                                else
-                                    submitCharacter.IsEnabled <- false
-                            else
-                                clanSelector.Clear()
-                                clan <- None
+                            | None ->
+                                clanSelector.ItemsSource <- []
                                 clanSelector.IsEnabled <- false
-                                if race.IsSome && gender.IsSome then
-                                    submitCharacter.IsEnabled <- true
-                                else
-                                    submitCharacter.IsEnabled <- false
                         | _ -> ()
+
                     )
 
                     clanSelector.SelectionChanged.Add(fun _ ->
-                        let clanSelection = clanSelector.SelectedValue :?> string
+                        let clanSelection = clanSelector.SelectedValue :?> XivSubRace
                         clan <- Some clanSelection
                         if race.IsSome && clan.IsSome && gender.IsSome then
                             submitCharacter.IsEnabled <- true
@@ -209,7 +209,7 @@ type MainWindow () as this =
                     )
 
                     genderSelector.SelectionChanged.Add(fun _ ->
-                        let genderSelection = genderSelector.SelectedValue :?> string
+                        let genderSelection = genderSelector.SelectedValue :?> XivGender
                         gender <- Some genderSelection
                         if clanSelector.IsEnabled then
                             if race.IsSome && clan.IsSome && gender.IsSome then
@@ -225,13 +225,17 @@ type MainWindow () as this =
 
                     submitCharacter.Click.Add(fun _ ->
                         render.clearCharacter()
-                        let raceValue =
-                            if race.Value = "Hyur" then
-                                $"{race.Value}_{clan.Value}_{gender.Value}"
-                            else
-                                $"{race.Value}_{gender.Value}"
+                        let raceItem = raceSelector.SelectedItem :?> XivBaseRace
+                        let subRaceItem = clanSelector.SelectedItem :?> XivSubRace
+                        let genderItem = genderSelector.SelectedItem :?> XivGender
 
-                        match Enum.TryParse<XivRace>(raceValue) with
+                        let finalRaceStr =
+                            match raceItem with
+                            | XivBaseRace.Hyur -> $"{subRaceItem.ToString()}_{genderItem.ToString()}"
+                            | _ -> $"{raceItem.ToString()}_{genderItem.ToString()}"
+                           
+
+                        match Enum.TryParse<XivRace>(finalRaceStr) with
                         | true, parsedRace ->
                             Async.StartImmediate <|
                             async {

@@ -13,13 +13,8 @@
 		<StackPanel Grid.Column="0">
 			<StackPanel>
 				<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
-				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
-					<ComboBox.ItemTemplate>
-						<DataTemplate x:DataType="shared:ComboOption">
-							<TextBlock Text="{Binding Display}" />
-						</DataTemplate>
-					</ComboBox.ItemTemplate>
-				</ComboBox>
+				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+
 				<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 				<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 				<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>

@@ -2,10 +2,11 @@
 
 open xivModdingFramework.General
 open xivModdingFramework.General.Enums
+open xivModdingFramework.General.DataContainers
 
-let getScalingParameters (race: XivSubRace) (gender: XivGender) =
-    task{
-        let! rgsp = CMP.GetScalingParameter (race, gender)
-        printfn $"Height range: {rgsp.MinSize} to {rgsp.MaxSize}"
-        printfn $"Tail size: {rgsp.MinTail} to {rgsp.MaxTail}"
+open xivModdingFramework.Models.DataContainers
+
+let applyCmp (cmp: RacialGenderScalingParameter) (ttModel: TTModel) =
+    task {
+        
     }
