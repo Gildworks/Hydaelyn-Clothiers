@@ -124,18 +124,26 @@ let removeMeshParts (flags: Map<EquipmentParameterFlag, bool>) (model: TTModel) 
                 | _ -> ()
             | EquipmentParameterFlag.FootHideKnee, true ->
                 match shoeType() with
-                | "Shoe" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_sne"]), false)
-                | "MidBoot" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_hiz"]), false)
-                | "LongBoot" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_mom"]), false)
+                | "Shoe" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_sne"]), false)
+                | "MidBoot" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_hiz"]), false)
+                    removeParts model "atr_hiz"
+                | "LongBoot" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_mom"]), false)
+                    removeParts model "atr_hiz"
                 | _ -> ()
-                removeParts model "atr_hiz"
             | EquipmentParameterFlag.FootHideCalf, true ->
                 match shoeType() with
-                | "Shoe" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_sne"]), false)
-                | "MidBoot" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_hiz"]), false)
-                | "LongBoot" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_mom"]), false)
+                | "Shoe" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_sne"]), false)
+                | "MidBoot" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_hiz"]), false)
+                    removeParts model "atr_sne"
+                | "LongBoot" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_mom"]), false)
+                    removeParts model "atr_sne"
                 | _ -> ()
-                removeParts model "atr_sne"
             | EquipmentParameterFlag.HeadHideScalp, true ->
                 do ModelModifiers.ApplyShapes(model, List<string>(["shp_hib"]), false)
                 removeParts model "atr_kam"
@@ -167,36 +175,35 @@ let removeSlot (flags: Map<EquipmentParameterFlag, bool>) (models: Map<Equipment
         for flag in flags do
             match (flag.Key, flag.Value) with
             | EquipmentParameterFlag.BodyShowLeg, false ->
-                visibleModels <- models.Remove(Legs)
+                visibleModels <- visibleModels.Remove(Legs)
             | EquipmentParameterFlag.BodyShowHand, false ->
-                visibleModels <- models.Remove(Hands)
+                visibleModels <- visibleModels.Remove(Hands)
             | EquipmentParameterFlag.BodyShowHead, false ->
-                visibleModels <- models.Remove(Head)
+                visibleModels <- visibleModels.Remove(Head)
+            | EquipmentParameterFlag.HeadShowNecklace, false
             | EquipmentParameterFlag.BodyShowNecklace, false ->
-                visibleModels <- models.Remove(Necklace)
+                visibleModels <- visibleModels.Remove(Necklace)
             | EquipmentParameterFlag.HandShowBracelet, false
             | EquipmentParameterFlag.BodyShowBracelet, false ->
-                visibleModels <- models.Remove(Bracelet)
+                visibleModels <- visibleModels.Remove(Bracelet)
             | EquipmentParameterFlag.LegShowTail, false
             | EquipmentParameterFlag.BodyShowTail, false ->
-                visibleModels <- models.Remove(Tail)
+                visibleModels <- visibleModels.Remove(Tail)
             | EquipmentParameterFlag.LegShowFoot, false ->
-                visibleModels <- models.Remove(Feet)
+                visibleModels <- visibleModels.Remove(Feet)
             | EquipmentParameterFlag.HandShowRingL, false ->
-                visibleModels <- models.Remove(RingL)
+                visibleModels <- visibleModels.Remove(RingL)
             | EquipmentParameterFlag.HandShowRingR, false ->
-                visibleModels <- models.Remove(RingR)
+                visibleModels <- visibleModels.Remove(RingR)
             | EquipmentParameterFlag.HeadShowHairOverride, true ->
                 usedFlags <- usedFlags.Remove(EquipmentParameterFlag.HeadHideHair)
                 usedFlags <- usedFlags.Remove(EquipmentParameterFlag.HeadHideScalp)
             | EquipmentParameterFlag.HeadHideHair, true ->
-                visibleModels <- models.Remove(Hair)
-            | EquipmentParameterFlag.HeadShowNecklace, false ->
-                visibleModels <- models.Remove(Necklace)
+                visibleModels <- visibleModels.Remove(Hair)
             | EquipmentParameterFlag.HeadShowEarrings, false ->
-                visibleModels <- models.Remove(Earrings)
+                visibleModels <- visibleModels.Remove(Earrings)
             | EquipmentParameterFlag.HeadShowEarViera, false ->
-                visibleModels <- models.Remove(Ear)
+                visibleModels <- visibleModels.Remove(Ear)
             | _ -> ()
         return visibleModels
     }

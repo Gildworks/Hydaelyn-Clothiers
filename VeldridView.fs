@@ -364,7 +364,7 @@ type VeldridView() as this =
             ModelModifiers.FixUpSkinReferences(ttModel, race)
             ttModelMap <- ttModelMap.Add(slot, (ttModel,  item))
             let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
-            //ttModelMap <- adjustedModels
+            ttModelMap <- adjustedModels
             for slot, (ttModel, item) in Map.toSeq adjustedModels do
                 let! renderModel =
                     async{

@@ -283,17 +283,18 @@ type MainWindow () as this =
                                     if current >= 0 then
                                         slot.SelectedIndex <- -1
                                         slot.SelectedIndex <- current
+                                reloadGear headSlot
+                                reloadGear bodySlot
+                                reloadGear handSlot
+                                reloadGear legsSlot
+                                reloadGear feetSlot
 
                                 baseCharacter bodySlot bodyGear "SmallClothes"
                                 baseCharacter handSlot handGear "SmallClothes"
                                 baseCharacter legsSlot legsGear "SmallClothes"
                                 baseCharacter feetSlot feetGear "SmallClothes"
 
-                                reloadGear headSlot
-                                reloadGear bodySlot
-                                reloadGear handSlot
-                                reloadGear legsSlot
-                                reloadGear feetSlot
+
                             }
 
                         | false, _ ->
