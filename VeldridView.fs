@@ -13,6 +13,7 @@ open Avalonia.Threading
 open AvaloniaRender.Veldrid
 
 open Veldrid
+open Veldrid.Utilities
 
 open xivModdingFramework.Cache
 open xivModdingFramework.Exd.Enums
@@ -60,6 +61,8 @@ type VeldridView() as this =
     let mutable emptyPipeline   : Pipeline option               = None
     let mutable emptyMVPBuffer  : DeviceBuffer option           = None
     let mutable emptyMVPSet     : ResourceSet option            = None
+
+    let disposeQueue = System.Collections.Generic.Queue<RenderModel * int>()
 
     // === Camera Resources ===
     let mutable camera          : CameraController              = CameraController()
@@ -214,6 +217,14 @@ type VeldridView() as this =
 
             if not firstRender then firstRender <- true
 
+            let mutable count = disposeQueue.Count
+            for _ in 0 .. count - 1 do
+                let model, framesLeft = disposeQueue.Dequeue()
+                if framesLeft <= 0 then
+                    model.Dispose()
+                else
+                    disposeQueue.Enqueue((model, framesLeft - 1))
+
     override this.Dispose (gd: GraphicsDevice): unit =
         pipeline    |> Option.iter (fun p -> p.Dispose())
         mvpBuffer   |> Option.iter (fun b -> b.Dispose())
@@ -353,19 +364,26 @@ type VeldridView() as this =
             ModelModifiers.FixUpSkinReferences(ttModel, race)
             ttModelMap <- ttModelMap.Add(slot, (ttModel,  item))
             let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
-            ttModelMap <- adjustedModels
-            let! renderModel =
-                async{
-                    try
-                        let (fixedModel, _) = ttModelMap[slot]
-                        return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
-                    with ex ->
-                        printfn $"Error loading model: {ex.Message}"
-                        return raise ex 
-                }
-            modelMap <- modelMap.Add(slot, renderModel)
+            //ttModelMap <- adjustedModels
+            for slot, (ttModel, item) in Map.toSeq adjustedModels do
+                let! renderModel =
+                    async{
+                        try
+                            let (fixedModel, _) = adjustedModels[slot]
+                            return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
+                        with ex ->
+                            printfn $"Error loading model: {ex.Message}"
+                            return raise ex 
+                    }
+                match modelMap.TryFind(slot) with
+                | Some oldModel when not (obj.ReferenceEquals(oldModel, renderModel)) -> disposeQueue.Enqueue((oldModel, 5))
+                | None -> ()
+                | _ -> ()
+
+                modelMap <- modelMap.Add(slot, renderModel)
             printfn $"Model loaded!"
             texLayout <- Some textureLayout
+            
         }
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace) : Async<unit> =
@@ -464,10 +482,18 @@ type VeldridView() as this =
         emptyMVPSet <- Some mvpSet
 
     member this.clearCharacter () =
+        ttModelMap <-
+            ttModelMap
+            |> Map.remove Face
+            |> Map.remove Hair
+            |> Map.remove Tail
+            |> Map.remove Ear
+
         modelMap <-
-        modelMap
-        |> Map.remove Face
-        |> Map.remove Hair
-        |> Map.remove Tail
-        |> Map.remove Ear
+            modelMap
+            |> Map.remove Face
+            |> Map.remove Hair
+            |> Map.remove Tail
+            |> Map.remove Ear
+
 

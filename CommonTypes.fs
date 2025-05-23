@@ -5,6 +5,7 @@ open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.General.Enums
+open System
 open System.Numerics
 open System.Runtime.InteropServices
 open Veldrid
@@ -55,6 +56,11 @@ type EquipmentSlot =
     | Hair
     | Tail
     | Ear
+    | Bracelet
+    | RingL
+    | RingR
+    | Necklace
+    | Earrings
 
 type ColorSetRow =
     {
@@ -112,6 +118,18 @@ type PreparedMaterial =
         ResourceSet             : ResourceSet
         Mtrl                    : XivMtrl
     }
+    with
+        member this.Dispose() =
+            this.DiffuseTexture.Dispose()
+            this.AlphaTexture.Dispose()
+            this.EmissiveTexture.Dispose()
+            this.MetalnessTexture.Dispose()
+            this.NormalTexture.Dispose()
+            this.OcclusionTexture.Dispose()
+            this.RoughnessTexture.Dispose()
+            this.SpecularTexture.Dispose()
+            this.SubsurfaceTexture.Dispose()
+            this.ResourceSet.Dispose()
 
 
 type MdlEntry = {
@@ -137,6 +155,12 @@ type RenderModel = {
     Meshes                      : RenderMesh list
     Original                    : TTModel
 }
+    with
+        member this.Dispose() =
+            for mesh in this.Meshes do
+                mesh.VertexBuffer.Dispose()
+                mesh.IndexBuffer.Dispose()
+                mesh.Material.Dispose()
 
 type PipelineKey = {
     VertexLayout                : VertexLayoutDescription

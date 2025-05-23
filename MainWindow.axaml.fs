@@ -303,6 +303,7 @@ type MainWindow () as this =
 
 
                     headSlot.SelectionChanged.Add(fun _ ->
+                        printfn "SelectionChanged event firing"
                         let idx = headSlot.SelectedIndex
                         if idx >= 0 && idx < headGear.Length then
                             let entry = headGear[idx]
@@ -311,6 +312,7 @@ type MainWindow () as this =
                     )
 
                     bodySlot.SelectionChanged.Add(fun _ ->
+                        printfn "SelectionChanged event firing"
                         let idx = bodySlot.SelectedIndex
                         if idx >= 0 && idx < bodyGear.Length then
                             let entry = bodyGear[idx]
@@ -320,6 +322,7 @@ type MainWindow () as this =
                     )
 
                     handSlot.SelectionChanged.Add(fun _ ->
+                        printfn "SelectionChanged event firing"
                         let idx = handSlot.SelectedIndex
                         if idx >= 0 && idx < handGear.Length then
                             let entry = handGear[idx]
@@ -328,6 +331,7 @@ type MainWindow () as this =
                     )
 
                     legsSlot.SelectionChanged.Add(fun _ ->
+                        printfn "SelectionChanged event firing"
                         let idx = legsSlot.SelectedIndex
                         if idx >= 0 && idx < legsGear.Length then
                             let entry = legsGear[idx]
@@ -336,6 +340,7 @@ type MainWindow () as this =
                     )
 
                     feetSlot.SelectionChanged.Add(fun _ ->
+                        printfn "SelectionChanged event firing"
                         let idx = feetSlot.SelectedIndex
                         if idx >= 0 && idx < feetGear.Length then
                             let entry = feetGear[idx]
