@@ -78,18 +78,14 @@ type VeldridView() as this =
             printfn "\n\n========================================================="
             printfn $"[Mailbox] Assigning model for: Slot {slot} | Race {race} | Item {item}"
             printfn"============================================"
-            //gearItem <- Some item
-            //modelSlot <- Some slot
-            //modelRace <- Some race
-            //assignModel <- true
 
-            //while assignModel do
-            //    do! Async.Sleep 10
-
-            let! _ =
-                async {
-                    do! this.AssignGear(slot, item, race, device.Value )
-                }
+            try
+                //let! _ =
+                //    async {
+                do! this.AssignGear(slot, item, race, device.Value )
+                    //}
+            with ex ->
+                printfn $"[AssignGear] Failed to load model for slot {slot}: {ex.Message}"
             
             reply. Reply(())
             return! loop ()
@@ -264,6 +260,12 @@ type VeldridView() as this =
             printfn "Loading model..."
 
             let! ttModel =
+                let loadModel (item: IItemModel) (race: XivRace) =
+                    task {
+                        let! model = Mdl.GetTTModel(item, race)
+                        printfn $"Model loaded: {model.Source}"
+                        return model
+                    }
                 printfn "Reached renderModel loading!"
                 async{    
                     match slot with
@@ -281,7 +283,7 @@ type VeldridView() as this =
                             | _ -> "error", "error", "error"
                         let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
                         try
-                            return! Mdl.GetTTModel(item, race) |> Async.AwaitTask
+                            return! loadModel item race |> Async.AwaitTask
                         with ex ->
                             printfn $"[Character Part Loading | Path: {mdlPath}] Error loading model: {ex.Message}"
                             return raise ex
@@ -319,12 +321,7 @@ type VeldridView() as this =
                         let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
                         let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
                         
-                        let loadModel (item: IItemModel) (race: XivRace) =
-                            task {
-                                let! model = Mdl.GetTTModel(item, race)
-                                printfn $"Model loaded: {model.Source}"
-                                return model
-                            }
+                        
 
                         let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
                             async {
@@ -351,6 +348,7 @@ type VeldridView() as this =
                             
                             return! racialFallbacks item priorityList resolvedRace
                 }
+            printfn $"Leaving the model loading area"
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
             ttModelMap <- ttModelMap.Add(slot, (ttModel,  item))

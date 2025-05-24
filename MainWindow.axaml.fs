@@ -10,6 +10,7 @@ open Avalonia.Markup.Xaml
 open AvaloniaRender.Veldrid
 open xivModdingFramework.Cache
 open xivModdingFramework.General.Enums
+open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Items.Categories
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.Items.Enums
@@ -47,11 +48,19 @@ type MainWindow () as this =
                         else
                             None
 
+        let hasModel (item: IItemModel) =
+            try
+                let model = Mdl.GetTTModel(item, characterRace)
+                not model.IsFaulted
+            with _ ->
+                false
+
         let getCustomizableParts (targetRace: XivRace) (partCategory: string) (characterItems: XivCharacter list) : XivCharacter list =
             characterItems
             |> List.filter (fun item ->
                 item.TertiaryCategory = targetRace.GetDisplayName() &&
-                item.SecondaryCategory = partCategory
+                item.SecondaryCategory = partCategory &&
+                hasModel item
             )
             |> List.sortBy (fun item -> item.ModelInfo.SecondaryID)
 
@@ -252,7 +261,6 @@ type MainWindow () as this =
                         let idx = faceSelector.SelectedIndex
                         if idx >= 0 && idx < faces.Length then
                             let entry = faces[idx]
-                            printfn $"ModelInfo: {entry.DataFile.GetFileName()}"
                             do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace) |> ignore
                     )
 
