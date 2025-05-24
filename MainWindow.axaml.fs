@@ -252,6 +252,7 @@ type MainWindow () as this =
                         let idx = faceSelector.SelectedIndex
                         if idx >= 0 && idx < faces.Length then
                             let entry = faces[idx]
+                            printfn $"ModelInfo: {entry.DataFile.GetFileName()}"
                             do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace) |> ignore
                     )
 
@@ -259,6 +260,7 @@ type MainWindow () as this =
                         let idx = earSelector.SelectedIndex
                         if idx >= 0 && idx < ears.Length then
                             let entry = ears[idx]
+                            
                             do render.AssignTrigger(Shared.EquipmentSlot.Ear, entry, characterRace) |> ignore
                     )
 

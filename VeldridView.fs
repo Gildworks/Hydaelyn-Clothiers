@@ -262,14 +262,6 @@ type VeldridView() as this =
             let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout
             printfn "Material built!"
             printfn "Loading model..."
-            //let! renderModel2 =
-            //    try
-            //        ModelLoader.loadRenderModelFromItem
-            //            gd.ResourceFactory gd tx gearItem.Value XivRace.Hyur_Midlander_Female materialBuilder
-            //        |> Async.AwaitTask
-            //    with ex ->
-            //        printfn $"Error loading model: {ex.Message}"
-            //        raise ex
 
             let! ttModel =
                 printfn "Reached renderModel loading!"
@@ -289,8 +281,7 @@ type VeldridView() as this =
                             | _ -> "error", "error", "error"
                         let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
                         try
-                            //return! ModelLoader.loadRenderModelFromPart gd.ResourceFactory gd tx mdlPath race materialBuilder |> Async.AwaitTask
-                            return! Mdl.GetTTModel(mdlPath, true, tx) |> Async.AwaitTask
+                            return! Mdl.GetTTModel(item, race) |> Async.AwaitTask
                         with ex ->
                             printfn $"[Character Part Loading | Path: {mdlPath}] Error loading model: {ex.Message}"
                             return raise ex
