@@ -9,12 +9,17 @@
         Title="fs_mdl_viewer"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
-	<Grid ColumnDefinitions="*, 5, 3*">
+	<Grid ColumnDefinitions="*, 5, 3*, *">
 		<StackPanel Grid.Column="0">
 			<StackPanel>
 				<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
-				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-
+				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
+					<ComboBox.ItemTemplate>
+						<DataTemplate x:DataType="shared:ComboOption">
+							<TextBlock Text="{Binding Display}" />
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
 				<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 				<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 				<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
@@ -51,6 +56,15 @@
 		<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
 			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl" />
 		</Border>
+		<StackPanel Grid.Column="3">
+			<StackPanel>
+				<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
+				<ComboBox x:Name="HairSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+				<ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+				<ComboBox x:Name="EarSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+				<ComboBox x:Name="TailSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+			</StackPanel>
+		</StackPanel>
 
 	</Grid>
 </Window>

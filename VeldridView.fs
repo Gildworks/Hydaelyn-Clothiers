@@ -450,6 +450,7 @@ type VeldridView() as this =
 
     member this.ClearGearSlot(slot: EquipmentSlot) =
         modelMap <- modelMap.Remove(slot)
+        ttModelMap <- ttModelMap.Remove(slot)
 
     member this.CreateEmptyPipeline (gd: GraphicsDevice) (outputDesc: OutputDescription) =
         let factory = gd.ResourceFactory

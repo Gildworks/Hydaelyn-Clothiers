@@ -4,8 +4,6 @@ VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "fs-mdl-viewer", "fs-mdl-viewer.fsproj", "{30D7EC02-1D77-0C46-0D59-ED813148B1CB}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "hc_installer", "..\hc_installer\hc_installer.vdproj", "{52F6D433-8B0C-933E-F654-C31A57E74E72}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,14 +20,6 @@ Global
 		{30D7EC02-1D77-0C46-0D59-ED813148B1CB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{30D7EC02-1D77-0C46-0D59-ED813148B1CB}.Release|x64.ActiveCfg = Release|Any CPU
 		{30D7EC02-1D77-0C46-0D59-ED813148B1CB}.Release|x64.Build.0 = Release|Any CPU
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Debug|Any CPU.ActiveCfg = Release|Any CPU
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Debug|Any CPU.Build.0 = Release|Any CPU
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Debug|x64.ActiveCfg = Debug|x64
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Debug|x64.Build.0 = Debug|x64
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Release|Any CPU.Build.0 = Release|Any CPU
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Release|x64.ActiveCfg = Release|x64
-		{52F6D433-8B0C-933E-F654-C31A57E74E72}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

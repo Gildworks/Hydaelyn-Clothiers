@@ -82,11 +82,15 @@ type MainWindow () as this =
                 | :? VeldridView as render ->
                     render.AttachInputHandlers(overlay)
 
-                    let mutable race        : XivBaseRace option     = None
-                    let mutable clan        : XivSubRace option     = None
-                    let mutable gender      : XivGender option     = None
+                    let mutable race        : string option     = None
+                    let mutable clan        : string option     = None
+                    let mutable gender      : string option     = None
                     let mutable charRace    : string option     = None
                     let mutable finalRace   : XivRace option    = None
+                    let mutable hairs       : XivCharacter list = List.Empty
+                    let mutable faces       : XivCharacter list = List.Empty
+                    let mutable ears        : XivCharacter list = List.Empty
+                    let mutable tails       : XivCharacter list = List.Empty
 
                     let! gear = render.GetEquipment()
                     let! chara = render.GetChara()
@@ -94,24 +98,18 @@ type MainWindow () as this =
                     let tx = ModTransaction.BeginReadonlyTransaction()
 
                     
-                    let baseRaces =
-                        Enum.GetValues(typeof<XivBaseRace>)
-                        |> Seq.cast<XivBaseRace>
-                        |> Seq.toList
-
-                    let clanMap =
-                        Enum.GetValues(typeof<XivSubRace>)
-                        |> Seq.cast<XivSubRace>
-                        |> Seq.groupBy (fun sub ->
-                            let name = sub.ToString()
-                            Enum.Parse<XivBaseRace>(name.Split('_')[0])
-                        )
-                        |> Map.ofSeq
-                    
-                    let genderOptions =
-                        Enum.GetValues(typeof<XivGender>)
-                        |> Seq.cast<XivGender>
-                        |> Seq.toList
+                    let raceOptions = [
+                        { Display = "Hyur"; Value = "Hyur"}
+                        { Display = "Elezen"; Value = "Elezen"}
+                        { Display = "Lalafell"; Value = "Lalafell"}
+                        { Display = "Miqo'te"; Value = "Miqote"}
+                        { Display = "Roegadyn"; Value = "Roegadyn"}
+                        { Display = "Au Ra"; Value = "AuRa"}
+                        { Display = "Hrothgar"; Value = "Hrothgar"}
+                        { Display = "Viera"; Value = "Viera"}
+                    ]
+                    let genderOptions = ["Male"; "Female"]
+                    let clanOptions = ["Midlander"; "Highlander"]
 
                     let headGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Head")
                     let bodyGear = gear |> List.filter (fun m -> m.SecondaryCategory = "Body")
@@ -145,9 +143,10 @@ type MainWindow () as this =
 
                     // === Character Selection Boxes ===
                     let raceSelector = this.FindControl<ComboBox>("RaceSelector")
-                    raceSelector.ItemsSource <- baseRaces
+                    raceSelector.ItemsSource <- raceOptions
                     
                     let clanSelector = this.FindControl<ComboBox>("ClanSelector")
+                    clanSelector.ItemsSource <- clanOptions
                     clanSelector.IsEnabled <- false
 
                     let genderSelector = this.FindControl<ComboBox>("GenderSelector")
@@ -155,6 +154,20 @@ type MainWindow () as this =
 
                     let submitCharacter = this.FindControl<Button>("SubmitCharacter")
                     submitCharacter.IsEnabled <- false
+
+                    // === Character Customization Boxes ===
+                    let hairSelector = this.FindControl<ComboBox>("HairSelector")
+                    hairSelector.IsEnabled <- false
+
+                    let faceSelector = this.FindControl<ComboBox>("FaceSelector")
+                    faceSelector.IsEnabled <- false
+
+                    let earSelector = this.FindControl<ComboBox>("EarSelector")
+                    earSelector.IsEnabled <- false
+
+                    let tailSelector = this.FindControl<ComboBox>("TailSelector")
+                    tailSelector.IsEnabled <- false
+
 
                     // === Gear Selection Boxes ===
                     let headSlot = this.FindControl<ComboBox>("HeadSlot")
@@ -184,23 +197,28 @@ type MainWindow () as this =
 
 
                     raceSelector.SelectionChanged.Add(fun _ ->
-                        let baseRaceSelection = raceSelector.SelectedValue :?> XivBaseRace
-                        race <- Some baseRaceSelection
                         match raceSelector.SelectedValue with
-                        | :? XivBaseRace as selectedBase ->
-                            match clanMap.TryFind(selectedBase) with
-                            | Some subraces ->
-                                clanSelector.ItemsSource <- subraces
+                        | :? ComboOption as selected ->
+                            race <- Some selected.Value
+                            if selected.Value = "Hyur" then
                                 clanSelector.IsEnabled <- true
-                            | None ->
-                                clanSelector.ItemsSource <- []
+                                if race.IsSome && clan.IsSome && gender.IsSome then
+                                    submitCharacter.IsEnabled <- true
+                                else
+                                    submitCharacter.IsEnabled <- false
+                            else
+                                clanSelector.Clear()
+                                clan <- None
                                 clanSelector.IsEnabled <- false
+                                if race.IsSome && gender.IsSome then
+                                    submitCharacter.IsEnabled <- true
+                                else
+                                    submitCharacter.IsEnabled <- false
                         | _ -> ()
-
                     )
 
                     clanSelector.SelectionChanged.Add(fun _ ->
-                        let clanSelection = clanSelector.SelectedValue :?> XivSubRace
+                        let clanSelection = clanSelector.SelectedValue :?> string
                         clan <- Some clanSelection
                         if race.IsSome && clan.IsSome && gender.IsSome then
                             submitCharacter.IsEnabled <- true
@@ -209,7 +227,7 @@ type MainWindow () as this =
                     )
 
                     genderSelector.SelectionChanged.Add(fun _ ->
-                        let genderSelection = genderSelector.SelectedValue :?> XivGender
+                        let genderSelection = genderSelector.SelectedValue :?> string
                         gender <- Some genderSelection
                         if clanSelector.IsEnabled then
                             if race.IsSome && clan.IsSome && gender.IsSome then
@@ -223,35 +241,95 @@ type MainWindow () as this =
                                 submitCharacter.IsEnabled <- false
                     )
 
+                    hairSelector.SelectionChanged.Add(fun _ ->
+                        let idx = hairSelector.SelectedIndex
+                        if idx >= 0 && idx < hairs.Length then
+                            let entry = hairs[idx]
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hair, entry, characterRace) |> ignore
+                    )
+
+                    faceSelector.SelectionChanged.Add(fun _ ->
+                        let idx = faceSelector.SelectedIndex
+                        if idx >= 0 && idx < faces.Length then
+                            let entry = faces[idx]
+                            do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace) |> ignore
+                    )
+
+                    earSelector.SelectionChanged.Add(fun _ ->
+                        let idx = earSelector.SelectedIndex
+                        if idx >= 0 && idx < ears.Length then
+                            let entry = ears[idx]
+                            do render.AssignTrigger(Shared.EquipmentSlot.Ear, entry, characterRace) |> ignore
+                    )
+
+                    tailSelector.SelectionChanged.Add(fun _ ->
+                        let idx = tailSelector.SelectedIndex
+                        if idx >= 0 && idx < tails.Length then
+                            let entry = tails[idx]
+                            do render.AssignTrigger(Shared.EquipmentSlot.Tail, entry, characterRace) |> ignore
+                    )
+
                     submitCharacter.Click.Add(fun _ ->
                         render.clearCharacter()
-                        let raceItem = raceSelector.SelectedItem :?> XivBaseRace
-                        let subRaceItem = clanSelector.SelectedItem :?> XivSubRace
-                        let genderItem = genderSelector.SelectedItem :?> XivGender
+                        let raceValue =
+                            if race.Value = "Hyur" then
+                                $"{race.Value}_{clan.Value}_{gender.Value}"
+                            else
+                                $"{race.Value}_{gender.Value}"
 
-                        let finalRaceStr =
-                            match raceItem with
-                            | XivBaseRace.Hyur -> $"{subRaceItem.ToString()}_{genderItem.ToString()}"
-                            | _ -> $"{raceItem.ToString()}_{genderItem.ToString()}"
-                           
-
-                        match Enum.TryParse<XivRace>(finalRaceStr) with
+                        match Enum.TryParse<XivRace>(raceValue) with
                         | true, parsedRace ->
                             Async.StartImmediate <|
                             async {
                                 characterRace <- parsedRace
                                 let availableBodyItems = getCustomizableParts parsedRace "Body" chara
+
                                 let availableFaceItem = getCustomizableParts parsedRace "Face" chara
+                                faces <- availableFaceItem
 
                                 let availableHairs = getCustomizableParts parsedRace "Hair" chara
+                                hairs <- availableHairs
+
                                 let availableEars = getCustomizableParts parsedRace "Ear" chara
+                                ears <- availableEars
+
                                 let availableTails = getCustomizableParts parsedRace "Tail" chara
+                                tails <- availableTails
 
                                 let effectiveBodyItem = availableBodyItems |> List.tryHead
                                 let effectiveFaceItem = availableFaceItem |> List.tryHead
                                 let defaultHair = availableHairs |> List.tryHead
                                 let defaultEar = availableEars |> List.tryHead
                                 let defaultTail = availableTails |> List.tryHead
+
+                                let hairList = availableHairs |> List.map (fun m -> m.Name)
+                                let faceList = availableFaceItem |> List.map (fun m -> m.Name)
+                                let earList = availableEars |> List.map (fun m -> m.Name)
+                                let tailList = availableTails |> List.map (fun m -> m.Name)
+
+                                
+                                hairSelector.ItemsSource <- hairList
+                                hairSelector.IsEnabled <- true
+
+                                
+                                faceSelector.ItemsSource <- faceList
+                                faceSelector.IsEnabled <- true
+
+                                
+                                if availableEars.Length > 0 then
+                                    earSelector.IsEnabled <- true
+                                    earSelector.ItemsSource <- earList
+                                else
+                                    earSelector.IsEnabled <- false
+                                    earSelector.ItemsSource <- []
+
+                                
+                                if availableTails.Length > 0 then
+                                    tailSelector.IsEnabled <- true
+                                    tailSelector.ItemsSource <- tailList
+                                else
+                                    tailSelector.IsEnabled <- false
+                                    tailSelector.ItemsSource <- []
 
                                 match effectiveBodyItem, effectiveFaceItem with
                                 | Some body, Some face ->
@@ -264,13 +342,29 @@ type MainWindow () as this =
                                 | _ ->
                                     printfn $"Could not determine effective body or face for {parsedRace.GetDisplayName()}"
 
-                                do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace)
-                                do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace)
+                                if faceSelector.SelectedIndex >= 0 then
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, faces[faceSelector.SelectedIndex], parsedRace)
+                                else
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace)
+
+                                if hairSelector.SelectedIndex >= 0 then
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, hairs[hairSelector.SelectedIndex], parsedRace)
+                                else
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace)
+
                                 match defaultEar with
-                                | Some ear -> do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace)
+                                | Some ear ->
+                                    if earSelector.SelectedIndex >= 0 then
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ears[earSelector.SelectedIndex], parsedRace)
+                                    else
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace)
                                 | None -> ()
                                 match defaultTail with
-                                |Some tail -> do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace)
+                                |Some tail -> 
+                                    if tailSelector.SelectedIndex >= 0 then
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tails[tailSelector.SelectedIndex], parsedRace)
+                                    else
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace)
                                 | None -> ()
 
                                 let baseCharacter (slot: ComboBox) (gearList: XivGear list) (nameFilter: string) =
