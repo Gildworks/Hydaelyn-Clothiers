@@ -107,7 +107,7 @@ type App() =
                 let info = xivModdingFramework.GameInfo(DirectoryInfo(gamePath), XivLanguage.English)
                 XivCache.SetGameInfo(info) |> ignore
 
-                // === This part is responsible for controlling automatic updates, will throw an error when running in debug, uncomment when building a release ===
+                 //=== This part is responsible for controlling automatic updates, will throw an error when running in debug, uncomment when building a release ===
                 
                 //let mgr = UpdateManager(new GithubSource("https://github.com/shandonb/hc-modelviewer", String.Empty, true))
 
