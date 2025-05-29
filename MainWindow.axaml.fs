@@ -185,9 +185,25 @@ type MainWindow () as this =
                                                     return! racialFallbacks item rest race
                                         }
                                     try
-                                        return! loadModel item resolvedRace |> Async.AwaitTask
-                                    with _ ->
-                                        return! racialFallbacks item priorityList resolvedRace
+                                        let! result = loadModel item resolvedRace |> Async.AwaitTask
+                                        if obj.ReferenceEquals(result, null) then
+                                            printfn $"[Dye Selectors] loadModel returned null for resolved race {resolvedRace}"
+                                            //return! racialFallbacks item priorityList resolvedRace
+                                            try
+                                                let! fallback = racialFallbacks item priorityList resolvedRace
+                                                if obj.ReferenceEquals(fallback, null) then
+                                                    printfn $"[Dye Selectors] Attempts at fallbacks failed, using Hyur Midlander Male"
+                                                    return! loadModel item XivRace.Hyur_Midlander_Male |> Async.AwaitTask
+                                                else
+                                                    return fallback
+                                            with ex ->
+                                                printfn $"[Dye Selectors] This is still erroring, trying with HMM"
+                                                return! loadModel item XivRace.Hyur_Midlander_Male |> Async.AwaitTask
+                                        else
+                                            return result
+                                    with ex ->
+                                        printfn $"[Dye Selectors] Exception during model load: {ex.Message}"
+                                        return! loadModel item XivRace.Hyur_Midlander_Male |> Async.AwaitTask
                                 }
 
                             for mat in dyeModel.Materials do
