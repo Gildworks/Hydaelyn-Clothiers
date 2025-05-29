@@ -10,46 +10,113 @@
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
 	<Grid ColumnDefinitions="*, 5, 3*, *">
-		<StackPanel Grid.Column="0">
-			<StackPanel>
-				<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
-				<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
-					<ComboBox.ItemTemplate>
-						<DataTemplate x:DataType="shared:ComboOption">
-							<TextBlock Text="{Binding Display}" />
-						</DataTemplate>
-					</ComboBox.ItemTemplate>
-				</ComboBox>
-				<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-				<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-				<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
-				
-			</StackPanel>
-			<StackPanel>
-				<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
-				<Grid ColumnDefinitions="9*, *">
-					<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" />
-					<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
-				</Grid>
-				<Grid ColumnDefinitions="9*, *">
-					<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-					<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
-				</Grid>
-				<Grid ColumnDefinitions="9*, *">
-					<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-					<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
-				</Grid>
-				<Grid ColumnDefinitions="9*, *">
-					<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-					<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
-				</Grid>
-				<Grid ColumnDefinitions="9*, *">
-					<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-					<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
-				</Grid>				
-			</StackPanel>
+		<ScrollViewer>
+			<StackPanel Grid.Column="0">
+				<StackPanel>
+					<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
+					<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
+						<ComboBox.ItemTemplate>
+							<DataTemplate x:DataType="shared:ComboOption">
+								<TextBlock Text="{Binding Display}" />
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
+					<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+					<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+					<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
 
-		</StackPanel>
+				</StackPanel>
+				<StackPanel>
+					<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Head
+						</Expander.Header>
+						<StackPanel>
+							<Grid ColumnDefinitions="9*, *">
+								<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" />
+								<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							</Grid>
+							<TextBlock Text="Dye Slots" />
+							<Grid ColumnDefinitions="*,*">
+								<ComboBox x:Name="HeadDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+								<ComboBox x:Name="HeadDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="1" />
+							</Grid>
+						</StackPanel>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Body
+						</Expander.Header>
+						<StackPanel>
+							<Grid ColumnDefinitions="9*, *">
+								<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+								<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							</Grid>
+							<TextBlock Text="Dye Slots" />
+							<Grid ColumnDefinitions="*,*">
+								<ComboBox x:Name="BodyDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+								<ComboBox x:Name="BodyDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="1" />
+							</Grid>
+						</StackPanel>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Hand
+						</Expander.Header>
+						<StackPanel>
+							<Grid ColumnDefinitions="9*, *">
+								<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+								<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							</Grid>
+							<TextBlock Text="Dye Slots" />
+							<Grid ColumnDefinitions="*,*">
+								<ComboBox x:Name="HandDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+								<ComboBox x:Name="HandDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="1" />
+							</Grid>
+						</StackPanel>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Leg
+						</Expander.Header>
+						<StackPanel>
+							<Grid ColumnDefinitions="9*, *">
+								<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+								<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							</Grid>
+							<TextBlock Text="Dye Slots" />
+							<Grid ColumnDefinitions="*,*">
+								<ComboBox x:Name="LegDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+								<ComboBox x:Name="LegDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="1" />
+							</Grid>
+						</StackPanel>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Feet
+						</Expander.Header>
+						<StackPanel>
+							<Grid ColumnDefinitions="9*, *">
+								<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
+								<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							</Grid>
+							<TextBlock Text="Dye Slots" />
+							<Grid ColumnDefinitions="*,*">
+								<ComboBox x:Name="FeetDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+								<ComboBox x:Name="FeetDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="1" />
+							</Grid>
+						</StackPanel>
+					</Expander>
+				</StackPanel>
+
+			</StackPanel>
+		</ScrollViewer>
 
 		<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
 

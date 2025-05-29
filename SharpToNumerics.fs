@@ -24,3 +24,11 @@ let convertColor (rgba: byte[]) =
         float32 rgba.[2] / 255.0f,
         float32 rgba.[3] / 255.0f
     )
+
+let halfToVec4 (inputAray: Half[]) : Vector4 =
+    match inputAray.Length with
+    | l when l >= 4 ->
+        Vector4(float32 inputAray[0], float32 inputAray[1], float32 inputAray[2], float32 inputAray[3])
+    | l when l >= 3 ->
+        Vector4(float32 inputAray[0], float32 inputAray[1], float32 inputAray[2], 1.0f)
+    | _ -> Vector4.Zero

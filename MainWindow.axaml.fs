@@ -4,9 +4,12 @@ open System
 open System.Collections.ObjectModel
 open System.IO
 open System.Text.Json
+open System.Numerics
+open System.Threading.Tasks
 open Avalonia
 open Avalonia.Controls
 open Avalonia.Markup.Xaml
+open Avalonia.Media.Imaging
 open AvaloniaRender.Veldrid
 open xivModdingFramework.Cache
 open xivModdingFramework.General.Enums
@@ -15,9 +18,18 @@ open xivModdingFramework.Items.Categories
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.Items.Enums
 open xivModdingFramework.Models.FileTypes
+open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Mods
+open xivModdingFramework.Materials.FileTypes
+open xivModdingFramework.Materials.DataContainers
+open xivModdingFramework.Exd.FileTypes
+open xivModdingFramework.Exd.Enums
+open xivModdingFramework.Textures.FileTypes
+open xivModdingFramework.Textures.Enums
+open xivModdingFramework.Textures.DataContainers
 
 open Shared
+open SharpToNumerics
 
 type MainWindow () as this = 
     inherit Window ()
@@ -64,9 +76,20 @@ type MainWindow () as this =
             )
             |> List.sortBy (fun item -> item.ModelInfo.SecondaryID)
 
+        let getDyeSwatches () =
+            task {
+                let! dyeDict = STM.GetDyeNames()
+                let allDyes =
+                    dyeDict
+                    |> Seq.map (fun kvp ->kvp.Value)
+                    |> Seq.toList
+                return allDyes
+            }
+
         this.InitializeComponent()
         let viewer = this.FindControl<EmbeddedWindowVeldrid>("ViewerControl")
-        let overlay = this.FindControl<Border>("InputOverlay")        
+        let overlay = this.FindControl<Border>("InputOverlay")
+        
 
         viewer.DataContext <- viewModel
 
@@ -106,6 +129,111 @@ type MainWindow () as this =
                     let eqpCategory = Eqp()
                     let tx = ModTransaction.BeginReadonlyTransaction()
 
+                    let enableDyeSlots (item: IItemModel, slot: EquipmentSlot, box1: ComboBox, box2: ComboBox, dyes: string list, tx: ModTransaction)=
+                        task {
+                            let mutable dyeChannel1 = false
+                            let mutable dyeChannel2 = false
+
+                            // === Simplified race conversion stuff, in final app move to separate module ===
+                            let! dyeModel =
+                                let loadModel (item: IItemModel) (race: XivRace) =
+                                    task {
+                                        let! model = Mdl.GetTTModel(item, race)
+                                        return model
+                                    }
+                                async {
+                                    let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot, races: XivRace list) : Async<XivRace> =
+                                        let rec tryResolveRace (slot: string) (races: XivRace list) (originalRace: XivRace) (eqdp: Collections.Generic.Dictionary<XivRace, xivModdingFramework.Models.DataContainers.EquipmentDeformationParameter>) : Async<XivRace> =
+                                            async {
+                                                match races with
+                                                | [] ->
+                                                    return originalRace
+                                                | race::rest ->
+                                                    match eqdp.TryGetValue(race) with
+                                                    | true, param when param.HasModel ->
+                                                        return race
+                                                    | _ ->
+                                                        return! tryResolveRace slot rest originalRace eqdp
+                                            }
+                                        let searchSlot =
+                                            match slot with
+                                            | EquipmentSlot.Body -> "top"
+                                            | EquipmentSlot.Head -> "met"
+                                            | EquipmentSlot.Hands -> "glv"
+                                            | EquipmentSlot.Legs -> "dwn"
+                                            | EquipmentSlot.Feet -> "sho"
+                                            | _ -> ""
+
+                                        async {
+                                            let! eqdp = eqpCategory.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
+                                            return! tryResolveRace searchSlot races race eqdp
+                                        }
+                                    let priorityList = XivRaces.GetModelPriorityList(characterRace) |> Seq.toList
+                                    let! resolvedRace = resolveModelRace(item, characterRace, slot, priorityList)
+
+                                    let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
+                                        async {
+                                            match races with
+                                            | [] ->
+                                                printfn "All races failed, this sucks..."
+                                                return raise (exn "Failed to load any model, rage quitting.")
+                                            | race::rest ->
+                                                try
+                                                    return! loadModel item race |> Async.AwaitTask
+                                                with ex ->
+                                                    printfn $"Fallback failed for {race}: {ex.Message}"
+                                                    return! racialFallbacks item rest race
+                                        }
+                                    try
+                                        return! loadModel item resolvedRace |> Async.AwaitTask
+                                    with _ ->
+                                        return! racialFallbacks item priorityList resolvedRace
+                                }
+
+                            for mat in dyeModel.Materials do
+                                let! materialPath =
+                                    task{
+                                        try                                        
+                                            let! loaded = Mtrl.GetXivMtrl(mat, item, false, tx)
+                                            printfn "[Dye Selectors] Material Path loaded"
+                                            return loaded.MTRLPath
+                                        with
+                                        | _ ->
+                                            printfn "[Dye Selectors] Material Path loaded, alternate logic used"
+                                            return Mtrl.GetMtrlPath(dyeModel.Source, mat)
+                                    }
+                                let! material =
+                                    try
+                                        Mtrl.GetXivMtrl(materialPath, true, tx)
+                                    with ex ->
+                                        printfn $"[Dye Selectors] Failed to load material for dye selection: {ex.Message}"
+                                        raise ex
+
+                                match material.ColorSetDyeData.Length with
+                                | l when l >= 128 ->
+                                    printfn "Dawntrail gear found"
+                                    for i in 0 .. 15 do
+                                        let offset = i * 4
+                                        let b0 = material.ColorSetDyeData[offset]
+                                        let b3 = material.ColorSetDyeData[offset + 3]
+
+                                        if b0 > 0uy then
+                                            if b3 < 8uy then
+                                                dyeChannel1 <- true
+                                            elif b3 >= 8uy then
+                                                dyeChannel2 <- true
+                                | l when l = 32 ->
+                                    printfn "Endwalker gear found"
+                                    for i in 0 .. 15 do
+                                        let offset = i * 4
+                                        let b0 = material.ColorSetDyeData[offset]
+                                        if b0 > 0uy then dyeChannel1 <- true
+                                | _ -> ()
+
+                            if not dyeChannel1 then box1.ItemsSource <- [] else box1.ItemsSource <- dyes
+                            if not dyeChannel2 then box2.ItemsSource <- [] else box2.ItemsSource <- dyes
+                            return (dyeChannel1, dyeChannel2)
+                        }
                     
                     let raceOptions = [
                         { Display = "Hyur"; Value = "Hyur"}
@@ -131,6 +259,9 @@ type MainWindow () as this =
                     let handNames = handGear |> List.map (fun m -> m.Name)
                     let legsNames = legsGear |> List.map (fun m -> m.Name)
                     let feetNames = feetGear |> List.map (fun m -> m.Name)
+
+                    let! dyeList = getDyeSwatches() |> Async.AwaitTask
+                    
 
                     let clearSelection (slot: ComboBox)  (gearList: XivGear list) =
                         let index =
@@ -183,27 +314,52 @@ type MainWindow () as this =
                     let headClear = this.FindControl<Button>("HeadClear")
                     headClear.Click.Add(fun _ -> clearSelection headSlot headGear)
                     headSlot.ItemsSource <- headNames
+                    let headDye1 = this.FindControl<ComboBox>("HeadDye1")
+                    let headDye2 = this.FindControl<ComboBox>("HeadDye2")
+                    headDye1.IsEnabled <- false
+                    headDye2.IsEnabled <- false
 
                     let bodySlot = this.FindControl<ComboBox>("BodySlot")
                     let bodyClear = this.FindControl<Button>("BodyClear")
                     bodyClear.Click.Add(fun _ -> clearSelection bodySlot bodyGear)
                     bodySlot.ItemsSource <- bodyNames
+                    let bodyDye1 = this.FindControl<ComboBox>("BodyDye1")
+                    let bodyDye2 = this.FindControl<ComboBox>("BodyDye2")
+                    bodyDye1.IsEnabled <- false
+                    bodyDye2.IsEnabled <- false
+
 
                     let handSlot = this.FindControl<ComboBox>("HandSlot")
                     let handClear = this.FindControl<Button>("HandClear")
                     handClear.Click.Add(fun _ -> clearSelection handSlot handGear)
                     handSlot.ItemsSource <- handNames
+                    let handDye1 = this.FindControl<ComboBox>("HandDye1")
+                    let handDye2 = this.FindControl<ComboBox>("HandDye2")
+                    handDye1.IsEnabled <- false
+                    handDye2.IsEnabled <- false
+
 
                     let legsSlot = this.FindControl<ComboBox>("LegsSlot")
                     let legClear = this.FindControl<Button>("LegClear")
                     legClear.Click.Add(fun _ -> clearSelection legsSlot legsGear)
                     legsSlot.ItemsSource <- legsNames
+                    let legDye1 = this.FindControl<ComboBox>("LegDye1")
+                    let legDye2 = this.FindControl<ComboBox>("LegDye2")
+                    legDye1.IsEnabled <- false
+                    legDye2.IsEnabled <- false
 
                     let feetSlot = this.FindControl<ComboBox>("FeetSlot")
                     let feetClear = this.FindControl<Button>("FeetClear")
                     feetClear.Click.Add(fun _ -> clearSelection feetSlot feetGear)
                     feetSlot.ItemsSource <- feetNames
+                    let feetDye1 = this.FindControl<ComboBox>("FeetDye1")
+                    let feetDye2 = this.FindControl<ComboBox>("FeetDye2")
+                    feetDye1.IsEnabled <- false
+                    feetDye2.IsEnabled <- false
 
+                    // === ComboBox Selection Methods ===
+                        
+                    // === Character Selectors
 
                     raceSelector.SelectionChanged.Add(fun _ ->
                         match raceSelector.SelectedValue with
@@ -278,6 +434,76 @@ type MainWindow () as this =
                             let entry = tails[idx]
                             do render.AssignTrigger(Shared.EquipmentSlot.Tail, entry, characterRace) |> ignore
                     )
+
+                    // === Gear Selectors ===
+
+                    headSlot.SelectionChanged.Add(fun _ ->
+                        printfn "Headslot changed"
+                        let idx = headSlot.SelectedIndex
+                        if idx >= 0 && idx < headGear.Length then
+                            let entry = headGear[idx]
+                            do
+                                Async.StartImmediate(async {
+                                   let! (slot1, slot2) = enableDyeSlots(entry,EquipmentSlot.Head , headDye1, headDye2, dyeList, tx) |> Async.AwaitTask
+                                   headDye1.IsEnabled <- slot1
+                                   headDye2.IsEnabled <- slot2
+                                 })
+                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace) |> ignore
+                    )
+
+                    bodySlot.SelectionChanged.Add(fun _ ->
+                        let idx = bodySlot.SelectedIndex
+                        if idx >= 0 && idx < bodyGear.Length then
+                            let entry = bodyGear[idx]
+                            do
+                                Async.StartImmediate(async {
+                                    let! (slot1, slot2) = enableDyeSlots(entry, EquipmentSlot.Body, bodyDye1, bodyDye2, dyeList, tx) |> Async.AwaitTask
+                                    bodyDye1.IsEnabled <- slot1
+                                    bodyDye2.IsEnabled <- slot2
+                                })
+                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace) |> ignore
+                    )
+
+                    handSlot.SelectionChanged.Add(fun _ ->
+                        let idx = handSlot.SelectedIndex
+                        if idx >= 0 && idx < handGear.Length then
+                            let entry = handGear[idx]
+                            do
+                                Async.StartImmediate(async {
+                                    let! (slot1, slot2) = enableDyeSlots(entry, EquipmentSlot.Hands, handDye1, handDye2, dyeList, tx) |> Async.AwaitTask
+                                    handDye1.IsEnabled <- slot1
+                                    handDye2.IsEnabled <- slot2
+                                })
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace) |> ignore
+                    )
+
+                    legsSlot.SelectionChanged.Add(fun _ ->
+                        let idx = legsSlot.SelectedIndex
+                        if idx >= 0 && idx < legsGear.Length then
+                            let entry = legsGear[idx]
+                            do
+                                Async.StartImmediate(async {
+                                    let! (slot1, slot2) = enableDyeSlots(entry, EquipmentSlot.Legs, legDye1, legDye2, dyeList, tx) |> Async.AwaitTask
+                                    handDye1.IsEnabled <- slot1
+                                    handDye2.IsEnabled <- slot2
+                                })
+                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace) |> ignore
+                    )
+
+                    feetSlot.SelectionChanged.Add(fun _ ->
+                        let idx = feetSlot.SelectedIndex
+                        if idx >= 0 && idx < feetGear.Length then
+                            let entry = feetGear[idx]
+                            do
+                                Async.StartImmediate(async {
+                                    let! (slot1, slot2) = enableDyeSlots(entry, EquipmentSlot.Feet, feetDye1, feetDye2, dyeList, tx) |> Async.AwaitTask
+                                    feetDye1.IsEnabled <- slot1
+                                    feetDye2.IsEnabled <- slot2
+                                })
+                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace) |> ignore
+                    )
+
+                    // === Submit Character Button ===
 
                     submitCharacter.Click.Add(fun _ ->
                         render.clearCharacter()
@@ -409,56 +635,6 @@ type MainWindow () as this =
                             printfn "Invalid race string. Could not parse into XivRace"
 
                     )
-
-
-                    headSlot.SelectionChanged.Add(fun _ ->
-                        printfn "SelectionChanged event firing"
-                        let idx = headSlot.SelectedIndex
-                        if idx >= 0 && idx < headGear.Length then
-                            let entry = headGear[idx]
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_met.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace) |> ignore
-                    )
-
-                    bodySlot.SelectionChanged.Add(fun _ ->
-                        printfn "SelectionChanged event firing"
-                        let idx = bodySlot.SelectedIndex
-                        if idx >= 0 && idx < bodyGear.Length then
-                            let entry = bodyGear[idx]
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_top.mdl"
-                            printfn $"Path: {path}"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace) |> ignore
-                    )
-
-                    handSlot.SelectionChanged.Add(fun _ ->
-                        printfn "SelectionChanged event firing"
-                        let idx = handSlot.SelectedIndex
-                        if idx >= 0 && idx < handGear.Length then
-                            let entry = handGear[idx]
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_glv.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace) |> ignore
-                    )
-
-                    legsSlot.SelectionChanged.Add(fun _ ->
-                        printfn "SelectionChanged event firing"
-                        let idx = legsSlot.SelectedIndex
-                        if idx >= 0 && idx < legsGear.Length then
-                            let entry = legsGear[idx]
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_dwn.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace) |> ignore
-                    )
-
-                    feetSlot.SelectionChanged.Add(fun _ ->
-                        printfn "SelectionChanged event firing"
-                        let idx = feetSlot.SelectedIndex
-                        if idx >= 0 && idx < feetGear.Length then
-                            let entry = feetGear[idx]
-                            let path = $"chara/equipment/e{entry.ModelInfo.PrimaryID:D4}/model/c0101e{entry.ModelInfo.PrimaryID:D4}_sho.mdl"
-                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace) |> ignore
-                    )
-
-                    
-
 
                 | _ -> ()
             | _ -> ()

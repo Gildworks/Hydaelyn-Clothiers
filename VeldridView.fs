@@ -343,7 +343,7 @@ type VeldridView() as this =
                         try
                             printfn $"Attempting to load model with {resolvedRace.ToString()}"
                             //return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value race race materialBuilder |> Async.AwaitTask
-                            return! loadModel item race |> Async.AwaitTask
+                            return! loadModel item resolvedRace |> Async.AwaitTask
                         with _ ->
                             
                             return! racialFallbacks item priorityList resolvedRace
