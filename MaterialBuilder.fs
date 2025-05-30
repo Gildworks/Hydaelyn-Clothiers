@@ -1,6 +1,8 @@
 ﻿module MaterialBuilder
 
 open System.Threading.Tasks
+open System.Collections.Generic
+open System
 open Veldrid
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Materials.FileTypes
@@ -14,10 +16,110 @@ let materialBuilder
     (factory: ResourceFactory)
     (gd: GraphicsDevice)
     (resourceLayout: ResourceLayout)
+    (colors: CustomModelColors)
     (mtrl: XivMtrl)
     : Task<PreparedMaterial> =
     task {
-        let! modelTex = ModelTexture.GetModelMaps(mtrl, pbrMaps = true)
+        //let dyedMat = mtrl.Clone() :?> XivMtrl
+        
+        //let! stainTemplate = STM.GetStainingTemplateFile(STM.EStainingTemplate.Dawntrail)
+        //let data = dyedMat.ColorSetData.ToArray()
+
+        //for row in 0 .. 15 do
+        //    let tplKey = STM.GetTemplateKeyFromMaterialData(dyedMat, row)
+        //    let entry = stainTemplate.GetTemplate(tplKey)
+            
+        //    if entry <> null then
+        //        let cols = 8
+        //        let rowOff = row * cols * 4
+        //        let rowData =
+        //            [| 0 .. cols - 1 |]
+        //            |> Array.map (fun c ->
+        //                Array.init 4 (fun j ->
+        //                    data.[rowOff + c * 4 + j]
+        //                )
+        //            )
+        //        for kv in StainingTemplateEntry.TemplateEntryOffsetToColorsetOffset.[STM.EStainingTemplate.Dawntrail] do
+        //            let tplOffset, csOffset = kv.Key, kv.Value
+        //            let colIdx = csOffset / 4
+        //            let compIdx = csOffset % 4
+        //            let compHalfs = entry.GetData(tplOffset, 9)
+        //            if compHalfs <> null then
+        //                for i in 0 .. compHalfs.Length - 1 do
+        //                    rowData.[colIdx].[compIdx + i] <- compHalfs.[i]
+        //        let raw = rowData |> Array.collect id
+        //        Array.Copy(raw, 0, data, rowOff, raw.Length)
+        //        Array.Copy(raw, 0, data, rowOff + cols * 4, raw.Length)
+        //dyedMat.ColorSetData <- List<SharpDX.Half>(data)
+        let dyedMat = mtrl.Clone() :?> XivMtrl
+        let! stainTemplate = STM.GetStainingTemplateFile(STM.EStainingTemplate.Dawntrail)
+        if dyedMat.ColorSetDyeData <> null && dyedMat.ColorSetDyeData.Length = 128 then
+            for rowIndexInColorSet in 0 .. 15 do
+                let dyeDataOffset = rowIndexInColorSet * 4
+                let b0 = dyedMat.ColorSetDyeData[dyeDataOffset]
+                let b2 = dyedMat.ColorSetDyeData[dyeDataOffset + 2]
+                let b3 = dyedMat.ColorSetDyeData[dyeDataOffset + 3]
+                let templateFile = uint16 b2 ||| (uint16 b3 <<< 8)
+                let templateKey = templateFile + 1000us
+                let channelSelector = if b3 < 8uy then 0 elif b3 >= 8uy then 1 else -1
+                let mutable dyeIdToApply : int = 9
+
+                match dyeIdToApply with
+                | n when n >= 0 && templateKey > 1000us && templateKey <> System.UInt16.MaxValue ->
+                    match stainTemplate.GetTemplate(templateKey) with
+                    | null -> printfn $"STM Template {templateKey} not found for material."
+                    | templateEntry ->
+                        for mapping in StainingTemplateEntry.TemplateEntryOffsetToColorsetOffset.[STM.EStainingTemplate.Dawntrail] do
+                            let templateComponentFileOffset = mapping.Key
+                            let colorsetComponentDataOffset = mapping.Value
+
+                            let dyedComponentHalfs = templateEntry.GetData(templateComponentFileOffset, n)
+                            if dyedComponentHalfs <> null then
+                                let colorsetRowBaseIndex = rowIndexInColorSet * 32
+                                let colorSetRowMemoryStride = 16
+
+                                let materialRowBaseHalfsIndex = rowIndexInColorSet * 64
+
+                                for k in 0 .. dyedComponentHalfs.Length - 1 do
+                                    let targetIndexColorSetData = materialRowBaseHalfsIndex + colorsetComponentDataOffset + k
+                                    if targetIndexColorSetData < dyedMat.ColorSetData.Count then
+                                        printfn $"Previous row data: {dyedMat.ColorSetData.[targetIndexColorSetData]} | Target data: {dyedComponentHalfs.[k]}"
+                                        dyedMat.ColorSetData.[targetIndexColorSetData] <- dyedComponentHalfs.[k]
+                                        printfn $"(Hopefully) New ColorSet Data: {dyedMat.ColorSetData.[targetIndexColorSetData]}"
+                                        printfn "ColorSet Row Adjusted Successfully!"
+                                    else
+                                        printfn "Warning: Tried to write dye data out of bounds for ColorSetData."
+                | _ -> ()
+
+
+        let! modelTex = ModelTexture.GetModelMaps(dyedMat, true)
+        let w, h = modelTex.Width, modelTex.Height
+        let x, y = w/2, h/2
+        let idx = (y * w + x) * 4
+        printfn "Center RGBA: %A" (modelTex.Diffuse.[idx..idx + 3])
+        printfn "Trying to override the diffuse data"
+        let testDiffuseBytes = Array.zeroCreate<byte>(modelTex.Width * modelTex.Height * 4)
+        for y_px in 0 .. modelTex.Height - 1 do
+            for x_px in 0 .. modelTex.Width - 1 do
+                let px_offset = (y_px * modelTex.Width + x_px) * 4
+                let testRowIndex = 15
+                let materialRowBase = testRowIndex * 64
+                let r_h = dyedMat.ColorSetData.[materialRowBase + 0]
+                let g_h = dyedMat.ColorSetData.[materialRowBase + 1]
+                let b_h = dyedMat.ColorSetData.[materialRowBase + 2]
+
+                let r_f = SharpDX.Half.op_Implicit(r_h)
+                let g_f = SharpDX.Half.op_Implicit(g_h)
+                let b_f = SharpDX.Half.op_Implicit(b_h)
+                
+
+                testDiffuseBytes.[px_offset + 0] <- byte (Math.Sqrt(float r_f) * 255.0)
+                testDiffuseBytes.[px_offset + 1] <- byte (Math.Sqrt(float g_f) * 255.0)
+                testDiffuseBytes.[px_offset + 2] <- byte (Math.Sqrt(float b_f) * 255.0)
+                testDiffuseBytes.[px_offset + 3] <- 255uy
+        //modelTex.Diffuse <- testDiffuseBytes
+
+
 
 
         // --- Helper to convert byte[] to RgbaByte[] ---
@@ -47,6 +149,7 @@ let materialBuilder
             tex
 
         // --- Attempt to create all relevant textures ---
+        printfn "Trying to create textures"
         let refLength = modelTex.Width * modelTex.Height * 4
         let diffuseTex =
             if modelTex.Diffuse.Length >= refLength then
@@ -149,7 +252,7 @@ let materialBuilder
                 OcclusionTexture = occlusionTex
                 SubsurfaceTexture = subsurfaceTex
                 ResourceSet = resourceSet
-                Mtrl = mtrl
+                Mtrl = dyedMat
             }
         with ex ->
             printfn $"[Material Builder] Failed to create resource set: {ex.Message}"

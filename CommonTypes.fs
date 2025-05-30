@@ -2,6 +2,8 @@
 
 open xivModdingFramework.Textures.Enums
 open xivModdingFramework.Models.DataContainers
+open xivModdingFramework.Models.ModelTextures
+open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.General.Enums
@@ -184,4 +186,10 @@ type CharacterCustomizationOptions = {
 
 type Config = {
     GamePath: string
+}
+
+type InputModel = {
+    Model                       : TTModel
+    Item                        : IItemModel
+    Colors                      : CustomModelColors
 }

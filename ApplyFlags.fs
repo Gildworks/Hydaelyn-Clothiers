@@ -169,7 +169,7 @@ let removeMeshParts (flags: Map<EquipmentParameterFlag, bool>) (model: TTModel) 
         return model
         }
 
-let removeSlot (flags: Map<EquipmentParameterFlag, bool>) (models: Map<EquipmentSlot, TTModel * IItemModel>) =
+let removeSlot (flags: Map<EquipmentParameterFlag, bool>) (models: Map<EquipmentSlot, InputModel>) =
     task {
         let mutable visibleModels = models
         for flag in flags do
@@ -208,16 +208,16 @@ let removeSlot (flags: Map<EquipmentParameterFlag, bool>) (models: Map<Equipment
         return visibleModels
     }
 
-let applyFlags (models: Map<EquipmentSlot, TTModel * IItemModel>) : Task<Map<EquipmentSlot, TTModel * IItemModel>> =
+let applyFlags (models: Map<EquipmentSlot, InputModel>) : Task<Map<EquipmentSlot, InputModel>> =
     task {
-        for (model, item) in models.Values do
-            let attributes = model.Attributes
-            let flags = model.Flags
-            printfn $"\n\n\n{model.Source} attributes:"
+        for model in models.Values do
+            let attributes = model.Model.Attributes
+            let flags = model.Model.Flags
+            printfn $"\n\n\n{model.Model.Source} attributes:"
             for attr in attributes do
                 printfn $"{attr}"
             printfn $" Model Flags: {flags}"
-            for group in model.MeshGroups do
+            for group in model.Model.MeshGroups do
                 printfn $"\n Parts for {group.Name}:"
                 for part in group.Parts do
                     let partAttr = part.Attributes
@@ -226,13 +226,13 @@ let applyFlags (models: Map<EquipmentSlot, TTModel * IItemModel>) : Task<Map<Equ
                     for attr in partAttr do
                         printfn $"Attribute: {attr}"
 
-            printfn $"Primary Category: {item.PrimaryCategory} | Secondary Category: {item.SecondaryCategory} | Tertiary Category: {item.TertiaryCategory} | ID: {item.ModelInfo.PrimaryID}"
+            printfn $"Primary Category: {model.Item.PrimaryCategory} | Secondary Category: {model.Item.SecondaryCategory} | Tertiary Category: {model.Item.TertiaryCategory} | ID: {model.Item.ModelInfo.PrimaryID}"
 
-            if item.PrimaryCategory = "Gear" && item.ModelInfo.PrimaryID > 0 then
+            if model.Item.PrimaryCategory = "Gear" && model.Item.ModelInfo.PrimaryID > 0 then
 
                 let eqp = new Eqp()
             
-                let! itemAttr = eqp.GetEqpEntry(item)
+                let! itemAttr = eqp.GetEqpEntry(model.Item)
                 let itemFlags = itemAttr.AvailableFlags
                 let itemFlagValues = itemAttr.GetFlags()
                 printfn "\n\n==================================================="
@@ -263,16 +263,16 @@ let applyFlags (models: Map<EquipmentSlot, TTModel * IItemModel>) : Task<Map<Equ
             if usedFlags.Count > 0 then
                 removedSlots
                 |> Map.toSeq
-                |> Seq.map (fun (slot, (ttModel, item)) -> task {
-                    let! edited = removeMeshParts usedFlags ttModel
-                    return slot, (edited, item)
+                |> Seq.map (fun (slot, removedSlots) -> task {
+                    let! edited = removeMeshParts usedFlags removedSlots.Model
+                    return slot, {removedSlots with Model = edited}
                 })
                 |> Task.WhenAll
             else
                 removedSlots
                 |> Map.toSeq
-                |> Seq.map (fun (slot, (ttModel, item)) -> task {
-                    return slot, (ttModel, item)
+                |> Seq.map (fun (slot,removedSlots) -> task {
+                    return slot, removedSlots
                 })
                 |> Task.WhenAll
 

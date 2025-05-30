@@ -25,6 +25,7 @@ open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Models.FileTypes
 open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Models.Helpers
+open xivModdingFramework.Models.ModelTextures
 open xivModdingFramework.Mods
 
 open MaterialBuilder
@@ -38,7 +39,7 @@ type VeldridView() as this =
 
     // === Model Resources ===
     let allSlots = [ Head; Body; Hands; Legs; Feet ]
-    let mutable ttModelMap : Map<EquipmentSlot, TTModel * IItemModel> = Map.empty
+    let mutable ttModelMap : Map<EquipmentSlot, InputModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
     let mutable modelMap : Map<EquipmentSlot, RenderModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
@@ -74,7 +75,7 @@ type VeldridView() as this =
   
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
-            let! (slot, item, race, reply: AsyncReplyChannel<unit>) = inbox.Receive()
+            let! (slot, item, race, colors, reply: AsyncReplyChannel<unit>) = inbox.Receive()
             printfn "\n\n========================================================="
             printfn $"[Mailbox] Assigning model for: Slot {slot} | Race {race} | Item {item}"
             printfn"============================================"
@@ -82,7 +83,7 @@ type VeldridView() as this =
             try
                 //let! _ =
                 //    async {
-                do! this.AssignGear(slot, item, race, device.Value )
+                do! this.AssignGear(slot, item, race, colors, device.Value )
                     //}
             with ex ->
                 printfn $"[AssignGear] Failed to load model for slot {slot}: {ex.Message}"
@@ -228,7 +229,7 @@ type VeldridView() as this =
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, gd: GraphicsDevice) : Async<unit> =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
         printfn $"Loading model with the following parameters:"
         printfn $"Slot: {slot}"
         printfn $"Item: {item}"
@@ -255,7 +256,7 @@ type VeldridView() as this =
             printfn "Texture layout created!"
           
             printfn "Building material..."
-            let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout
+            
             printfn "Material built!"
             printfn "Loading model..."
 
@@ -351,14 +352,15 @@ type VeldridView() as this =
             printfn $"Leaving the model loading area"
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
-            ttModelMap <- ttModelMap.Add(slot, (ttModel,  item))
+            ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Colors = colors})
             let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
             ttModelMap <- adjustedModels
-            for slot, (ttModel, item) in Map.toSeq adjustedModels do
+            for model in Map.toSeq adjustedModels do
+                let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Colors
                 let! renderModel =
                     async{
                         try
-                            let (fixedModel, _) = adjustedModels[slot]
+                            let fixedModel = adjustedModels[slot].Model
                             return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
                         with ex ->
                             printfn $"Error loading model: {ex.Message}"
@@ -375,8 +377,8 @@ type VeldridView() as this =
             
         }
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace) : Async<unit> =
-        agent.PostAndAsyncReply(fun reply -> (slot, item, race, reply))
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: CustomModelColors) : Async<unit> =
+        agent.PostAndAsyncReply(fun reply -> (slot, item, race, colors, reply))
         
 
     member this.RequestResize (w: uint32, h: uint32) =
