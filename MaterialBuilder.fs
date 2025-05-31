@@ -12,7 +12,8 @@ let materialBuilder
     (factory: ResourceFactory)
     (gd: GraphicsDevice)
     (resourceLayout: ResourceLayout)
-    (colors: int)
+    (dye1: int)
+    (dye2: int)
     (mtrl: XivMtrl)
     : Task<PreparedMaterial> =
     task {
@@ -28,16 +29,19 @@ let materialBuilder
                 let b0_flags = dyedMat.ColorSetDyeData[dyeDataOffset + 0]
                 let b2_template_part1 = dyedMat.ColorSetDyeData[dyeDataOffset + 2]
                 let b3_template_part2 = dyedMat.ColorSetDyeData[dyeDataOffset + 3]
+                let templateOffset = if b3_template_part2 >= 8uy then 8uy else 0uy
 
-                let templateFile = uint16 b2_template_part1 ||| (uint16 b3_template_part2 <<< 8)
-                let templateKey = templateFile + 1000us
-                let mutable dyeIdToApply1 : int = colors
+                let templateFile = uint16 b2_template_part1 ||| (uint16 (b3_template_part2 - templateOffset) <<< 8)
+                let templateKey = (templateFile % 1000us) + 1000us
+                
+                let dyeToApply : int =
+                    if b3_template_part2 >= 8uy then dye2 else dye1
 
                 if conceptualRowForInstructions = 7 then
                     printfn $"=== InstIdx: {dyeInstructionIndex}, ConceptualRow: {conceptualRowForInstructions}, IsB: {isBPartInstructions} ==="
                     printfn $"DyeDateOffset: {dyeDataOffset}, Flags: {b0_flags:X2}, TemplateKey: {templateKey}"
 
-                match dyeIdToApply1 with
+                match dyeToApply with
                 | n when n >= 0 && templateKey > 1000us && templateKey <> UInt16.MaxValue ->
                     if conceptualRowForInstructions = 7 then printfn $"Template Check PASSED"
 

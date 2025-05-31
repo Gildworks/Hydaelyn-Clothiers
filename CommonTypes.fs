@@ -195,5 +195,6 @@ type Config = {
 type InputModel = {
     Model                       : TTModel
     Item                        : IItemModel
-    Colors                      : int
+    Dye1                        : int
+    Dye2                        : int
 }

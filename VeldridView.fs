@@ -75,7 +75,7 @@ type VeldridView() as this =
   
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
-            let! (slot, item, race, colors, reply: AsyncReplyChannel<unit>) = inbox.Receive()
+            let! (slot, item, race, dye1, dye2, reply: AsyncReplyChannel<unit>) = inbox.Receive()
             printfn "\n\n========================================================="
             printfn $"[Mailbox] Assigning model for: Slot {slot} | Race {race} | Item {item}"
             printfn"============================================"
@@ -83,7 +83,7 @@ type VeldridView() as this =
             try
                 //let! _ =
                 //    async {
-                do! this.AssignGear(slot, item, race, colors, device.Value )
+                do! this.AssignGear(slot, item, race, dye1, dye2, device.Value )
                     //}
             with ex ->
                 printfn $"[AssignGear] Failed to load model for slot {slot}: {ex.Message}"
@@ -230,7 +230,7 @@ type VeldridView() as this =
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: int, gd: GraphicsDevice) : Async<unit> =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, gd: GraphicsDevice) : Async<unit> =
         printfn $"Loading model with the following parameters:"
         printfn $"Slot: {slot}"
         printfn $"Item: {item}"
@@ -353,11 +353,11 @@ type VeldridView() as this =
             printfn $"Leaving the model loading area"
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
-            ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Colors = colors})
+            ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2})
             let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
             ttModelMap <- adjustedModels
             for model in Map.toSeq adjustedModels do
-                let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Colors
+                let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2
                 let! renderModel =
                     async{
                         try
@@ -378,8 +378,8 @@ type VeldridView() as this =
             
         }
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: int) : Async<unit> =
-        agent.PostAndAsyncReply(fun reply -> (slot, item, race, colors, reply))
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int) : Async<unit> =
+        agent.PostAndAsyncReply(fun reply -> (slot, item, race, dye1, dye2, reply))
         
 
     member this.RequestResize (w: uint32, h: uint32) =

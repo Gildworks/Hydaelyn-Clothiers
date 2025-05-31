@@ -497,14 +497,14 @@ type MainWindow () as this =
                         let idx = hairSelector.SelectedIndex
                         if idx >= 0 && idx < hairs.Length then
                             let entry = hairs[idx]
-                            do render.AssignTrigger(Shared.EquipmentSlot.Hair, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hair, entry, characterRace, -1, -1) |> ignore
                     )
 
                     faceSelector.SelectionChanged.Add(fun _ ->
                         let idx = faceSelector.SelectedIndex
                         if idx >= 0 && idx < faces.Length then
                             let entry = faces[idx]
-                            do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace, -1, -1) |> ignore
                     )
 
                     earSelector.SelectionChanged.Add(fun _ ->
@@ -512,20 +512,22 @@ type MainWindow () as this =
                         if idx >= 0 && idx < ears.Length then
                             let entry = ears[idx]
                             
-                            do render.AssignTrigger(Shared.EquipmentSlot.Ear, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Ear, entry, characterRace, -1, -1) |> ignore
                     )
 
                     tailSelector.SelectionChanged.Add(fun _ ->
                         let idx = tailSelector.SelectedIndex
                         if idx >= 0 && idx < tails.Length then
                             let entry = tails[idx]
-                            do render.AssignTrigger(Shared.EquipmentSlot.Tail, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Tail, entry, characterRace, -1, -1) |> ignore
                     )
 
                     // === Gear Selectors ===
 
+                    // === Head Slots ===
                     headSlot.SelectionChanged.Add(fun _ ->
-                        printfn "Headslot changed"
+                        headDye1.SelectedIndex <- -1
+                        headDye2.SelectedIndex <- -1
                         let idx = headSlot.SelectedIndex
                         if idx >= 0 && idx < headGear.Length then
                             let entry = headGear[idx]
@@ -535,10 +537,43 @@ type MainWindow () as this =
                                    headDye1.IsEnabled <- slot1
                                    headDye2.IsEnabled <- slot2
                                  })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace, -1, -1) |> ignore
                     )
 
+                    headDye1.SelectionChanged.Add(fun _ ->
+                        let entryIdx = headSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < headGear.Length then
+                            let entry = headGear[entryIdx]
+                            if headDye1.SelectedIndex > -1 then
+                                let dye1Idx = headDye1.SelectedIndex + 1
+                                let dye2Idx = 
+                                    if headDye2.IsEnabled && headDye2.SelectedIndex >= 0 then
+                                        headDye2.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye1Idx >= 0 && dye1Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Head, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    headDye2.SelectionChanged.Add(fun _ ->
+                        let entryIdx = headSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < headGear.Length then
+                            let entry = headGear[entryIdx]
+                            if headDye2.SelectedIndex > -1 then
+                                let dye2Idx = headDye2.SelectedIndex + 1
+                                let dye1Idx =
+                                    if headDye1.IsEnabled && headDye1.SelectedIndex >= 0 then
+                                        headDye1.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye2Idx >= 0 && dye2Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Head, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    // === Body Slots ===
                     bodySlot.SelectionChanged.Add(fun _ ->
+                        bodyDye1.SelectedIndex <- -1
+                        bodyDye2.SelectedIndex <- -1
                         let idx = bodySlot.SelectedIndex
                         if idx >= 0 && idx < bodyGear.Length then
                             let entry = bodyGear[idx]
@@ -549,19 +584,43 @@ type MainWindow () as this =
                                     bodyDye2.IsEnabled <- slot2
                                 })
                             
-                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace, -1, -1) |> ignore
                     )
 
                     bodyDye1.SelectionChanged.Add(fun _ ->
                         let entryIdx = bodySlot.SelectedIndex
                         if entryIdx >= 0 && entryIdx < bodyGear.Length then
                             let entry = bodyGear[entryIdx]
-                            let dyeIdx = bodyDye1.SelectedIndex
-                            if dyeIdx >= 0 && dyeIdx < dyeList.Length then
-                                do render.AssignTrigger(EquipmentSlot.Body, entry, characterRace, dyeIdx) |> ignore
+                            if bodyDye1.SelectedIndex > -1 then
+                                let dye1Idx = bodyDye1.SelectedIndex + 1
+                                let dye2Idx = 
+                                    if bodyDye2.IsEnabled && bodyDye2.SelectedIndex >= 0 then
+                                        bodyDye2.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye1Idx >= 0 && dye1Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Body, entry, characterRace, dye1Idx, dye2Idx) |> ignore
                     )
 
+                    bodyDye2.SelectionChanged.Add(fun _ ->
+                        let entryIdx = bodySlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < bodyGear.Length then
+                            let entry = bodyGear[entryIdx]
+                            if bodyDye2.SelectedIndex > -1 then
+                                let dye2Idx = bodyDye2.SelectedIndex + 1
+                                let dye1Idx =
+                                    if bodyDye1.IsEnabled && bodyDye1.SelectedIndex >= 0 then
+                                        bodyDye1.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye2Idx >= 0 && dye2Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Body, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    // === Hand Slots ===
                     handSlot.SelectionChanged.Add(fun _ ->
+                        handDye1.SelectedIndex <- -1
+                        handDye2.SelectedIndex <- -1
                         let idx = handSlot.SelectedIndex
                         if idx >= 0 && idx < handGear.Length then
                             let entry = handGear[idx]
@@ -571,23 +630,89 @@ type MainWindow () as this =
                                     handDye1.IsEnabled <- slot1
                                     handDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace, -1, -1) |> ignore
                     )
 
+                    handDye1.SelectionChanged.Add(fun _ ->
+                        let entryIdx = handSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < handGear.Length then
+                            let entry = handGear[entryIdx]
+                            if handDye1.SelectedIndex > -1 then
+                                let dye1Idx = handDye1.SelectedIndex + 1
+                                let dye2Idx = 
+                                    if handDye2.IsEnabled && handDye2.SelectedIndex >= 0 then
+                                        handDye2.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye1Idx >= 0 && dye1Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Hands, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    handDye2.SelectionChanged.Add(fun _ ->
+                        let entryIdx = handSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < handGear.Length then
+                            let entry = handGear[entryIdx]
+                            if handDye2.SelectedIndex > -1 then
+                                let dye2Idx = handDye2.SelectedIndex + 1
+                                let dye1Idx =
+                                    if handDye1.IsEnabled && handDye1.SelectedIndex >= 0 then
+                                        handDye1.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye2Idx >= 0 && dye2Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Hands, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    // === Leg Slots ===
                     legsSlot.SelectionChanged.Add(fun _ ->
+                        legDye1.SelectedIndex <- -1
+                        legDye2.SelectedIndex <- -1
                         let idx = legsSlot.SelectedIndex
                         if idx >= 0 && idx < legsGear.Length then
                             let entry = legsGear[idx]
                             do
                                 Async.StartImmediate(async {
                                     let! (slot1, slot2) = enableDyeSlots(entry, EquipmentSlot.Legs, legDye1, legDye2, dyeList, tx) |> Async.AwaitTask
-                                    handDye1.IsEnabled <- slot1
-                                    handDye2.IsEnabled <- slot2
+                                    legDye1.IsEnabled <- slot1
+                                    legDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace, -1, -1) |> ignore
                     )
 
+                    legDye1.SelectionChanged.Add(fun _ ->
+                        let entryIdx = legsSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < legsGear.Length then
+                            let entry = legsGear[entryIdx]
+                            if legDye1.SelectedIndex > -1 then
+                                let dye1Idx = legDye1.SelectedIndex + 1
+                                let dye2Idx = 
+                                    if legDye2.IsEnabled && legDye2.SelectedIndex >= 0 then
+                                        legDye2.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye1Idx >= 0 && dye1Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Legs, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    legDye2.SelectionChanged.Add(fun _ ->
+                        let entryIdx = legsSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < legsGear.Length then
+                            let entry = legsGear[entryIdx]
+                            if legDye2.SelectedIndex > -1 then
+                                let dye2Idx = legDye2.SelectedIndex + 1
+                                let dye1Idx =
+                                    if legDye1.IsEnabled && legDye1.SelectedIndex >= 0 then
+                                        legDye1.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye2Idx >= 0 && dye2Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Legs, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    // === Feet Slots ===
                     feetSlot.SelectionChanged.Add(fun _ ->
+                        feetDye1.SelectedIndex <- -1
+                        feetDye2.SelectedIndex <- -1
                         let idx = feetSlot.SelectedIndex
                         if idx >= 0 && idx < feetGear.Length then
                             let entry = feetGear[idx]
@@ -597,7 +722,37 @@ type MainWindow () as this =
                                     feetDye1.IsEnabled <- slot1
                                     feetDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace, -1) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace, -1, -1) |> ignore
+                    )
+
+                    feetDye1.SelectionChanged.Add(fun _ ->
+                        let entryIdx = feetSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < feetGear.Length then
+                            let entry = feetGear[entryIdx]
+                            if feetDye1.SelectedIndex > -1 then
+                                let dye1Idx = feetDye1.SelectedIndex + 1
+                                let dye2Idx = 
+                                    if feetDye2.IsEnabled && feetDye2.SelectedIndex >= 0 then
+                                        feetDye2.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye1Idx >= 0 && dye1Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Feet, entry, characterRace, dye1Idx, dye2Idx) |> ignore
+                    )
+
+                    feetDye2.SelectionChanged.Add(fun _ ->
+                        let entryIdx = feetSlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < feetGear.Length then
+                            let entry = feetGear[entryIdx]
+                            if feetDye2.SelectedIndex > -1 then
+                                let dye2Idx = feetDye2.SelectedIndex + 1
+                                let dye1Idx =
+                                    if feetDye1.IsEnabled && feetDye1.SelectedIndex >= 0 then
+                                        feetDye1.SelectedIndex + 1
+                                    else
+                                        -1
+                                if dye2Idx >= 0 && dye2Idx < dyeList.Length then
+                                    do render.AssignTrigger(EquipmentSlot.Feet, entry, characterRace, dye1Idx, dye2Idx) |> ignore
                     )
 
                     // === Submit Character Button ===
@@ -676,28 +831,28 @@ type MainWindow () as this =
                                     printfn $"Could not determine effective body or face for {parsedRace.GetDisplayName()}"
 
                                 if faceSelector.SelectedIndex >= 0 then
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, faces[faceSelector.SelectedIndex], parsedRace, -1)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, faces[faceSelector.SelectedIndex], parsedRace, -1, -1)
                                 else
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace, -1)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace, -1, -1)
 
                                 if hairSelector.SelectedIndex >= 0 then
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, hairs[hairSelector.SelectedIndex], parsedRace, -1)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, hairs[hairSelector.SelectedIndex], parsedRace, -1, -1)
                                 else
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace, -1)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace, -1, -1)
 
                                 match defaultEar with
                                 | Some ear ->
                                     if earSelector.SelectedIndex >= 0 then
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ears[earSelector.SelectedIndex], parsedRace, -1)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ears[earSelector.SelectedIndex], parsedRace, -1, -1)
                                     else
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace, -1)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace, -1, -1)
                                 | None -> ()
                                 match defaultTail with
                                 |Some tail -> 
                                     if tailSelector.SelectedIndex >= 0 then
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tails[tailSelector.SelectedIndex], parsedRace, -1)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tails[tailSelector.SelectedIndex], parsedRace, -1, -1)
                                     else
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace, -1)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace, -1, -1)
                                 | None -> ()
 
                                 let baseCharacter (slot: ComboBox) (gearList: XivGear list) (nameFilter: string) =
@@ -709,16 +864,27 @@ type MainWindow () as this =
                                             slot.SelectedIndex <- idx
                                             )
 
-                                let reloadGear (slot: ComboBox) =
+                                let reloadGear (slot: ComboBox) (dye1: ComboBox) (dye2: ComboBox) =
                                     let current = slot.SelectedIndex
+                                    let currentDye1 = dye1.SelectedIndex
+                                    let currentDye2 = dye2.SelectedIndex
                                     if current >= 0 then
                                         slot.SelectedIndex <- -1
                                         slot.SelectedIndex <- current
-                                reloadGear headSlot
-                                reloadGear bodySlot
-                                reloadGear handSlot
-                                reloadGear legsSlot
-                                reloadGear feetSlot
+                                    if currentDye1 >= 0 then
+                                        dye1.SelectedIndex <- -1
+                                        dye1.SelectedIndex <- currentDye1
+                                    if currentDye2 >= 0 then
+                                        dye2.SelectedIndex <- -1
+                                        dye2.SelectedIndex <- currentDye2
+
+
+
+                                reloadGear headSlot headDye1 headDye2
+                                reloadGear bodySlot bodyDye1 bodyDye2
+                                reloadGear handSlot handDye1 handDye2
+                                reloadGear legsSlot legDye1 legDye2
+                                reloadGear feetSlot feetDye1 feetDye2
 
                                 baseCharacter bodySlot bodyGear "SmallClothes"
                                 baseCharacter handSlot handGear "SmallClothes"
