@@ -96,14 +96,16 @@ let loadRenderModelFromItem
                                 SharpToNumerics.vec3 vtx.Position,
                                 SharpToNumerics.convertColor vtx.VertexColor,
                                 SharpToNumerics.vec2 vtx.UV1,
-                                SharpToNumerics.vec3 vtx.Normal
+                                SharpToNumerics.vec3 vtx.Normal,
+                                SharpToNumerics.vec3 vtx.Tangent,
+                                SharpToNumerics.vec3 vtx.Binormal
                             )
                         )
                         |> Seq.toArray
                     let indices = part.TriangleIndices |> Seq.map uint16 |> Array.ofSeq
 
                     printfn "Creating buffers"
-                    let vertexBuffer = factory.CreateBuffer(BufferDescription(uint32 (verts.Length * sizeof<float32> * 12), BufferUsage.VertexBuffer))
+                    let vertexBuffer = factory.CreateBuffer(BufferDescription(uint32 (verts.Length * sizeof<float32> * sizeof<VertexPositionColorUv>), BufferUsage.VertexBuffer))
                     let indexBuffer = factory.CreateBuffer(BufferDescription(uint32 (indices.Length * sizeof<uint16>), BufferUsage.IndexBuffer))
                     printfn "Buffers created, updating buffers..."
                     gd.UpdateBuffer(vertexBuffer, 0u, convertedVerts)
@@ -218,7 +220,9 @@ let loadRenderModelFromPart
                                 SharpToNumerics.vec3 vtx.Position,
                                 SharpToNumerics.convertColor vtx.VertexColor,
                                 SharpToNumerics.vec2 vtx.UV1,
-                                SharpToNumerics.vec3 vtx.Normal
+                                SharpToNumerics.vec3 vtx.Normal,
+                                SharpToNumerics.vec3 vtx.Tangent,
+                                SharpToNumerics.vec3 vtx.Binormal
                             )
                         )
                         |> Seq.toArray

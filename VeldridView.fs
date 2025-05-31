@@ -101,7 +101,7 @@ type VeldridView() as this =
         device <- Some gd
 
         let mvp = gd.ResourceFactory.CreateBuffer(
-            BufferDescription(uint32 (sizeof<Matrix4x4>), BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)
+            BufferDescription(uint32 (sizeof<Matrix4x4> * 2), BufferUsage.UniformBuffer ||| BufferUsage.Dynamic)
         )
         let layout = gd.ResourceFactory.CreateResourceLayout(
             ResourceLayoutDescription(ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex))
@@ -113,13 +113,8 @@ type VeldridView() as this =
         mvpSet    <- Some set
 
     override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain): unit = 
-        //if assignModel then
-        //    this.AssignGear(modelSlot.Value, gearItem.Value, modelRace.Value, gd)
-        //    assignModel <- false
 
-        if isResizing then () else
-
-        
+        if isResizing then () else       
 
         let fb = swapchain.Framebuffer
         if fb.Width <> this.WindowWidth || fb.Height <> this.WindowHeight then
@@ -138,8 +133,8 @@ type VeldridView() as this =
                     //VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    //VertexElementDescription("BiTangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    //VertexElementDescription("Unknown1", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+                    VertexElementDescription("Bitangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
                 |]
             )
             let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
@@ -183,7 +178,13 @@ type VeldridView() as this =
             let aspect = w / h
             let view = camera.GetViewMatrix()
             let proj = camera.GetProjectionMatrix(aspect)
-            let mvpMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f) * view * proj
+            //let mvpMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f) * view * proj
+            let modelMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f)
+            
+            let worldViewMatrix = modelMatrix * view
+            let worldViewProjectionMatrix = worldViewMatrix * proj
+
+            let transformsData = [| worldViewProjectionMatrix; worldViewMatrix |]
 
             cmdList.Begin()
             cmdList.SetFramebuffer(fb)
@@ -200,7 +201,7 @@ type VeldridView() as this =
             else
                 for model in visibleModels do
                     for mesh in model.Meshes do
-                        gd.UpdateBuffer(mvpBuffer.Value, 0u, mvpMatrix)
+                        gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
                         cmdList.SetPipeline(pipeline.Value)
                         cmdList.SetGraphicsResourceSet(0u, mvpSet.Value)
                         cmdList.SetGraphicsResourceSet(1u, mesh.Material.ResourceSet)
@@ -229,7 +230,7 @@ type VeldridView() as this =
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: int, gd: GraphicsDevice) : Async<unit> =
         printfn $"Loading model with the following parameters:"
         printfn $"Slot: {slot}"
         printfn $"Item: {item}"
@@ -344,7 +345,7 @@ type VeldridView() as this =
                         try
                             printfn $"Attempting to load model with {resolvedRace.ToString()}"
                             //return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value race race materialBuilder |> Async.AwaitTask
-                            return! loadModel item resolvedRace |> Async.AwaitTask
+                            return! loadModel item race |> Async.AwaitTask
                         with _ ->
                             
                             return! racialFallbacks item priorityList resolvedRace
@@ -377,7 +378,7 @@ type VeldridView() as this =
             
         }
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: CustomModelColors) : Async<unit> =
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, colors: int) : Async<unit> =
         agent.PostAndAsyncReply(fun reply -> (slot, item, race, colors, reply))
         
 

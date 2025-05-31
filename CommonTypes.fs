@@ -30,11 +30,15 @@ type VertexPositionColorUv =
     val Color           : Vector4
     val UV              : Vector2
     val Normal          : Vector3
-    new (pos, col, uv, normal) = {
+    val Tangent         : Vector3
+    val BiTangent       : Vector3
+    new (pos, col, uv, normal, tangent, bitangent) = {
         Position = pos
         Color = col
         UV = uv
         Normal = normal
+        Tangent = tangent
+        BiTangent = bitangent
     }
 
 
@@ -191,5 +195,5 @@ type Config = {
 type InputModel = {
     Model                       : TTModel
     Item                        : IItemModel
-    Colors                      : CustomModelColors
+    Colors                      : int
 }

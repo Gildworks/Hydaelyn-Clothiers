@@ -91,9 +91,9 @@ type MainWindow () as this =
         let halfToColor (h: SharpDX.Half[]) =
             if h.Length >= 3 then
                 let color = Vector4(
-                    float32 h[0],
-                    float32 h[1],
-                    float32 h[2],
+                    SharpDX.Half.op_Implicit(h[0]),
+                    SharpDX.Half.op_Implicit(h[1]),
+                    SharpDX.Half.op_Implicit(h[2]),
                     255.0f
                 )
                 let sv = SharpDX.Vector4(color.X, color.Y, color.Z, color.W)
@@ -497,14 +497,14 @@ type MainWindow () as this =
                         let idx = hairSelector.SelectedIndex
                         if idx >= 0 && idx < hairs.Length then
                             let entry = hairs[idx]
-                            do render.AssignTrigger(Shared.EquipmentSlot.Hair, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hair, entry, characterRace, -1) |> ignore
                     )
 
                     faceSelector.SelectionChanged.Add(fun _ ->
                         let idx = faceSelector.SelectedIndex
                         if idx >= 0 && idx < faces.Length then
                             let entry = faces[idx]
-                            do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Face, entry, characterRace, -1) |> ignore
                     )
 
                     earSelector.SelectionChanged.Add(fun _ ->
@@ -512,14 +512,14 @@ type MainWindow () as this =
                         if idx >= 0 && idx < ears.Length then
                             let entry = ears[idx]
                             
-                            do render.AssignTrigger(Shared.EquipmentSlot.Ear, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Ear, entry, characterRace, -1) |> ignore
                     )
 
                     tailSelector.SelectionChanged.Add(fun _ ->
                         let idx = tailSelector.SelectedIndex
                         if idx >= 0 && idx < tails.Length then
                             let entry = tails[idx]
-                            do render.AssignTrigger(Shared.EquipmentSlot.Tail, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Tail, entry, characterRace, -1) |> ignore
                     )
 
                     // === Gear Selectors ===
@@ -535,7 +535,7 @@ type MainWindow () as this =
                                    headDye1.IsEnabled <- slot1
                                    headDye2.IsEnabled <- slot2
                                  })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Head, entry, characterRace, -1) |> ignore
                     )
 
                     bodySlot.SelectionChanged.Add(fun _ ->
@@ -548,7 +548,17 @@ type MainWindow () as this =
                                     bodyDye1.IsEnabled <- slot1
                                     bodyDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace, globalDefaultColors) |> ignore
+                            
+                            do render.AssignTrigger(Shared.EquipmentSlot.Body, entry, characterRace, -1) |> ignore
+                    )
+
+                    bodyDye1.SelectionChanged.Add(fun _ ->
+                        let entryIdx = bodySlot.SelectedIndex
+                        if entryIdx >= 0 && entryIdx < bodyGear.Length then
+                            let entry = bodyGear[entryIdx]
+                            let dyeIdx = bodyDye1.SelectedIndex
+                            if dyeIdx >= 0 && dyeIdx < dyeList.Length then
+                                do render.AssignTrigger(EquipmentSlot.Body, entry, characterRace, dyeIdx) |> ignore
                     )
 
                     handSlot.SelectionChanged.Add(fun _ ->
@@ -561,7 +571,7 @@ type MainWindow () as this =
                                     handDye1.IsEnabled <- slot1
                                     handDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Hands, entry, characterRace, -1) |> ignore
                     )
 
                     legsSlot.SelectionChanged.Add(fun _ ->
@@ -574,7 +584,7 @@ type MainWindow () as this =
                                     handDye1.IsEnabled <- slot1
                                     handDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Legs, entry, characterRace, -1) |> ignore
                     )
 
                     feetSlot.SelectionChanged.Add(fun _ ->
@@ -587,7 +597,7 @@ type MainWindow () as this =
                                     feetDye1.IsEnabled <- slot1
                                     feetDye2.IsEnabled <- slot2
                                 })
-                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace, globalDefaultColors) |> ignore
+                            do render.AssignTrigger(Shared.EquipmentSlot.Feet, entry, characterRace, -1) |> ignore
                     )
 
                     // === Submit Character Button ===
@@ -666,28 +676,28 @@ type MainWindow () as this =
                                     printfn $"Could not determine effective body or face for {parsedRace.GetDisplayName()}"
 
                                 if faceSelector.SelectedIndex >= 0 then
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, faces[faceSelector.SelectedIndex], parsedRace, globalDefaultColors)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, faces[faceSelector.SelectedIndex], parsedRace, -1)
                                 else
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace, globalDefaultColors)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Face, effectiveFaceItem.Value, parsedRace, -1)
 
                                 if hairSelector.SelectedIndex >= 0 then
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, hairs[hairSelector.SelectedIndex], parsedRace, globalDefaultColors)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, hairs[hairSelector.SelectedIndex], parsedRace, -1)
                                 else
-                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace, globalDefaultColors)
+                                    do! render.AssignTrigger(Shared.EquipmentSlot.Hair, defaultHair.Value, parsedRace, -1)
 
                                 match defaultEar with
                                 | Some ear ->
                                     if earSelector.SelectedIndex >= 0 then
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ears[earSelector.SelectedIndex], parsedRace, globalDefaultColors)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ears[earSelector.SelectedIndex], parsedRace, -1)
                                     else
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace, globalDefaultColors)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Ear, ear, parsedRace, -1)
                                 | None -> ()
                                 match defaultTail with
                                 |Some tail -> 
                                     if tailSelector.SelectedIndex >= 0 then
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tails[tailSelector.SelectedIndex], parsedRace, globalDefaultColors)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tails[tailSelector.SelectedIndex], parsedRace, -1)
                                     else
-                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace, globalDefaultColors)
+                                        do! render.AssignTrigger(Shared.EquipmentSlot.Tail, tail, parsedRace, -1)
                                 | None -> ()
 
                                 let baseCharacter (slot: ComboBox) (gearList: XivGear list) (nameFilter: string) =
