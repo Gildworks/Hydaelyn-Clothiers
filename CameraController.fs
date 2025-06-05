@@ -19,7 +19,7 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
     let mutable lastMouse = Vector2.Zero
 
     do
-        let fovY = MathF.PI / 4.0f // From your GetProjectionMatrix
+        let fovY = MathF.PI / 6.0f // From your GetProjectionMatrix
         let P = Option.defaultValue 0.5f initialTargetYPercentageFromBottom // Default to center (0,0,0) if not specified
 
         if P < 0.0f || P > 1.0f then
@@ -114,7 +114,7 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
 
     member _.GetProjectionMatrix(aspectRatio: float32) : Matrix4x4 =
         Matrix4x4.CreatePerspectiveFieldOfView(
-            MathF.PI / 4.0f, // fovY
+            MathF.PI / 6.0f, // fovY
             aspectRatio,
             0.1f,            // Near plane
             1000.0f          // Far plane

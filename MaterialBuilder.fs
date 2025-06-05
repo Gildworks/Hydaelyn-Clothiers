@@ -14,6 +14,7 @@ let materialBuilder
     (resourceLayout: ResourceLayout)
     (dye1: int)
     (dye2: int)
+    (colors: CustomModelColors)
     (mtrl: XivMtrl)
     : Task<PreparedMaterial> =
     task {
@@ -76,7 +77,7 @@ let materialBuilder
                         if not (templateKey > 1000us) then printfn "templateKey was below 1000us."
                         if not (templateKey <> UInt16.MaxValue) then printfn "templateKey IS UINT16 MAX VALUE."
 
-        let! modelTex = ModelTexture.GetModelMaps(dyedMat, true)
+        let! modelTex = ModelTexture.GetModelMaps(dyedMat, true, colors)
 
         // --- Helper to convert byte[] to RgbaByte[] ---
         let byteToRgba (bytes: byte[]) : RgbaByte[] =

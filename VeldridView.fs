@@ -75,7 +75,7 @@ type VeldridView() as this =
   
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
-            let! (slot, item, race, dye1, dye2, reply: AsyncReplyChannel<unit>) = inbox.Receive()
+            let! (slot, item, race, dye1, dye2, colors, reply: AsyncReplyChannel<unit>) = inbox.Receive()
             printfn "\n\n========================================================="
             printfn $"[Mailbox] Assigning model for: Slot {slot} | Race {race} | Item {item}"
             printfn"============================================"
@@ -83,7 +83,7 @@ type VeldridView() as this =
             try
                 //let! _ =
                 //    async {
-                do! this.AssignGear(slot, item, race, dye1, dye2, device.Value )
+                do! this.AssignGear(slot, item, race, dye1, dye2, colors, device.Value )
                     //}
             with ex ->
                 printfn $"[AssignGear] Failed to load model for slot {slot}: {ex.Message}"
@@ -98,6 +98,7 @@ type VeldridView() as this =
 
     override this.Prepare (gd: GraphicsDevice): unit = 
         base.Prepare(gd: GraphicsDevice)
+        printfn "Preparing Graphics Device"
         device <- Some gd
 
         let mvp = gd.ResourceFactory.CreateBuffer(
@@ -107,12 +108,14 @@ type VeldridView() as this =
             ResourceLayoutDescription(ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex))
         )
         let set = gd.ResourceFactory.CreateResourceSet(ResourceSetDescription(layout, mvp))
+        printfn "In theory, the graphics device is good now"
 
         mvpBuffer <- Some mvp
         mvpLayout <- Some layout
         mvpSet    <- Some set
 
     override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain): unit = 
+
 
         if isResizing then () else       
 
@@ -230,7 +233,7 @@ type VeldridView() as this =
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, gd: GraphicsDevice) : Async<unit> =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
         printfn $"Loading model with the following parameters:"
         printfn $"Slot: {slot}"
         printfn $"Item: {item}"
@@ -353,11 +356,11 @@ type VeldridView() as this =
             printfn $"Leaving the model loading area"
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
-            ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2})
+            ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
             let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
             ttModelMap <- adjustedModels
             for model in Map.toSeq adjustedModels do
-                let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2
+                let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2 adjustedModels[slot].Colors
                 let! renderModel =
                     async{
                         try
@@ -378,8 +381,8 @@ type VeldridView() as this =
             
         }
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int) : Async<unit> =
-        agent.PostAndAsyncReply(fun reply -> (slot, item, race, dye1, dye2, reply))
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors) : Async<unit> =
+        agent.PostAndAsyncReply(fun reply -> (slot, item, race, dye1, dye2, colors, reply))
         
 
     member this.RequestResize (w: uint32, h: uint32) =

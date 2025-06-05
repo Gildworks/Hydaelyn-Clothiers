@@ -10,6 +10,7 @@ open xivModdingFramework.General.Enums
 open System
 open System.Numerics
 open System.Runtime.InteropServices
+open System.Runtime.CompilerServices
 open Veldrid
 
 
@@ -40,6 +41,60 @@ type VertexPositionColorUv =
         Tangent = tangent
         BiTangent = bitangent
     }
+
+type raceIds = 
+    | Hyur_Midlander_Male = 0
+    | Hyur_Midlander_Female = 1
+    | Hyur_HighLander_Male = 2
+    | Hyur_Highlander_Female = 3
+    | Elezen_Wildwood_Male = 4
+    | Elezen_Wildwood_Female = 5
+    | Elezen_Duskwight_Male = 6
+    | Elezen_Duskwight_Female = 7
+    | Lalafell_Plainsfolk_Male = 8
+    | Lalafell_Plainsfolk_Female = 9
+    | Lalafell_DunesFolk_Male = 10
+    | Lalafell_DunesFolk_Female = 11
+    | Miqote_Seeker_Male = 12
+    | Miqote_Seeker_Female = 13
+    | Miqote_Keeper_Male = 14
+    | Miqote_Keeper_Female = 15
+    | Roegadyn_SeaWolves_Male = 16
+    | Roegadyn_SeaWolves_Female = 17
+    | Roegadyn_Hellsguard_Male = 18
+    | Roegadyn_Hellsguard_Female = 19
+    | AuRa_Raen_Male = 20
+    | AuRa_Raen_Female = 21
+    | AuRa_Xaela_Male = 22
+    | AuRa_Xaela_Female = 23
+    | Hrothgar_Helions_Male = 24
+    | Hrothgar_Helions_Female = 25
+    | Hrothgar_Lost_Male = 26
+    | Hrothgar_Lost_Female = 27
+    | Viera_Rava_Male = 28
+    | Viera_Rava_Female = 29
+    | Viera_Veena_Male = 30
+    | Viere_Veena_Female = 31
+
+type paletteOptions =
+    | RenderHighlights = 0
+    | RenderEyeColor = 1
+    | RenderLipDark = 2
+    | RenderLipLight = 3
+    | RenderTattoo = 4
+    | RenderFaceDark = 5
+    | RenderFaceLight = 6
+    | UIHighlights = 7
+    | UIEyeColor = 8
+    | UILipDark = 9
+    | UILipLight = 10
+    | UITattoo = 11
+    | UIFaceDark = 12
+    | UIFaceLight = 13
+    | RenderSkin = 14
+    | RenderHair = 15
+    | UISkin = 16
+    | UIHair = 17
 
 
 
@@ -197,4 +252,5 @@ type InputModel = {
     Item                        : IItemModel
     Dye1                        : int
     Dye2                        : int
+    Colors                      : CustomModelColors
 }

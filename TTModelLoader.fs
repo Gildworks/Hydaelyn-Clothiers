@@ -46,7 +46,6 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
                             match slot with
                             | EquipmentSlot.Head -> "met"
                             | EquipmentSlot.Body -> "top"
-                            | EquipmentSlot.Body -> "top"
                             | EquipmentSlot.Hands -> "glv"
                             | EquipmentSlot.Legs -> "dwn"
                             | EquipmentSlot.Feet -> "sho"
@@ -68,13 +67,17 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
                                 return raise (exn "Failed to load any model, rage quitting.")
                             | race::rest ->
                                 try
-                                    return! loadModel item race |> Async.AwaitTask
+                                    let! model = loadModel item race |> Async.AwaitTask
+                                    if not (obj.ReferenceEquals(model, null)) then
+                                        return model
+                                    else
+                                        return! racialFallbacks item rest
                                 with ex ->
                                     printfn $"Fallback failed for {race}: {ex.Message}"
                                     return! racialFallbacks item rest
                         }
                     try
-                        let! result = loadModel item resolvedRace |> Async.AwaitTask
+                        let! result = loadModel item race |> Async.AwaitTask
                         if obj.ReferenceEquals(result, null) then
                             try
                                 let! fallback = racialFallbacks item priorityList
@@ -88,7 +91,7 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
                             return result
                     with ex ->
                         printfn $"Failed to even try to load a model: {ex.Message}"
-                        return raise ex
+                        return! racialFallbacks item priorityList
                 }
             return model
         }
