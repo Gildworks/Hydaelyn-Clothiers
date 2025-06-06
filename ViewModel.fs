@@ -14,6 +14,7 @@ type VeldridWindowViewModel() =
     let mutable _windowHandle   : Core.IDisposableWindow    option = None
 
     let mutable selectedRace = Unchecked.defaultof<ComboOption>
+    let mutable selectedTribe = Unchecked.defaultof<ComboOption>
 
     let propertyChanged = Event<PropertyChangedEventHandler, PropertyChangedEventArgs>()
 
@@ -23,6 +24,13 @@ type VeldridWindowViewModel() =
             if selectedRace <> value then
                 selectedRace <- value
                 propertyChanged.Trigger(this, PropertyChangedEventArgs("SelectedRace"))
+
+    member this.SelectedTribe
+        with get() = selectedTribe
+        and set(value) =
+            if selectedTribe <> value then
+                selectedTribe <- value
+                propertyChanged.Trigger(this, PropertyChangedEventArgs("SelectedTribe"))
 
     interface INotifyPropertyChanged with
         [<CLIEvent>]

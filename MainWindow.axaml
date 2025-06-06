@@ -10,8 +10,8 @@
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
 	<Grid ColumnDefinitions="*, 5, 3*, *">
-		<ScrollViewer>
-			<StackPanel Grid.Column="0">
+		<ScrollViewer Grid.Column="0">
+			<StackPanel>
 				<StackPanel>
 					<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
 					<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
@@ -21,7 +21,13 @@
 							</DataTemplate>
 						</ComboBox.ItemTemplate>
 					</ComboBox>
-					<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+					<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedTribe}">
+						<ComboBox.ItemTemplate>
+							<DataTemplate x:DataType="shared:ComboOption">
+								<TextBlock Text="{Binding Display}" />
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
 					<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 					<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
 
@@ -133,35 +139,161 @@
 		<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
 			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl" />
 		</Border>
-		<StackPanel Grid.Column="3">
-			<StackPanel>
-				<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
-				<ComboBox x:Name="HairSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
 
-				<ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-				<ComboBox x:Name="EarSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-				<ComboBox x:Name="TailSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-			</StackPanel>
+		<ScrollViewer Grid.Column="3">
 			<StackPanel>
-				<TextBlock Text="Character Colors" HorizontalAlignment="Stretch" Margin="19" />
-				<ItemsControl x:Name="SkinColorSwatches" Width="160">
-					<ItemsControl.ItemsPanel>
-						<ItemsPanelTemplate>
-							<UniformGrid Columns="8" />
-						</ItemsPanelTemplate>
-					</ItemsControl.ItemsPanel>
-					<ItemsControl.ItemTemplate>
-						<DataTemplate x:DataType="Color">
-							<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
-								<Border.Background>
-									<SolidColorBrush Color="{Binding}" />
-								</Border.Background>
-							</Border>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-			</StackPanel>
-		</StackPanel>
+				<StackPanel>
+					<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
+					<ComboBox x:Name="HairSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
 
+					<ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+					<ComboBox x:Name="EarSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+					<ComboBox x:Name="TailSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+				</StackPanel>
+				<StackPanel>
+					<TextBlock Text="Character Colors" HorizontalAlignment="Stretch" Margin="19" />
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Skin Color
+						</Expander.Header>
+						<ItemsControl x:Name="SkinColorSwatches" Width="160">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<UniformGrid Columns="8" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+									<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+										<Border.Background>
+											<SolidColorBrush Color="{Binding Color}" />
+										</Border.Background>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Hair Color
+						</Expander.Header>
+						<Grid ColumnDefinitions="*, *" RowDefinitions="9*, *">
+							<ItemsControl x:Name="HighlightColorSwatches" Width="160" Grid.Column="0" Grid.Row="0">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="8" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+											<Border.Background>
+												<SolidColorBrush Color="{Binding Color}" />
+											</Border.Background>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+
+							<ItemsControl x:Name="HairColorSwatches" Width="160" Grid.Column="1" Grid.Row="0">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="8" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+											<Border.Background>
+												<SolidColorBrush Color="{Binding Color}" />
+											</Border.Background>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+
+							<CheckBox x:Name="HighlightsCheckbox" Grid.Column="1" Grid.Row="1">
+								Highlights
+							</CheckBox>
+						</Grid>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Eye Color
+						</Expander.Header>
+						<ItemsControl x:Name="EyeColorSwatches" Width="160">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<UniformGrid Columns="8" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+									<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+										<Border.Background>
+											<SolidColorBrush Color="{Binding Color}" />
+										</Border.Background>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Lip Color
+						</Expander.Header>
+						<StackPanel>
+							<StackPanel HorizontalAlignment="Right">
+								<RadioButton Content="Dark" GroupName="LipColor" x:Name="DarkLip" IsChecked="True" />
+								<RadioButton Content="Light" GroupName="LipColor" x:Name="LightLip" />
+								<RadioButton Content="None" GroupName="LipColor" x:Name="NoneLip" />
+							</StackPanel>
+							<ItemsControl x:Name="LipColorSwatches" Width="160">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="8" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+											<Border.Background>
+												<SolidColorBrush Color="{Binding Color}" />
+											</Border.Background>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</StackPanel>
+					</Expander>
+
+					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander.Header>
+							Tattoo Color
+						</Expander.Header>
+						<ItemsControl x:Name="TattooColorSwatches" Width="160">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<UniformGrid Columns="8" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+									<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+										<Border.Background>
+											<SolidColorBrush Color="{Binding Color}" />
+										</Border.Background>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</Expander>
+				</StackPanel>
+			</StackPanel>
+		</ScrollViewer>
 	</Grid>
 </Window>

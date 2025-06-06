@@ -45,7 +45,7 @@ type VertexPositionColorUv =
 type raceIds = 
     | Hyur_Midlander_Male = 0
     | Hyur_Midlander_Female = 1
-    | Hyur_HighLander_Male = 2
+    | Hyur_Highlander_Male = 2
     | Hyur_Highlander_Female = 3
     | Elezen_Wildwood_Male = 4
     | Elezen_Wildwood_Female = 5
@@ -253,4 +253,9 @@ type InputModel = {
     Dye1                        : int
     Dye2                        : int
     Colors                      : CustomModelColors
+}
+
+type swatchOption = {
+    Color                       : Avalonia.Media.Color
+    Index                       : int
 }
