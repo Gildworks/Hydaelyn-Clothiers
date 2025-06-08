@@ -18,6 +18,10 @@
 		
 		
 		
+		<Compile Include="GamePathPrompt.axaml.fs" />
+		
+		
+		
 		<Content Include="shaders\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
@@ -29,8 +33,6 @@
 		<Compile Include="MaterialBuilder.fs" />
 		<Compile Include="ApplyFlags.fs" />
 		<Compile Include="TTModelLoader.fs" />
-
-		<Compile Include="CmpLoader.fs" />
 		<Compile Include="ShaderUtils.fs" />		
 		
 		<Compile Include="MaterialInterpreter.fs" />		

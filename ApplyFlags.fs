@@ -213,21 +213,6 @@ let applyFlags (models: Map<EquipmentSlot, InputModel>) : Task<Map<EquipmentSlot
         for model in models.Values do
             let attributes = model.Model.Attributes
             let flags = model.Model.Flags
-            printfn $"\n\n\n{model.Model.Source} attributes:"
-            for attr in attributes do
-                printfn $"{attr}"
-            printfn $" Model Flags: {flags}"
-            for group in model.Model.MeshGroups do
-                printfn $"\n Parts for {group.Name}:"
-                for part in group.Parts do
-                    let partAttr = part.Attributes
-                    let partName = part.Name
-                    printfn $"{partName}:"
-                    for attr in partAttr do
-                        printfn $"Attribute: {attr}"
-
-            printfn $"Primary Category: {model.Item.PrimaryCategory} | Secondary Category: {model.Item.SecondaryCategory} | Tertiary Category: {model.Item.TertiaryCategory} | ID: {model.Item.ModelInfo.PrimaryID}"
-
             if model.Item.PrimaryCategory = "Gear" && model.Item.ModelInfo.PrimaryID > 0 then
 
                 let eqp = new Eqp()
@@ -235,22 +220,13 @@ let applyFlags (models: Map<EquipmentSlot, InputModel>) : Task<Map<EquipmentSlot
                 let! itemAttr = eqp.GetEqpEntry(model.Item)
                 let itemFlags = itemAttr.AvailableFlags
                 let itemFlagValues = itemAttr.GetFlags()
-                printfn "\n\n==================================================="
-                printfn "Flags:"
-                printfn "==================================================="
                 for flag in itemFlagValues do
-                    printfn $"{flag.Key}: {flag.Value}"
                     allFlags <- allFlags |> Map.add flag.Key flag.Value
             
-                printfn "\n\n==================================================="
-                printfn $"Relevant Flags:"
-                printfn "==================================================="
                 for flag in itemFlagValues do                
                     if flag.Key.ToString().Contains("Hide") && flag.Value then
-                        printfn $"{flag.Key}"
                         usedFlags <- usedFlags |> Map.add flag.Key flag.Value
                     else if flag.Key.ToString().Contains("Show") && not flag.Value then
-                        printfn $"{flag.Key}"
                         usedFlags <- usedFlags |> Map.add flag.Key flag.Value
         
 

@@ -63,7 +63,6 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
                         async {
                             match races with
                             | [] ->
-                                printfn "All races failed, the model may not exist."
                                 return raise (exn "Failed to load any model, rage quitting.")
                             | race::rest ->
                                 try
@@ -73,7 +72,6 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
                                     else
                                         return! racialFallbacks item rest
                                 with ex ->
-                                    printfn $"Fallback failed for {race}: {ex.Message}"
                                     return! racialFallbacks item rest
                         }
                     try
@@ -85,12 +83,10 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
                                     return! loadModel item XivRace.Hyur_Midlander_Male |> Async.AwaitTask
                                 else return fallback
                             with ex ->
-                                printfn $"Failed to resolve model: {ex.Message}"
                                 return raise ex
                         else
                             return result
                     with ex ->
-                        printfn $"Failed to even try to load a model: {ex.Message}"
                         return! racialFallbacks item priorityList
                 }
             return model

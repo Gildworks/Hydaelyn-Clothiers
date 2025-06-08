@@ -30,7 +30,7 @@
 					</ComboBox>
 					<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
 					<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
-
+					<ProgressBar x:Name="ModelLoadingBar" IsIndeterminate="False" Height="20" Margin="10" />
 				</StackPanel>
 				<StackPanel>
 					<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
@@ -137,7 +137,7 @@
 		<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
 
 		<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
-			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl" />
+			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl"/>
 		</Border>
 
 		<ScrollViewer Grid.Column="3">

@@ -3,6 +3,7 @@
 open System
 open System.IO
 open System.Numerics
+open System.Threading.Tasks
 
 open Avalonia
 open Avalonia.Controls
@@ -75,20 +76,14 @@ type VeldridView() as this =
   
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
-            let! (slot, item, race, dye1, dye2, colors, reply: AsyncReplyChannel<unit>) = inbox.Receive()
-            printfn "\n\n========================================================="
-            printfn $"[Mailbox] Assigning model for: Slot {slot} | Race {race} | Item {item}"
-            printfn"============================================"
-
+            let! (slot, item, race, dye1, dye2, colors, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
             try
-                //let! _ =
-                //    async {
                 do! this.AssignGear(slot, item, race, dye1, dye2, colors, device.Value )
-                    //}
+                taskCompletionSource.SetResult(())
             with ex ->
-                printfn $"[AssignGear] Failed to load model for slot {slot}: {ex.Message}"
+                taskCompletionSource.SetException(ex)
             
-            reply. Reply(())
+            _mailboxAckReply.Reply(())
             return! loop ()
         }
         loop ()
@@ -98,7 +93,6 @@ type VeldridView() as this =
 
     override this.Prepare (gd: GraphicsDevice): unit = 
         base.Prepare(gd: GraphicsDevice)
-        printfn "Preparing Graphics Device"
         device <- Some gd
 
         let mvp = gd.ResourceFactory.CreateBuffer(
@@ -108,7 +102,6 @@ type VeldridView() as this =
             ResourceLayoutDescription(ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex))
         )
         let set = gd.ResourceFactory.CreateResourceSet(ResourceSetDescription(layout, mvp))
-        printfn "In theory, the graphics device is good now"
 
         mvpBuffer <- Some mvp
         mvpLayout <- Some layout
@@ -128,12 +121,10 @@ type VeldridView() as this =
         let h = float32 fb.Height
 
         if pipeline.IsNone && texLayout.IsSome && not assignModel then
-            printfn "Creating standard pipeline..."
             let vertexLayout = VertexLayoutDescription(
                 [|
                     VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
                     VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-                    //VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
                     VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
@@ -175,13 +166,11 @@ type VeldridView() as this =
             )
             let pipe = gd.ResourceFactory.CreateGraphicsPipeline(pipelineDesc)
             pipeline <- Some pipe
-            printfn "Standard pipeline created!"
 
         if w > 0.0f && h > 0.0f then
             let aspect = w / h
             let view = camera.GetViewMatrix()
             let proj = camera.GetProjectionMatrix(aspect)
-            //let mvpMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f) * view * proj
             let modelMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f)
             
             let worldViewMatrix = modelMatrix * view
@@ -234,16 +223,10 @@ type VeldridView() as this =
         base.Dispose(gd: GraphicsDevice)
 
     member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
-        printfn $"Loading model with the following parameters:"
-        printfn $"Slot: {slot}"
-        printfn $"Item: {item}"
-        printfn $"Race: {race}"
-
         async {
             let tx = ModTransaction.BeginReadonlyTransaction()
             let eqp = new Eqp()       
 
-            printfn "Creating texture layout..."
             let textureLayout =
                 gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(
                     ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
@@ -256,29 +239,22 @@ type VeldridView() as this =
                     ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                     ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                     ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
-                ))            
-            printfn "Texture layout created!"
-          
-            printfn "Building material..."
-            
-            printfn "Material built!"
-            printfn "Loading model..."
+                ))
 
             let! ttModel =
                 let loadModel (item: IItemModel) (race: XivRace) =
                     task {
                         let! model = Mdl.GetTTModel(item, race)
-                        printfn $"Model loaded: {model.Source}"
+                        let _ = model.Source
                         return model
                     }
-                printfn "Reached renderModel loading!"
-                async{    
+
+                async {    
                     match slot with
                     | EquipmentSlot.Face
                     | EquipmentSlot.Hair
                     | EquipmentSlot.Tail
                     | EquipmentSlot.Ear ->
-                        printfn "Loading character model!"
                         let category, prefix, suffix  =
                             match slot with
                             | EquipmentSlot.Face -> "face", "f", "fac"
@@ -290,10 +266,8 @@ type VeldridView() as this =
                         try
                             return! loadModel item race |> Async.AwaitTask
                         with ex ->
-                            printfn $"[Character Part Loading | Path: {mdlPath}] Error loading model: {ex.Message}"
                             return raise ex
                     | _ ->
-                        printfn "Loading gear model!"
                         let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot, races: XivRace list) : Async<XivRace> =
                             let rec tryResolveRace (slot: string) (races: XivRace list) (originalRace: XivRace) (eqdp: Collections.Generic.Dictionary<XivRace, xivModdingFramework.Models.DataContainers.EquipmentDeformationParameter>) : Async<XivRace> =
                                 async {
@@ -332,28 +306,21 @@ type VeldridView() as this =
                             async {
                                 match races with
                                 | [] ->
-                                    printfn "All races failed, is this even a real item? Are you intentionally trying to break me? Why would you do that?"
                                     return raise (exn "Failed to load any model. Rage quitting.")
                                 | race::rest ->
                                     try
-                                        printfn $"Trying {race} as a fallback..."
-                                        //return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx item race targetRace materialBuilder |> Async.AwaitTask
                                         return! loadModel item race |> Async.AwaitTask
                                     with ex ->
-                                        printfn $"Fallback failed for {race}: {ex.Message}"
                                         return! racialFallbacks item rest race
                             }
 
                         
                         try
-                            printfn $"Attempting to load model with {resolvedRace.ToString()}"
-                            //return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx gearItem.Value race race materialBuilder |> Async.AwaitTask
                             return! loadModel item race |> Async.AwaitTask
                         with _ ->
                             
                             return! racialFallbacks item priorityList resolvedRace
                 }
-            printfn $"Leaving the model loading area"
             do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
             ModelModifiers.FixUpSkinReferences(ttModel, race)
             ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
@@ -367,7 +334,6 @@ type VeldridView() as this =
                             let fixedModel = adjustedModels[slot].Model
                             return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
                         with ex ->
-                            printfn $"Error loading model: {ex.Message}"
                             return raise ex 
                     }
                 match modelMap.TryFind(slot) with
@@ -376,13 +342,17 @@ type VeldridView() as this =
                 | _ -> ()
 
                 modelMap <- modelMap.Add(slot, renderModel)
-            printfn $"Model loaded!"
             texLayout <- Some textureLayout
             
         }
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors) : Async<unit> =
-        agent.PostAndAsyncReply(fun reply -> (slot, item, race, dye1, dye2, colors, reply))
+        async {
+          let tcs = TaskCompletionSource<unit>()
+          do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, mailboxAckReply, tcs))
+
+          do! Async.AwaitTask(tcs.Task)
+        }
         
 
     member this.RequestResize (w: uint32, h: uint32) =
@@ -439,7 +409,6 @@ type VeldridView() as this =
         async{
             let chara = new Character()
             let! charaList = chara.GetCharacterList() |> Async.AwaitTask
-            printfn $"c{charaList[0].ModelInfo.PrimaryID:D4} | v{charaList[0].ModelInfo.ImcSubsetID:D4} | {charaList[0].ModelInfo.SecondaryID:D4}"
             return charaList |> List.ofSeq
         }
 

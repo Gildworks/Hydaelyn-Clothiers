@@ -3,6 +3,7 @@ namespace fs_mdl_viewer
 open System
 open System.Numerics
 open System.Threading.Tasks
+open System.Text.Json
 open System.IO
 
 open SixLabors.ImageSharp
@@ -15,9 +16,11 @@ open Avalonia.Interactivity
 open Avalonia.Layout
 open Avalonia.Media
 open Avalonia.Threading
+open Avalonia.Platform.Storage
 
 open AvaloniaRender.Veldrid
 open xivModdingFramework.General.Enums
+open xivModdingFramework.Cache
 open xivModdingFramework.General.DataContainers
 open xivModdingFramework.SqPack.FileTypes
 open xivModdingFramework.Items.Interfaces
@@ -93,7 +96,7 @@ module DataHelpers =
 
             let! cmpData =
                 try Dat.ReadFile(cmpPath, true) |> Async.AwaitTask
-                with ex -> printfn $"Failed to load cmp: {ex.Message}"; reraise()
+                with ex -> reraise()
 
             let cmpSet = new CharaMakeParameterSet(cmpData)
             let allBytes = cmpSet.GetBytes()
@@ -136,7 +139,6 @@ module DataHelpers =
             return dyeDict |> Seq.map (fun kvp -> kvp.Value) |> Seq.toList
         }
     let vec4ToDXColor (input: Vector4) : SharpDX.Color =
-        printfn $"Converting colors! Input color: R={input.X} G={input.Y} B={input.Z} A={input.W}"
         SharpDX.Color(
             byte (Math.Clamp(input.X, 0.0f, 255.0f)),
             byte (Math.Clamp(input.Y, 0.0f, 255.0f)),
@@ -217,6 +219,9 @@ type MainWindow () as this =
     let mutable currentFaceList: XivCharacter list = List.empty
     let mutable currentEarList: XivCharacter list = List.empty
     let mutable currentTailList: XivCharacter list = List.empty
+
+    let mutable busyOperationCount = 0
+    let busyLock = obj()
 
     let mutable viewerControl: EmbeddedWindowVeldrid = null
     let mutable inputOverlay: Border = null
@@ -301,7 +306,6 @@ type MainWindow () as this =
                         | vm -> match vm.Render with
                                 | :? VeldridView as r -> r.RequestResize(w,h)
                                 | _ -> ()
-                        | _ -> ()
             ) |> ignore
 
         this.Loaded.Add(fun _ ->
@@ -312,8 +316,7 @@ type MainWindow () as this =
                     veldridRenderView <- Some render
                     render.AttachInputHandlers(inputOverlay)
                     this.InitializeApplicationAsync(render) |> Async.StartImmediate
-                | _ -> printfn "CRITICAL ERROR: VeldridView instance not found in ViewModel after Loaded event."
-            | _ -> printfn "CRITICAL ERROR: ViewModel does not implement IVeldridWindowModel after Loaded event."
+                | _ -> ()
         )
 
     member private this.InitializeComponent() =
@@ -377,18 +380,15 @@ type MainWindow () as this =
             let mutable dyeChannel1 = false
             let mutable dyeChannel2 = false
 
-            printfn "[MAINWINDOW] ATTEMPTING TO LOAD DYEMODEL, IF YOU SEE THIS, THIS PORTION HAS BEEN REACHED."
-
             let! dyeModel = TTModelLoader.loadTTModel item currentCharacterRace itemSlot
                             |> Async.AwaitTask
-            printfn $"DyeModel: {dyeModel.Source} | Material Count: {dyeModel.Materials.Count}"
 
             for matName in dyeModel.Materials do
                 // *** FIXED HERE ***
                 let! material = (TTModelLoader.resolveMtrl dyeModel matName item tx |> Async.StartAsTask)
                 match material.ColorSetDyeData.Length with
                 | len when len >= 128 ->
-                    for i in 0 .. 15 do
+                    for i in 0 .. 31 do
                         let offset = i * 4
                         let stainId = material.ColorSetDyeData[offset]
                         let repeat = material.ColorSetDyeData[offset + 3]
@@ -396,7 +396,7 @@ type MainWindow () as this =
                             if repeat < 8uy then dyeChannel1 <- true
                             else dyeChannel2 <- true
                 | 32 ->
-                    for i in 0 .. 15 do
+                    for i in 0 .. 31 do
                         let flagsOffset = i * 2
                         let flags = material.ColorSetDyeData[flagsOffset]
                         if (flags &&& 0x01uy) <> 0uy then dyeChannel1 <- true
@@ -409,9 +409,10 @@ type MainWindow () as this =
         item: IItemModel, eqSlot: EquipmentSlot,
         dye1Combo: ComboBox, dye1ClearButton: Button,
         dye2Combo: ComboBox, dye2ClearButton: Button,
-        render: VeldridView) =
-        Async.StartImmediate(
-            async {
+        render: VeldridView) : Async<unit> =
+        async {
+            this.IncrementBusyCounter()
+            try
                 let mutable resetDye = true
                 match lastSelectedGearItem.TryGetValue(eqSlot) with
                 | true, previousItem when obj.ReferenceEquals(item, previousItem) ->
@@ -438,37 +439,40 @@ type MainWindow () as this =
                 if resetDye then
                     dye1Combo.SelectedIndex <- -1
                     dye2Combo.SelectedIndex <- -1
-                    do! render.AssignTrigger(eqSlot, item, currentCharacterRace, -1, -1, modelColors)
+                    do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, -1, -1, modelColors)
                 else
                     let dye1ToApply = if currentDye1Index >= 0 then currentDye1Index + 1 else -1
                     let dye2ToApply = if currentDye2Index >= 0 then currentDye2Index + 1 else -1
-                    do! render.AssignTrigger(eqSlot, item, currentCharacterRace, dye1ToApply, dye2ToApply, modelColors)
-            }
-        )
+                    do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1ToApply, dye2ToApply, modelColors)
+            finally
+                this.DecrementBusyCounter()
+        }
 
     member private this.updateModelWithSelectedColor(palette: paletteOptions, index: int, render: VeldridView) =
         Async.StartImmediate(
             async {
-                printfn $"Changing color for {palette.ToString()}"
-                let! renderPalette = DataHelpers.getColorPalette modelColorId palette |> Async.AwaitTask
-                let selectedColor = DataHelpers.vec4ToDXColor renderPalette.[index]
-                match int palette with
-                | 15 ->
-                    modelColors.HairColor <- selectedColor
-                | 0 ->
-                    modelColors.HairHighlightColor <- selectedColor
-                | 1 ->
-                    modelColors.EyeColor <- selectedColor
-                | 2 
-                | 3 ->
-                    modelColors.LipColor <- selectedColor
-                | 4 ->
-                    modelColors.TattooColor <- selectedColor
-                | 14 ->
-                    modelColors.SkinColor <- selectedColor
-                | _ -> ()
+                try
+                    let! renderPalette = DataHelpers.getColorPalette modelColorId palette |> Async.AwaitTask
+                    let selectedColor = DataHelpers.vec4ToDXColor renderPalette.[index]
+                    match int palette with
+                    | 15 ->
+                        modelColors.HairColor <- selectedColor
+                    | 0 ->
+                        modelColors.HairHighlightColor <- Nullable selectedColor
+                    | 1 ->
+                        modelColors.EyeColor <- selectedColor
+                    | 2 
+                    | 3 ->
+                        modelColors.LipColor <- selectedColor
+                    | 4 ->
+                        modelColors.TattooColor <- selectedColor
+                    | 14 ->
+                        modelColors.SkinColor <- selectedColor
+                    | _ -> ()
                 
-                do! this.OnSubmitCharacter(render)
+                    do! this.OnSubmitCharacter(render)
+                finally
+                    ()
             }
         )
         
@@ -514,7 +518,7 @@ type MainWindow () as this =
         let dye1Idx = if dye1Combo.IsEnabled && dye1Combo.SelectedIndex >=0 then dye1Combo.SelectedIndex + 1 else -1
         let dye2Idx = if dye2Combo.IsEnabled && dye2Combo.SelectedIndex >=0 then dye2Combo.SelectedIndex + 1 else -1
         if dye1Idx > 0 || dye2Idx > 0 then
-             render.AssignTrigger(eqSlot, item, currentCharacterRace, dye1Idx, dye2Idx, modelColors) |> ignore
+             this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1Idx, dye2Idx, modelColors) |> Async.StartImmediate
 
     member private this.ClearGearSlot(
         slotCombo: ComboBox, eqSlot: EquipmentSlot, gearList: XivGear list,
@@ -559,13 +563,6 @@ type MainWindow () as this =
             match raceSelector.SelectedValue with
             | :? ComboOption as selected ->
                 selectedRaceNameOpt <- Some selected.Value
-                //if selected.Value = "Hyur" then
-                //    clanSelector.ItemsSource <- ["Midlander"; "Highlander"]
-                //    clanSelector.IsEnabled <- true
-                //else
-                //    clanSelector.ItemsSource <- System.Linq.Enumerable.Empty<string>()
-                //    clanSelector.SelectedIndex <- -1
-                //    selectedClanNameOpt <- None
                 match selected.Value with
                 | "Hyur" ->
                     clanSelector.ItemsSource <- HyurTribes
@@ -633,7 +630,6 @@ type MainWindow () as this =
                 if lipRadioDarkControl.IsChecked.GetValueOrDefault(false) then
                     this.PaletteSwatchPointerPressed sender args paletteOptions.UILipDark render
                 elif lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
-                    printfn "Using Light Colors!"
                     this.PaletteSwatchPointerPressed sender args paletteOptions.UILipLight render
                 else
                     modelColors.LipColor <- SharpDX.Color(0uy)
@@ -648,14 +644,11 @@ type MainWindow () as this =
         )
 
         highlightEnableControl.IsCheckedChanged.Add( fun _ ->
-            printfn "Changing Highlight State"
             match highlightEnableControl.IsChecked.GetValueOrDefault(false) with
             | true -> 
                 highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
-                printfn $"Box checked, adding highlight swatches. {uiHighlightPalette.Length} swatches added!"
             | _ -> 
                 highlightsColorSwatchesControl.ItemsSource <- []
-                printfn "Box unchecked, hiding highlight swatches"
         )
 
         lipRadioDarkControl.IsCheckedChanged.Add(fun _ ->
@@ -687,7 +680,8 @@ type MainWindow () as this =
                 let idx = selector.SelectedIndex
                 let parts = getPartList()
                 if idx >= 0 && idx < parts.Length then
-                    render.AssignTrigger(partSlot, parts[idx], currentCharacterRace, -1, -1, modelColors) |> ignore
+                    this.ExecuteAssignTriggerAsync(render, partSlot, parts[idx], currentCharacterRace, -1, -1, modelColors) 
+                    |> Async.StartImmediate
             )
         setupCharPartSelector hairSelector EquipmentSlot.Hair (fun () -> currentHairList)
         setupCharPartSelector faceSelector EquipmentSlot.Face (fun () -> currentFaceList)
@@ -707,7 +701,7 @@ type MainWindow () as this =
                 let idx = slotCombo.SelectedIndex
                 let gearList = getGearList()
                 if idx >= 0 && idx < gearList.Length then
-                    this.HandleGearSelectionChanged(gearList[idx], eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
+                    do this.HandleGearSelectionChanged(gearList[idx], eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
             )
             clearButton.Click.Add(fun _ ->
                 this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
@@ -764,130 +758,213 @@ type MainWindow () as this =
 
     member private this.OnSubmitCharacter(render: VeldridView) =
         async {
-            let raceStr =
-                match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
-                | Some r, Some c, Some g when r = "Hyur" -> Some $"{r}_{c}_{g}"
-                | Some r, _, Some g when r <> "Hyur" -> Some $"{r}_{g}"
-                | _ -> None
+            this.IncrementBusyCounter()
+            try
+                let raceStr =
+                    match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
+                    | Some r, Some c, Some g when r = "Hyur" -> Some $"{r}_{c}_{g}"
+                    | Some r, _, Some g when r <> "Hyur" -> Some $"{r}_{g}"
+                    | _ -> None
 
-            let idStr = 
-                match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
-                | Some r, Some c, Some g -> $"{r}_{c}_{g}"
-                | _ -> ""
-            match Enum.TryParse<raceIds>(idStr) with
-            | true, parsedRace -> modelColorId <- parsedRace
-            | _ ->
-                printfn $"Didn't match a race. Passed race: {idStr}"
-                ()                    
+                let idStr = 
+                    match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
+                    | Some r, Some c, Some g -> $"{r}_{c}_{g}"
+                    | _ -> ""
+                match Enum.TryParse<raceIds>(idStr) with
+                | true, parsedRace -> modelColorId <- parsedRace
+                | _ ->
+                    ()                    
 
-            match raceStr with
-            | Some validRaceStr ->
-                match Enum.TryParse<XivRace>(validRaceStr) with
-                | true, parsedXivRace ->
-                    currentCharacterRace <- parsedXivRace
-                    render.clearCharacter()
+                match raceStr with
+                | Some validRaceStr ->
+                    match Enum.TryParse<XivRace>(validRaceStr) with
+                    | true, parsedXivRace ->
+                        currentCharacterRace <- parsedXivRace
+                        render.clearCharacter()
 
-                    let getParts cat = DataHelpers.getCustomizableParts parsedXivRace cat allCharaCache currentCharacterRace
-                    currentFaceList <- getParts "Face"
-                    currentHairList <- getParts "Hair"
-                    currentEarList <- getParts "Ear"
-                    currentTailList <- getParts "Tail"
+                        let getParts cat = DataHelpers.getCustomizableParts parsedXivRace cat allCharaCache currentCharacterRace
+                        currentFaceList <- getParts "Face"
+                        currentHairList <- getParts "Hair"
+                        currentEarList <- getParts "Ear"
+                        currentTailList <- getParts "Tail"
 
-                    let populateSelector (selector: ComboBox) (parts: XivCharacter list) defaultToFirst =
-                        selector.ItemsSource <- parts |> List.map (fun p -> p.Name)
-                        selector.IsEnabled <- not (List.isEmpty parts)
-                        if defaultToFirst && not (List.isEmpty parts) && selector.SelectedIndex < 0 then
-                            selector.SelectedIndex <- 0
+                        let populateSelector (selector: ComboBox) (parts: XivCharacter list) defaultToFirst =
+                            selector.ItemsSource <- parts |> List.map (fun p -> p.Name)
+                            selector.IsEnabled <- not (List.isEmpty parts)
+                            if defaultToFirst && not (List.isEmpty parts) && selector.SelectedIndex < 0 then
+                                selector.SelectedIndex <- 0
 
-                    populateSelector faceSelector currentFaceList true
-                    populateSelector hairSelector currentHairList true
-                    populateSelector earSelector currentEarList true
-                    populateSelector tailSelector currentTailList true
+                        populateSelector faceSelector currentFaceList true
+                        populateSelector hairSelector currentHairList true
+                        populateSelector earSelector currentEarList true
+                        populateSelector tailSelector currentTailList true
 
-                    let assignSelectedOrDefault (parts: XivCharacter list) (slot: EquipmentSlot) (selector: ComboBox) =
-                        if selector.IsEnabled then
-                            let idx = selector.SelectedIndex
-                            let itemToAssign =
-                                if idx >= 0 && idx < List.length parts then
-                                    Some parts[idx]
-                                else
-                                    List.tryHead parts
+                        let mutable allModelUpdateTasks: Async<unit> list = []
+
+                        let assignSelectedOrDefault (parts: XivCharacter list) (slot: EquipmentSlot) (selector: ComboBox) =
+                            if selector.IsEnabled then
+                                let idx = selector.SelectedIndex
+                                let itemToAssign =
+                                    if idx >= 0 && idx < List.length parts then
+                                        Some parts[idx]
+                                    else
+                                        List.tryHead parts
                             
-                            match itemToAssign with
-                            | Some item ->
-                                do render.AssignTrigger(slot, item, parsedXivRace, -1, -1, modelColors) |> ignore
-                            | None -> ()
+                                match itemToAssign with
+                                | Some item ->
+                                    allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors) :: allModelUpdateTasks
+                                | None -> ()
 
-                    do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
-                    do assignSelectedOrDefault currentHairList EquipmentSlot.Hair hairSelector
-                    if currentEarList |> List.isEmpty |> not then do assignSelectedOrDefault currentEarList EquipmentSlot.Ear earSelector
-                    if currentTailList |> List.isEmpty |> not then do assignSelectedOrDefault currentTailList EquipmentSlot.Tail tailSelector
+                        do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
+                        do assignSelectedOrDefault currentHairList EquipmentSlot.Hair hairSelector
+                        if currentEarList |> List.isEmpty |> not then do assignSelectedOrDefault currentEarList EquipmentSlot.Ear earSelector
+                        if currentTailList |> List.isEmpty |> not then do assignSelectedOrDefault currentTailList EquipmentSlot.Tail tailSelector
 
-                    let reselectIfPopulated (combo: ComboBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
-                    reselectIfPopulated headSlotCombo
-                    reselectIfPopulated bodySlotCombo
-                    reselectIfPopulated handSlotCombo
-                    reselectIfPopulated legsSlotCombo
-                    reselectIfPopulated feetSlotCombo
+                        let reselectIfPopulated (combo: ComboBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
+                        reselectIfPopulated headSlotCombo
+                        reselectIfPopulated bodySlotCombo
+                        reselectIfPopulated handSlotCombo
+                        reselectIfPopulated legsSlotCombo
+                        reselectIfPopulated feetSlotCombo
 
-                    let setDefaultGear (combo: ComboBox, category: string, nameFilter: string) =
-                        if combo.SelectedIndex = -1 then
-                            let gear = allGearCache |> List.filter(fun g -> g.SecondaryCategory = category)
-                            match gear |> List.tryFindIndex(fun g -> g.Name.Contains(nameFilter)) with
-                            | Some idx -> combo.SelectedIndex <- idx
-                            | None -> ()
-                    setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
-                    setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
-                    setDefaultGear (legsSlotCombo, "Legs", "SmallClothes")
-                    setDefaultGear (feetSlotCombo, "Feet", "SmallClothes")
+                        let setDefaultGear (combo: ComboBox, category: string, nameFilter: string) =
+                            if combo.SelectedIndex = -1 then
+                                let gear = allGearCache |> List.filter(fun g -> g.SecondaryCategory = category)
+                                match gear |> List.tryFindIndex(fun g -> g.Name.Contains(nameFilter)) with
+                                | Some idx -> combo.SelectedIndex <- idx
+                                | None -> ()
+                        setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
+                        setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
+                        setDefaultGear (legsSlotCombo, "Legs", "SmallClothes")
+                        setDefaultGear (feetSlotCombo, "Feet", "SmallClothes")
+
+                        if not (List.isEmpty allModelUpdateTasks) then
+                            do! Async.Parallel(allModelUpdateTasks) |> Async.Ignore
 
                     
                     
-                    let! getUiEyePalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIEyeColor |> Async.AwaitTask
-                    let! getUiLipDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipDark |> Async.AwaitTask
-                    let! getUiLipLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipLight |> Async.AwaitTask
-                    let! getUiTattoo = DataHelpers.getUIColorPalette modelColorId paletteOptions.UITattoo |> Async.AwaitTask
-                    let! getUiFaceDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
-                    let! getUiFaceLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
-                    let! getUiSkinPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
-                    let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHair |> Async.AwaitTask
-                    let! getUiHighlightPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
+                        let! getUiEyePalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIEyeColor |> Async.AwaitTask
+                        let! getUiLipDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipDark |> Async.AwaitTask
+                        let! getUiLipLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipLight |> Async.AwaitTask
+                        let! getUiTattoo = DataHelpers.getUIColorPalette modelColorId paletteOptions.UITattoo |> Async.AwaitTask
+                        let! getUiFaceDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
+                        let! getUiFaceLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
+                        let! getUiSkinPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
+                        let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHair |> Async.AwaitTask
+                        let! getUiHighlightPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
 
-                    uiEyePalette <- getUiEyePalette
-                    uiLipDark <- getUiLipDark
-                    uiLipLight <- getUiLipLight
-                    uiTattoo <- getUiTattoo
-                    uiFaceDark <- getUiFaceDark
-                    uiFaceLight <- getUiFaceLight
-                    uiSkinPalette <- getUiSkinPalette
-                    uiHairPalette <- getUiHairPalette
-                    uiHighlightPalette <- getUiHighlightPalette
+                        uiEyePalette <- getUiEyePalette
+                        uiLipDark <- getUiLipDark
+                        uiLipLight <- getUiLipLight
+                        uiTattoo <- getUiTattoo
+                        uiFaceDark <- getUiFaceDark
+                        uiFaceLight <- getUiFaceLight
+                        uiSkinPalette <- getUiSkinPalette
+                        uiHairPalette <- getUiHairPalette
+                        uiHighlightPalette <- getUiHighlightPalette
 
-                    if skinColorSwatchesControl <> null then
-                        skinColorSwatchesControl.ItemsSource <- uiSkinPalette
-                    if hairColorSwatchesControl <> null then
-                        hairColorSwatchesControl.ItemsSource <- uiHairPalette
-                    if highlightEnableControl <> null && highlightEnableControl.IsChecked.GetValueOrDefault(false) && highlightsColorSwatchesControl <> null then
-                        highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
-                    if eyeColorSwatchesControl <> null then
-                        eyeColorSwatchesControl.ItemsSource <- uiEyePalette
-                    if lipColorSwatchesControl <> null then
-                        if lipRadioDarkControl <> null && lipRadioDarkControl.IsChecked.GetValueOrDefault(false) then
-                            lipColorSwatchesControl.ItemsSource <- uiLipDark
-                        elif lipRadioLightControl <> null && lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
-                            lipColorSwatchesControl.ItemsSource <- uiLipLight
-                        else
-                            lipColorSwatchesControl.ItemsSource <- []
-                    if tattooColorSwatchesControl <> null then
-                        tattooColorSwatchesControl.ItemsSource <- uiTattoo
+                        if skinColorSwatchesControl <> null then
+                            skinColorSwatchesControl.ItemsSource <- uiSkinPalette
+                        if hairColorSwatchesControl <> null then
+                            hairColorSwatchesControl.ItemsSource <- uiHairPalette
+                        if highlightEnableControl <> null && highlightEnableControl.IsChecked.GetValueOrDefault(false) && highlightsColorSwatchesControl <> null then
+                            highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
+                        if eyeColorSwatchesControl <> null then
+                            eyeColorSwatchesControl.ItemsSource <- uiEyePalette
+                        if lipColorSwatchesControl <> null then
+                            if lipRadioDarkControl <> null && lipRadioDarkControl.IsChecked.GetValueOrDefault(false) then
+                                lipColorSwatchesControl.ItemsSource <- uiLipDark
+                            elif lipRadioLightControl <> null && lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
+                                lipColorSwatchesControl.ItemsSource <- uiLipLight
+                            else
+                                lipColorSwatchesControl.ItemsSource <- []
+                        if tattooColorSwatchesControl <> null then
+                            tattooColorSwatchesControl.ItemsSource <- uiTattoo
 
-                | false, _ -> printfn $"Invalid XivRace string for Enum.TryParse: '{validRaceStr}'"
-            | None -> printfn "Cannot submit character: Incomplete race/clan/gender selection."
+                    | false, _ -> ()
+                | None -> ()
+            finally
+                this.DecrementBusyCounter()
+        }
+    member private this.SetLoadingState (isLoading: bool) =
+        Dispatcher.UIThread.Post(fun () ->
+            match this.FindControl<ProgressBar>("ModelLoadingBar") with
+            | loadingBar when loadingBar <> null ->
+                loadingBar.IsIndeterminate <- isLoading
+            | _ -> ()
+        )
+
+    member private this.IncrementBusyCounter() =
+        lock busyLock (fun () ->
+            busyOperationCount <- busyOperationCount + 1
+            if busyOperationCount = 1 then
+                this.SetLoadingState(true)
+        )
+    member private this.DecrementBusyCounter() =
+        lock busyLock (fun () ->
+            if busyOperationCount > 0 then
+                busyOperationCount <- busyOperationCount - 1
+            if busyOperationCount = 0 then
+                this.SetLoadingState(false)
+        )
+
+    member private this.ExecuteAssignTriggerAsync
+        (render: VeldridView, slot: EquipmentSlot, item: IItemModel,
+        race: XivRace, dye1: int, dye2: int, currentModelColors: CustomModelColors) : Async<unit> =
+        async {
+            this.IncrementBusyCounter()
+            try
+                do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors)
+            finally
+                this.DecrementBusyCounter()
         }
 
     member private this.InitializeApplicationAsync(render: VeldridView) =
         async {
+
+            let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
+            let loadConfig () : Config option =
+                if File.Exists(configPath) then
+                    try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
+                    with ex -> None
+                else None
+            let saveConfig (cfg: Config) =
+                try let dir = Path.GetDirectoryName(configPath)
+                    if not (Directory.Exists(dir)) then Directory.CreateDirectory(dir) |> ignore
+                    File.WriteAllText(configPath, JsonSerializer.Serialize(cfg))
+                with ex -> ()
+            let isValidGamePath (path: string): bool  =
+                not (String.IsNullOrWhiteSpace(path)) &&
+                Directory.Exists(path)
+
+            let mutable gamePathFromConfigOrPrompt: string = ""
+            let mutable setupSucceeded = false
+
+            match loadConfig() with
+            | Some config when isValidGamePath config.GamePath ->
+                gamePathFromConfigOrPrompt <- config.GamePath
+                setupSucceeded <- true
+            | _ ->
+                let promptWindow = GamePathPromptWindow()
+                let! pathFromDialog = promptWindow.ShowDialog<string option>(this) |> Async.AwaitTask
+                match pathFromDialog with
+                | Some validPath ->
+                    gamePathFromConfigOrPrompt <- Path.Combine(validPath, "game", "sqpack", "ffxiv")
+                    saveConfig { GamePath = Path.Combine(validPath, "game", "sqpack", "ffxiv") }
+                    setupSucceeded <- true
+                | None ->
+                    setupSucceeded <- false
+
+            if not setupSucceeded then
+                this.Close()
+                return ()
+
             try
+
+                let gameDataRootPath = gamePathFromConfigOrPrompt
+                let info = xivModdingFramework.GameInfo(DirectoryInfo(gameDataRootPath), XivLanguage.English)
+                XivCache.SetGameInfo(info) |> ignore
+
                 currentTransaction <- ModTransaction.BeginReadonlyTransaction()
 
                 let! gear = render.GetEquipment()
@@ -912,5 +989,5 @@ type MainWindow () as this =
                     currentTransaction <- null
 
             with ex ->
-                printfn $"Error during application initialization: {ex.ToString()}"
+                ()
         }
