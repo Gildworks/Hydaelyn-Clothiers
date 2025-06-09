@@ -2,6 +2,8 @@
 ### Glamour Planning and Previewing for Final Fantasy XIV
 [Hydaelyn Clothiers Discord Server](https://discord.gg/uBnM4fvMJj)  |  [Hydaelyn Clothiers on Patreon](https://www.patreon.com/HydaelynClothiers)
 
+[Latest Release](https://github.com/Gildworks/Hydaelyn-Clothiers/releases/latest)
+
 ## Basic Use
 Hydaelyn Clothiers aims to be intuitive and easy to use. 
 
