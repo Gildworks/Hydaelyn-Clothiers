@@ -1,12 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
+		<AssemblyName>Hydaelyn Clothiers</AssemblyName>
 		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<PlatformTarget>AnyCPU</PlatformTarget>
 		<Platforms>AnyCPU;x64</Platforms>
+		<ApplicationIcon>elemental.ico</ApplicationIcon>
 	</PropertyGroup>
 	
 	<ItemGroup>
@@ -55,6 +57,10 @@
         <Compile Include="MainWindow.axaml.fs" />
         <Compile Include="App.axaml.fs" />
         <Compile Include="Program.fs" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <Content Include="elemental.ico" />
     </ItemGroup>
 
     <ItemGroup>

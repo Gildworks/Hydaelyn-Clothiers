@@ -229,6 +229,7 @@ type MainWindow () as this =
     let mutable clanSelector: ComboBox = null
     let mutable genderSelector: ComboBox = null
     let mutable submitCharacterButton: Button = null
+    let mutable clearAllButton: Button = null
     let mutable hairSelector: ComboBox = null
     let mutable faceSelector: ComboBox = null
     let mutable earSelector: ComboBox = null
@@ -332,6 +333,7 @@ type MainWindow () as this =
         clanSelector <- this.FindControl<ComboBox>("ClanSelector")
         genderSelector <- this.FindControl<ComboBox>("GenderSelector")
         submitCharacterButton <- this.FindControl<Button>("SubmitCharacter")
+        clearAllButton <- this.FindControl<Button>("ClearAll")
         hairSelector <- this.FindControl<ComboBox>("HairSelector")
         faceSelector <- this.FindControl<ComboBox>("FaceSelector")
         earSelector <- this.FindControl<ComboBox>("EarSelector")
@@ -369,11 +371,8 @@ type MainWindow () as this =
         let raceOk = selectedRaceNameOpt.IsSome
         let genderOk = selectedGenderNameOpt.IsSome
         let clanOk = selectedClanNameOpt.IsSome
-            //match selectedRaceNameOpt with
-            //| Some "Hyur" -> selectedClanNameOpt.IsSome
-            //| Some _ -> true
-            //| None -> false
         submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk
+        clearAllButton.IsEnabled <- raceOk && genderOk && clanOk
 
     member private this.UpdateDyeChannelsForItem(item: IItemModel, itemSlot: EquipmentSlot, tx: ModTransaction) =
         task {
@@ -674,6 +673,9 @@ type MainWindow () as this =
             | _ ->
                 lipColorSwatchesControl.IsEnabled <- true                
         )
+        clearAllButton.Click.Add(fun _ ->
+            this.ClearAllSlots(render)
+        )
 
         let setupCharPartSelector (selector: ComboBox) (partSlot: EquipmentSlot) (getPartList: unit -> XivCharacter list) =
             selector.SelectionChanged.Add(fun _ ->
@@ -755,6 +757,24 @@ type MainWindow () as this =
                     }
                 Async.StartImmediate(operation)
         )
+
+    member private this.ClearAllSlots(render: VeldridView) =
+        let getGearListForCategory cat = allGearCache |> List.filter (fun m -> m.SecondaryCategory = cat)
+
+        modelColors <- ModelTexture.GetCustomColors()
+        selectedSwatchBorders.Clear()
+        if hairSelector <> null then hairSelector.SelectedIndex <- 0
+        if faceSelector <> null then faceSelector.SelectedIndex <- 0
+        if earSelector <> null && earSelector.SelectedIndex >= 0 then earSelector.SelectedIndex <- 0
+        if tailSelector <> null && tailSelector.SelectedIndex >= 0 then tailSelector.SelectedIndex <- 0
+        this.ClearGearSlot(headSlotCombo, EquipmentSlot.Head, getGearListForCategory "Head", headDye1Combo, headDye1ClearButton, headDye2Combo, headDye2ClearButton, render)
+        this.ClearGearSlot(bodySlotCombo, EquipmentSlot.Body, getGearListForCategory "Body", bodyDye1Combo, bodyDye1ClearButton, bodyDye2Combo, bodyDye2ClearButton, render)
+        this.ClearGearSlot(handSlotCombo, EquipmentSlot.Hands, getGearListForCategory "Hands", handDye1Combo, handDye1ClearButton, handDye2Combo, handDye2ClearButton, render)
+        this.ClearGearSlot(legsSlotCombo, EquipmentSlot.Legs, getGearListForCategory "Legs", legsDye1Combo, legsDye1ClearButton, legsDye2Combo, legsDye2ClearButton, render)
+        this.ClearGearSlot(feetSlotCombo, EquipmentSlot.Feet, getGearListForCategory "Feet", feetDye1Combo, feetDye1ClearButton, feetDye2Combo, feetDye2ClearButton, render)
+
+        this.OnSubmitCharacter(render)
+        |> Async.StartImmediate
 
     member private this.OnSubmitCharacter(render: VeldridView) =
         async {
@@ -934,8 +954,10 @@ type MainWindow () as this =
                     File.WriteAllText(configPath, JsonSerializer.Serialize(cfg))
                 with ex -> ()
             let isValidGamePath (path: string): bool  =
+                let expectedSuffix = Path.Combine("game", "sqpack", "ffxiv")
                 not (String.IsNullOrWhiteSpace(path)) &&
-                Directory.Exists(path)
+                Directory.Exists(path) &&
+                path.EndsWith(expectedSuffix, StringComparison.OrdinalIgnoreCase)
 
             let mutable gamePathFromConfigOrPrompt: string = ""
             let mutable setupSucceeded = false
@@ -977,6 +999,7 @@ type MainWindow () as this =
                 raceSelector.ItemsSource <- races
                 genderSelector.ItemsSource <- ["Male"; "Female"]
                 submitCharacterButton.IsEnabled <- false
+                clearAllButton.IsEnabled <- false
                 hairSelector.IsEnabled <- false; faceSelector.IsEnabled <- false
                 earSelector.IsEnabled <- false; tailSelector.IsEnabled <- false
                 

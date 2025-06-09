@@ -67,7 +67,7 @@ type GamePathPromptWindow() as this =
         else
             let errorMsg =
                 if String.IsNullOrWhiteSpace(path) then "Path cannot be empty."
-                else "Invalid game folder. Please ensure the selected directoy contains the 'game' and 'sqpack' subdirectories."
+                else "Invalid game folder. Please ensure the selected directoy contains the 'game' and 'boot' subdirectories."
             this.ShowError(errorMsg)
             confirmButton.IsEnabled <- false
             false

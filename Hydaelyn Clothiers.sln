@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "fs-mdl-viewer", "fs-mdl-viewer.fsproj", "{30D7EC02-1D77-0C46-0D59-ED813148B1CB}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hydaelyn Clothiers", "Hydaelyn Clothiers.fsproj", "{30D7EC02-1D77-0C46-0D59-ED813148B1CB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

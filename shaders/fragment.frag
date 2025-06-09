@@ -35,7 +35,7 @@ const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(0.5, 0.8, -0.6)); // Your "p
 
 const vec3 LIGHT_COLOR = vec3(1.0, 1.0, 0.95);
 const vec3 AMBIENT_LIGHT_COLOR = vec3(0.15, 0.15, 0.20); // Slightly increased ambient
-const float SPECULAR_INTENSITY = 0.0;
+const float SPECULAR_INTENSITY = 0.3;
 const float SHININESS = 16.0;
 const float GAMMA_INV = 1.0/2.2;
 

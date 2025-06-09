@@ -241,108 +241,111 @@ type VeldridView() as this =
                     ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
                 ))
 
-            let! ttModel =
-                let loadModel (item: IItemModel) (race: XivRace) =
-                    task {
-                        let! model = Mdl.GetTTModel(item, race)
-                        let _ = model.Source
-                        return model
-                    }
+            try
+                let! ttModel =
+                    let loadModel (item: IItemModel) (race: XivRace) =
+                        task {
+                            let! model = Mdl.GetTTModel(item, race)
+                            let _ = model.Source
+                            return model
+                        }
 
-                async {    
-                    match slot with
-                    | EquipmentSlot.Face
-                    | EquipmentSlot.Hair
-                    | EquipmentSlot.Tail
-                    | EquipmentSlot.Ear ->
-                        let category, prefix, suffix  =
-                            match slot with
-                            | EquipmentSlot.Face -> "face", "f", "fac"
-                            | EquipmentSlot.Hair -> "hair", "h", "hir"
-                            | EquipmentSlot.Ear -> "zear", "z", "zer"
-                            | EquipmentSlot.Tail -> "tail", "t", "til"
-                            | _ -> "error", "error", "error"
-                        let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
-                        try
-                            return! loadModel item race |> Async.AwaitTask
-                        with ex ->
-                            return raise ex
-                    | _ ->
-                        let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot, races: XivRace list) : Async<XivRace> =
-                            let rec tryResolveRace (slot: string) (races: XivRace list) (originalRace: XivRace) (eqdp: Collections.Generic.Dictionary<XivRace, xivModdingFramework.Models.DataContainers.EquipmentDeformationParameter>) : Async<XivRace> =
+                    async {    
+                        match slot with
+                        | EquipmentSlot.Face
+                        | EquipmentSlot.Hair
+                        | EquipmentSlot.Tail
+                        | EquipmentSlot.Ear ->
+                            let category, prefix, suffix  =
+                                match slot with
+                                | EquipmentSlot.Face -> "face", "f", "fac"
+                                | EquipmentSlot.Hair -> "hair", "h", "hir"
+                                | EquipmentSlot.Ear -> "zear", "z", "zer"
+                                | EquipmentSlot.Tail -> "tail", "t", "til"
+                                | _ -> "error", "error", "error"
+                            let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
+                            try
+                                return! loadModel item race |> Async.AwaitTask
+                            with ex ->
+                                return raise ex
+                        | _ ->
+                            let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot, races: XivRace list) : Async<XivRace> =
+                                let rec tryResolveRace (slot: string) (races: XivRace list) (originalRace: XivRace) (eqdp: Collections.Generic.Dictionary<XivRace, xivModdingFramework.Models.DataContainers.EquipmentDeformationParameter>) : Async<XivRace> =
+                                    async {
+                                        match races with
+                                        | [] -> 
+                                            return originalRace
+                                        | race::rest ->                                        
+                                            match eqdp.TryGetValue(race) with
+                                            | true, param when param.HasModel -> 
+                                                return race
+                                            | _ -> 
+                                                return! tryResolveRace slot rest originalRace eqdp
+                                    }
+
+                                let searchSlot = 
+                                    match slot with
+                                    | EquipmentSlot.Body -> "top"
+                                    | EquipmentSlot.Head -> "met"
+                                    | EquipmentSlot.Hands -> "glv"
+                                    | EquipmentSlot.Legs -> "dwn"
+                                    | EquipmentSlot.Feet -> "sho"
+                                    | _ -> ""
+                            
+                            
+                                async {
+                                    let! eqdp = eqp.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
+                                    return! tryResolveRace searchSlot races race eqdp
+                                }
+                        
+                            let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
+                            let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
+                        
+                        
+
+                            let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
                                 async {
                                     match races with
-                                    | [] -> 
-                                        return originalRace
-                                    | race::rest ->                                        
-                                        match eqdp.TryGetValue(race) with
-                                        | true, param when param.HasModel -> 
-                                            return race
-                                        | _ -> 
-                                            return! tryResolveRace slot rest originalRace eqdp
+                                    | [] ->
+                                        return raise (exn "Failed to load any model. Rage quitting.")
+                                    | race::rest ->
+                                        try
+                                            return! loadModel item race |> Async.AwaitTask
+                                        with ex ->
+                                            return! racialFallbacks item rest race
                                 }
 
-                            let searchSlot = 
-                                match slot with
-                                | EquipmentSlot.Body -> "top"
-                                | EquipmentSlot.Head -> "met"
-                                | EquipmentSlot.Hands -> "glv"
-                                | EquipmentSlot.Legs -> "dwn"
-                                | EquipmentSlot.Feet -> "sho"
-                                | _ -> ""
+                        
+                            try
+                                return! loadModel item race |> Async.AwaitTask
+                            with _ ->
                             
-                            
-                            async {
-                                let! eqdp = eqp.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
-                                return! tryResolveRace searchSlot races race eqdp
-                            }
-                        
-                        let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
-                        let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
-                        
-                        
-
-                        let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
-                            async {
-                                match races with
-                                | [] ->
-                                    return raise (exn "Failed to load any model. Rage quitting.")
-                                | race::rest ->
-                                    try
-                                        return! loadModel item race |> Async.AwaitTask
-                                    with ex ->
-                                        return! racialFallbacks item rest race
-                            }
-
-                        
-                        try
-                            return! loadModel item race |> Async.AwaitTask
-                        with _ ->
-                            
-                            return! racialFallbacks item priorityList resolvedRace
-                }
-            do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
-            ModelModifiers.FixUpSkinReferences(ttModel, race)
-            ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
-            let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
-            ttModelMap <- adjustedModels
-            for model in Map.toSeq adjustedModels do
-                let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2 adjustedModels[slot].Colors
-                let! renderModel =
-                    async{
-                        try
-                            let fixedModel = adjustedModels[slot].Model
-                            return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
-                        with ex ->
-                            return raise ex 
+                                return! racialFallbacks item priorityList resolvedRace
                     }
-                match modelMap.TryFind(slot) with
-                | Some oldModel when not (obj.ReferenceEquals(oldModel, renderModel)) -> disposeQueue.Enqueue((oldModel, 5))
-                | None -> ()
-                | _ -> ()
+                do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
+                ModelModifiers.FixUpSkinReferences(ttModel, race)
+                ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
+                let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
+                ttModelMap <- adjustedModels
+                for model in Map.toSeq adjustedModels do
+                    let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2 adjustedModels[slot].Colors
+                    let! renderModel =
+                        async{
+                            try
+                                let fixedModel = adjustedModels[slot].Model
+                                return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
+                            with ex ->
+                                return raise ex 
+                        }
+                    match modelMap.TryFind(slot) with
+                    | Some oldModel when not (obj.ReferenceEquals(oldModel, renderModel)) -> disposeQueue.Enqueue((oldModel, 5))
+                    | None -> ()
+                    | _ -> ()
 
-                modelMap <- modelMap.Add(slot, renderModel)
-            texLayout <- Some textureLayout
+                    modelMap <- modelMap.Add(slot, renderModel)
+                texLayout <- Some textureLayout
+            with ex ->
+                return ()
             
         }
 

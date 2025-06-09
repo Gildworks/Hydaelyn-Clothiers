@@ -6,10 +6,10 @@
         x:Class="fs_mdl_viewer.MainWindow"
 		xmlns:local="clr-namespace:fs_mdl_viewer"
 		xmlns:shared="clr-namespace:Shared"
-        Title="fs_mdl_viewer"
+        Title="Hydaelyn Clothiers"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
-	<Grid ColumnDefinitions="*, 5, 3*, *">
+	<Grid ColumnDefinitions="*, 5, 3*, 5, *">
 		<ScrollViewer Grid.Column="0">
 			<StackPanel>
 				<StackPanel>
@@ -29,7 +29,10 @@
 						</ComboBox.ItemTemplate>
 					</ComboBox>
 					<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-					<Button x:Name="SubmitCharacter" HorizontalAlignment="Right">Create Base Character</Button>
+					<Grid ColumnDefinitions="*, *" HorizontalAlignment="Stretch">
+						<Button x:Name="ClearAll" HorizontalAlignment="Center" Grid.Column="0" Padding="10">Clear All</Button>
+						<Button x:Name="SubmitCharacter" HorizontalAlignment="Center" Grid.Column="1" Padding="10">Create Base Character</Button>
+					</Grid>
 					<ProgressBar x:Name="ModelLoadingBar" IsIndeterminate="False" Height="20" Margin="10" />
 				</StackPanel>
 				<StackPanel>
@@ -130,7 +133,10 @@
 						</StackPanel>
 					</Expander>
 				</StackPanel>
-
+				<TextBlock  HorizontalAlignment="Stretch" Margin="19" xml:space="preserve">
+					Camera Controls:
+					LMB: Orbit | MMB: Pan | RMB/Wheel: Zoom
+				</TextBlock>
 			</StackPanel>
 		</ScrollViewer>
 
@@ -139,8 +145,9 @@
 		<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
 			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl"/>
 		</Border>
+		<GridSplitter Grid.Column="3" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
 
-		<ScrollViewer Grid.Column="3">
+		<ScrollViewer Grid.Column="4">
 			<StackPanel>
 				<StackPanel>
 					<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
