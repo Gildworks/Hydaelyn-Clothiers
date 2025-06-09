@@ -7,9 +7,7 @@
 
 
 ## Basic Use
-Hydaelyn Clothiers aims to be intuitive and easy to use. 
-
-**A local install of Final Fantasy XIV is required for this application to function.**
+Hydaelyn Clothiers aims to be intuitive and easy to use, however **a local install of Final Fantasy XIV is required for this application to function.**
 
 Vulkan compatibility is **required** for this app. Additional graphical backend support is planned, but currently unavailable.
 
