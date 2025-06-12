@@ -259,3 +259,6 @@ type swatchOption = {
     Color                       : Avalonia.Media.Color
     Index                       : int
 }
+
+type uiItemModel =
+    inherit IItemModel
