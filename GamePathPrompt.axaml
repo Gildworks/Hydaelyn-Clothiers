@@ -29,5 +29,4 @@
 			<Button Name="CancelButton" Content="Cancel" IsCancel="True"/>
 		</StackPanel>
 	</StackPanel>
-	
 </Window>

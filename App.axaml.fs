@@ -19,11 +19,11 @@ type App() =
         let asyncUpdateApp = async {
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
 
-            let mgr = UpdateManager(new GithubSource("https://github.com/Gildworks/Hydaelyn-Clothiers", String.Empty, true))
-            let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
-            if not (isNull newVer) then
-                do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
-                mgr.ApplyUpdatesAndRestart(newVer)
+            //let mgr = UpdateManager(new GithubSource("https://github.com/Gildworks/Hydaelyn-Clothiers", String.Empty, true))
+            //let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
+            //if not (isNull newVer) then
+            //    do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
+            //    mgr.ApplyUpdatesAndRestart(newVer)
 
             // === End Velopack Automatic Updates Section ===
 

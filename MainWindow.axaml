@@ -2,14 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d" Width="1426" Height="782"
         x:Class="fs_mdl_viewer.MainWindow"
 		xmlns:local="clr-namespace:fs_mdl_viewer"
 		xmlns:shared="clr-namespace:Shared"
         Title="Hydaelyn Clothiers"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
-	<Grid ColumnDefinitions="*, 5, 3*, 5, *">
+	<Grid ColumnDefinitions="*, 5, 2*, 5, *">
 		<ScrollViewer Grid.Column="0">
 			<StackPanel>
 				<StackPanel>
@@ -43,9 +43,21 @@
 							Head
 						</Expander.Header>
 						<StackPanel>
-							<Grid ColumnDefinitions="9*, *">
-								<ComboBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" />
-								<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+								<TextBox x:Name="HeadSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+								<Button x:Name="HeadSearchClear"
+										HorizontalAlignment="Stretch"
+										HorizontalContentAlignment="Center"
+										Grid.Column="1"
+										Grid.Row="0"
+										Background="Transparent"
+										>
+									✕
+								</Button>
+								<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
+									<ListBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
+								</ScrollViewer>
 							</Grid>
 							<TextBlock Text="Dye Slots" />
 							<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -56,15 +68,28 @@
 							</Grid>
 						</StackPanel>
 					</Expander>
+					
 
 					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
 						<Expander.Header>
 							Body
 						</Expander.Header>
 						<StackPanel>
-							<Grid ColumnDefinitions="9*, *">
-								<ComboBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-								<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+								<TextBox x:Name="BodySlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+								<Button x:Name="BodySearchClear"
+										HorizontalAlignment="Stretch"
+										HorizontalContentAlignment="Center"
+										Grid.Column="1"
+										Grid.Row="0"
+										Background="Transparent"
+										>
+									✕
+								</Button>
+								<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
+									<ListBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
+								</ScrollViewer>
 							</Grid>
 							<TextBlock Text="Dye Slots" />
 							<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -81,9 +106,21 @@
 							Hand
 						</Expander.Header>
 						<StackPanel>
-							<Grid ColumnDefinitions="9*, *">
-								<ComboBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-								<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*,*">
+								<TextBox x:Name="HandSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0"/>
+								<Button x:Name="HandSearchClear"
+										HorizontalAlignment="Stretch"
+										HorizontalContentAlignment="Center"
+										Grid.Column="1"
+										Grid.Row="0"
+										Background="Transparent"
+										>
+									✕
+								</Button>
+								<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
+									<ListBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
+								</ScrollViewer>
 							</Grid>
 							<TextBlock Text="Dye Slots" />
 							<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -100,9 +137,21 @@
 							Leg
 						</Expander.Header>
 						<StackPanel>
-							<Grid ColumnDefinitions="9*, *">
-								<ComboBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-								<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+								<TextBox x:Name="LegsSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+								<Button x:Name="LegsSearchClear"
+										HorizontalAlignment="Stretch"
+										HorizontalContentAlignment="Center"
+										Grid.Column="1"
+										Grid.Row="0"
+										Background="Transparent"
+										>
+										✕
+								</Button>
+								<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
+									<ListBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
+								</ScrollViewer>
 							</Grid>
 							<TextBlock Text="Dye Slots" />
 							<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -119,9 +168,23 @@
 							Feet
 						</Expander.Header>
 						<StackPanel>
-							<Grid ColumnDefinitions="9*, *">
-								<ComboBox x:Name="FeetSlot" HorizontalAlignment="Stretch" Margin="10,10,0,10" />
-								<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear</Button>
+							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+								<TextBox x:Name="FeetSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Row="0" />
+								<Button x:Name="FeetSearchClear" 
+										HorizontalAlignment="Stretch" 
+										HorizontalContentAlignment="Center" 
+										Grid.Column="1" 
+										Grid.Row="0"
+										Background="Transparent"
+										Foreground="{DynamicResource ThemeForegroundBrush}"
+										BorderBrush="Transparent"
+										>
+											✕
+										</Button>
+								<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
+								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
+									<ListBox x:Name="FeetSlot" HorizontalAlignment="Stretch"/>
+								</ScrollViewer>
 							</Grid>
 							<TextBlock Text="Dye Slots" />
 							<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -133,10 +196,12 @@
 						</StackPanel>
 					</Expander>
 				</StackPanel>
-				<TextBlock  HorizontalAlignment="Stretch" Margin="19" xml:space="preserve">
-					Camera Controls:
-					LMB: Orbit | MMB: Pan | RMB/Wheel: Zoom
-				</TextBlock>
+				<Grid ColumnDefinitions="*">
+					<TextBlock HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0, 20, 0, 20">
+						Camera Controls: <LineBreak />
+						LMB: Orbit | MMB: Pan | RMB/Wheel: Zoom
+					</TextBlock>
+				</Grid>
 			</StackPanel>
 		</ScrollViewer>
 
