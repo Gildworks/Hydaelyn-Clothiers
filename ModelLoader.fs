@@ -28,6 +28,8 @@ let loadRenderModelFromItem
     (mtlBuilder : XivMtrl -> Task<PreparedMaterial>)
     : Task<RenderModel> =
     task {
+        printfn $"////////////////////"
+        printfn $"Material info for {item.Name} Materials"
         let materialMap =
             ttModel.Materials
             |> Seq.distinct
@@ -41,6 +43,7 @@ let loadRenderModelFromItem
                         | _ ->
                             Mtrl.GetMtrlPath(ttModel.Source, path)
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
+                    
                     let! prepared = mtlBuilder mtrl
                     return path, prepared
                 with ex ->

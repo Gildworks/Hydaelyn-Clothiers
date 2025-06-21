@@ -12,11 +12,11 @@ open Shared
 
 //================================================ TO DO ================================================\\
 //    ✓ Load all flags for every mesh into list (custom flag type for list probably needed)              \\
-//    - Assess flags for overrides/priorities, discarding unused/unneeded                                \\
-//    - Create methods for each task defining behavior (which part(s) to hide, if present)               \\
+//    ✓ Assess flags for overrides/priorities, discarding unused/unneeded                                \\
+//    ✓ Create methods for each task defining behavior (which part(s) to hide, if present)               \\
 //    ✓ Create a helper task that takes a list of flags and applies the logic to them                    \\
 //    ✓ Output the modified models to either a new map or the current one, if possible                   \\
-//    - Start testing!                                                                                   \\
+//    ✓ Start testing!                                                                                   \\
 //=======================================================================================================\\
 
 

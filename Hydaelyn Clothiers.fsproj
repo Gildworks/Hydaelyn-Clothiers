@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
+		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<AssemblyName>Hydaelyn Clothiers</AssemblyName>
 		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -16,14 +16,91 @@
 		<ProjectReference Include="lib\AvaloniaRender\src\AvaloniaRender.Veldrid\AvaloniaRender.Veldrid.csproj" />
     </ItemGroup>
 
-	<ItemGroup>
-		
-		
-		
-		<Compile Include="GamePathPrompt.axaml.fs" />
-		
-		
-		
+	<ItemGroup>										
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ACN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ALC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ARC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ARM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\AST.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\BLM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\BLU.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\BRD.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\BSM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\BTN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\CNJ.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\CRP.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\CUL.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\DNC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\DRG.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\DRK.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\FSH.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\GLA.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\GNB.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\GSM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\LNC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\LTW.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\MCH.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\MIN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\MNK.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\MRD.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\NIN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\PCT.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\PGL.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\PLD.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\RDM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ROG.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\RPR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\SAM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\SCH.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\SGE.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\SMN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\THM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\VPR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\WAR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\WHM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\WVR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\DNC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\ACN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\ALC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\ARC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\ARM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\AST.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\BLM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\BLU.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\BRD.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\BSM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\BTN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\CNJ.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\CRP.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\CUL.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\DRG.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\DRK.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\FSH.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\GLA.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\GNB.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\GSM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\LNC.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\LTW.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\MCH.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\MIN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\MNK.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\MRD.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\NIN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\PCT.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\PGL.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\PLD.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\RDM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\ROG.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\RPR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\SAM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\SCH.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\SGE.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\SMN.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\THM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\VPR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WAR.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WHM.svg" />			
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WVR.svg" />			
 		<Content Include="shaders\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
@@ -31,15 +108,14 @@
 	</ItemGroup>
     
     <ItemGroup>
+		<Compile Include="GamePathPrompt.axaml.fs" />
 		<Compile Include="CommonTypes.fs" />
 		<Compile Include="MaterialBuilder.fs" />
 		<Compile Include="ApplyFlags.fs" />
 		<Compile Include="TTModelLoader.fs" />
 		<Compile Include="ShaderUtils.fs" />		
-		
 		<Compile Include="MaterialInterpreter.fs" />		
 		<Compile Include="TextureUtils.fs" />
-		<!-- <Compile Include="MaterialHelper.fs"  -->
 		<None Include="shaders\empty.frag" />
 		<None Include="shaders\empty.vert" />
 		<None Include="shaders\fragment.frag" />
@@ -47,11 +123,9 @@
 		<Compile Include="ShaderBuilder.fs" />
 		<Compile Include="SharpToNumerics.fs" />
 		<Compile Include="MaterialLoader.fs" />
-		<!-- <Compile Include="ModelLoaderRedux.fs" /> -->
         <Compile Include="ModelLoader.fs" />		
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
-        <!--<Compile Include="CustomVeldridControl.fs" /> -->
 		<Compile Include="VeldridView.fs" />
 		<Compile Include="ViewModel.fs" />
         <Compile Include="MainWindow.axaml.fs" />
@@ -64,23 +138,24 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.2.7" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.2.7" />
+        <PackageReference Include="Avalonia" Version="11.3.1" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.1" />
         <PackageReference Include="Avalonia.FuncUI.Elmish" Version="1.5.1" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.7" />
+        <PackageReference Include="Avalonia.Svg" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Svg.Skia" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.1" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.1" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.2.7">
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.1">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Lumina" Version="5.6.1" />
         <PackageReference Include="MessageBox.Avalonia" Version="3.2.0" />
         <PackageReference Include="Veldrid" Version="4.9.0" />
         <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
         <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
         <PackageReference Include="Veldrid.Utilities" Version="4.9.0" />
-        <PackageReference Include="Velopack" Version="0.0.1251" />
+        <PackageReference Include="Velopack" Version="0.0.1298" />
     </ItemGroup>
 
 	<ItemGroup>
