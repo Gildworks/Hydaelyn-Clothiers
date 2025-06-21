@@ -2,329 +2,545 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d" Width="1426" Height="782"
+        xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d"
         x:Class="fs_mdl_viewer.MainWindow"
 		xmlns:local="clr-namespace:fs_mdl_viewer"
 		xmlns:shared="clr-namespace:Shared"
         Title="Hydaelyn Clothiers"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
-	<Grid ColumnDefinitions="*, 5, 2*, 5, *">
-		<ScrollViewer Grid.Column="0">
-			<StackPanel>
-				<StackPanel>
-					<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
-					<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
-						<ComboBox.ItemTemplate>
-							<DataTemplate x:DataType="shared:ComboOption">
-								<TextBlock Text="{Binding Display}" />
-							</DataTemplate>
-						</ComboBox.ItemTemplate>
-					</ComboBox>
-					<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedTribe}">
-						<ComboBox.ItemTemplate>
-							<DataTemplate x:DataType="shared:ComboOption">
-								<TextBlock Text="{Binding Display}" />
-							</DataTemplate>
-						</ComboBox.ItemTemplate>
-					</ComboBox>
-					<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
-					<Grid ColumnDefinitions="*, *" HorizontalAlignment="Stretch">
-						<Button x:Name="ClearAll" HorizontalAlignment="Center" Grid.Column="0" Padding="10">Clear All</Button>
-						<Button x:Name="SubmitCharacter" HorizontalAlignment="Center" Grid.Column="1" Padding="10">Create Base Character</Button>
-					</Grid>
-					<ProgressBar x:Name="ModelLoadingBar" IsIndeterminate="False" Height="20" Margin="10" />
-				</StackPanel>
-				<StackPanel>
-					<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Head
-						</Expander.Header>
-						<StackPanel>
-							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-								<TextBox x:Name="HeadSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
-								<Button x:Name="HeadSearchClear"
-										HorizontalAlignment="Stretch"
-										HorizontalContentAlignment="Center"
-										Grid.Column="1"
-										Grid.Row="0"
-										Background="Transparent"
-										>
-									✕
-								</Button>
-								<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-									<ListBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-								</ScrollViewer>
-							</Grid>
-							<TextBlock Text="Dye Slots" />
-							<Grid ColumnDefinitions="4*,2*,4*,2*">
-								<ComboBox x:Name="HeadDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
-								<Button x:Name="HeadDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
-								<ComboBox x:Name="HeadDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
-								<Button x:Name="HeadDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
-							</Grid>
-						</StackPanel>
-					</Expander>
-					
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Body
-						</Expander.Header>
-						<StackPanel>
-							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-								<TextBox x:Name="BodySlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
-								<Button x:Name="BodySearchClear"
-										HorizontalAlignment="Stretch"
-										HorizontalContentAlignment="Center"
-										Grid.Column="1"
-										Grid.Row="0"
-										Background="Transparent"
-										>
-									✕
-								</Button>
-								<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-									<ListBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-								</ScrollViewer>
-							</Grid>
-							<TextBlock Text="Dye Slots" />
-							<Grid ColumnDefinitions="4*,2*,4*,2*">
-								<ComboBox x:Name="BodyDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
-								<Button x:Name="BodyDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
-								<ComboBox x:Name="BodyDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
-								<Button x:Name="BodyDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
-							</Grid>
-						</StackPanel>
-					</Expander>
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Hand
-						</Expander.Header>
-						<StackPanel>
-							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*,*">
-								<TextBox x:Name="HandSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0"/>
-								<Button x:Name="HandSearchClear"
-										HorizontalAlignment="Stretch"
-										HorizontalContentAlignment="Center"
-										Grid.Column="1"
-										Grid.Row="0"
-										Background="Transparent"
-										>
-									✕
-								</Button>
-								<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-									<ListBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-								</ScrollViewer>
-							</Grid>
-							<TextBlock Text="Dye Slots" />
-							<Grid ColumnDefinitions="4*,2*,4*,2*">
-								<ComboBox x:Name="HandDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
-								<Button x:Name="HandDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
-								<ComboBox x:Name="HandDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
-								<Button x:Name="HandDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
-							</Grid>
-						</StackPanel>
-					</Expander>
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Leg
-						</Expander.Header>
-						<StackPanel>
-							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-								<TextBox x:Name="LegsSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
-								<Button x:Name="LegsSearchClear"
-										HorizontalAlignment="Stretch"
-										HorizontalContentAlignment="Center"
-										Grid.Column="1"
-										Grid.Row="0"
-										Background="Transparent"
-										>
-										✕
-								</Button>
-								<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-									<ListBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-								</ScrollViewer>
-							</Grid>
-							<TextBlock Text="Dye Slots" />
-							<Grid ColumnDefinitions="4*,2*,4*,2*">
-								<ComboBox x:Name="LegDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
-								<Button x:Name="LegDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
-								<ComboBox x:Name="LegDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
-								<Button x:Name="LegDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
-							</Grid>
-						</StackPanel>
-					</Expander>
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Feet
-						</Expander.Header>
-						<StackPanel>
-							<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-								<TextBox x:Name="FeetSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Row="0" />
-								<Button x:Name="FeetSearchClear" 
-										HorizontalAlignment="Stretch" 
-										HorizontalContentAlignment="Center" 
-										Grid.Column="1" 
-										Grid.Row="0"
-										Background="Transparent"
-										Foreground="{DynamicResource ThemeForegroundBrush}"
-										BorderBrush="Transparent"
-										>
-											✕
-										</Button>
-								<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
-								<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-									<ListBox x:Name="FeetSlot" HorizontalAlignment="Stretch"/>
-								</ScrollViewer>
-							</Grid>
-							<TextBlock Text="Dye Slots" />
-							<Grid ColumnDefinitions="4*,2*,4*,2*">
-								<ComboBox x:Name="FeetDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
-								<Button x:Name="FeetDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
-								<ComboBox x:Name="FeetDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
-								<Button x:Name="FeetDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
-							</Grid>
-						</StackPanel>
-					</Expander>
-				</StackPanel>
-				<Grid ColumnDefinitions="*">
-					<TextBlock HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0, 20, 0, 20">
-						Camera Controls: <LineBreak />
-						LMB: Orbit | MMB: Pan | RMB/Wheel: Zoom
-					</TextBlock>
-				</Grid>
-			</StackPanel>
-		</ScrollViewer>
-
-		<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
-
-		<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
-			<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl"/>
-		</Border>
-		<GridSplitter Grid.Column="3" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
-
-		<ScrollViewer Grid.Column="4">
-			<StackPanel>
-				<StackPanel>
-					<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
-					<ComboBox x:Name="HairSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-
-					<ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-					<ComboBox x:Name="EarSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-					<ComboBox x:Name="TailSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
-				</StackPanel>
-				<StackPanel>
-					<TextBlock Text="Character Colors" HorizontalAlignment="Stretch" Margin="19" />
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Skin Color
-						</Expander.Header>
-						<ItemsControl x:Name="SkinColorSwatches" Width="160">
+	<Window.Styles>
+		<Style Selector="ToggleButton.job-icon-button Image#GreyscaleImage">
+			<Setter Property="IsVisible" Value="True" />			
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button Image#ColorImage">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button:checked Image#GreyscaleImage">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button:checked Image#ColorImage">
+			<Setter Property="IsVisible" Value="True" />
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button">
+			<Style Selector="^:checked /template/ ContentPresenter#PART_ContentPresenter">
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="BorderBrush" Value="Transparent" />
+			</Style>
+			<Style Selector="^:pressed /template/ ContentPresenter#PART_ContentPresenter">
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="BorderBrush" Value="Transparent" />
+			</Style>
+		</Style>
+	</Window.Styles>
+	<SplitView x:Name="FilterPanel"
+			   IsPaneOpen="False"
+			   DisplayMode="CompactInline"
+			   OpenPaneLength="500"
+			   CompactPaneLength="50">
+		<SplitView.Pane>
+			<ScrollViewer Name="FilterScroller">
+				<StackPanel Background="{DynamicResource ThemeControlLowBrush}">
+				
+				<Button x:Name="FilterOpenButton"
+						Content="☰"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Top"
+						Width="50" Height="50"
+						FontSize="20" />
+				<Panel Margin="0,0,50,0" ClipToBounds="True">
+					<StackPanel x:Name="SlidingContentPanel" Margin="10">
+						<StackPanel.RenderTransform>
+							<TranslateTransform X="0" />
+						</StackPanel.RenderTransform>
+						<StackPanel.Transitions>
+							<Transitions>
+								<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+							</Transitions>
+						</StackPanel.Transitions>
+						<CheckBox x:Name="EquipRestrict" Content="Enforce Equip Restrictions" IsChecked="{Binding EquipRestrict, Mode=TwoWay}"/>
+						<TextBlock>Class/Job Filters</TextBlock>
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Tanks</TextBlock>
+						<ItemsControl ItemsSource="{Binding Tanks}">
 							<ItemsControl.ItemsPanel>
 								<ItemsPanelTemplate>
-									<UniformGrid Columns="8" />
+									<WrapPanel Orientation="Horizontal" />
 								</ItemsPanelTemplate>
 							</ItemsControl.ItemsPanel>
+
 							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="{x:Type shared:swatchOption}">
-									<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
-										<Border.Background>
-											<SolidColorBrush Color="{Binding Color}" />
-										</Border.Background>
-									</Border>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}" 
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
-					</Expander>
 
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Hair Color
-						</Expander.Header>
-						<Grid ColumnDefinitions="*, *" RowDefinitions="9*, *">
-							<ItemsControl x:Name="HighlightColorSwatches" Width="160" Grid.Column="0" Grid.Row="0">
-								<ItemsControl.ItemsPanel>
-									<ItemsPanelTemplate>
-										<UniformGrid Columns="8" />
-									</ItemsPanelTemplate>
-								</ItemsControl.ItemsPanel>
-								<ItemsControl.ItemTemplate>
-									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
-										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
-											<Border.Background>
-												<SolidColorBrush Color="{Binding Color}" />
-											</Border.Background>
-										</Border>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-
-							<ItemsControl x:Name="HairColorSwatches" Width="160" Grid.Column="1" Grid.Row="0">
-								<ItemsControl.ItemsPanel>
-									<ItemsPanelTemplate>
-										<UniformGrid Columns="8" />
-									</ItemsPanelTemplate>
-								</ItemsControl.ItemsPanel>
-								<ItemsControl.ItemTemplate>
-									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
-										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
-											<Border.Background>
-												<SolidColorBrush Color="{Binding Color}" />
-											</Border.Background>
-										</Border>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-
-							<CheckBox x:Name="HighlightsCheckbox" Grid.Column="1" Grid.Row="1">
-								Highlights
-							</CheckBox>
-						</Grid>
-					</Expander>
-
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Eye Color
-						</Expander.Header>
-						<ItemsControl x:Name="EyeColorSwatches" Width="160">
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Healers</TextBlock>
+						<ItemsControl ItemsSource="{Binding Healers}">
 							<ItemsControl.ItemsPanel>
 								<ItemsPanelTemplate>
-									<UniformGrid Columns="8" />
+									<WrapPanel Orientation="Horizontal" />
 								</ItemsPanelTemplate>
 							</ItemsControl.ItemsPanel>
+
 							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="{x:Type shared:swatchOption}">
-									<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
-										<Border.Background>
-											<SolidColorBrush Color="{Binding Color}" />
-										</Border.Background>
-									</Border>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
-					</Expander>
 
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Lip Color
-						</Expander.Header>
-						<StackPanel>
-							<StackPanel HorizontalAlignment="Right">
-								<RadioButton Content="Dark" GroupName="LipColor" x:Name="DarkLip" IsChecked="True" />
-								<RadioButton Content="Light" GroupName="LipColor" x:Name="LightLip" />
-								<RadioButton Content="None" GroupName="LipColor" x:Name="NoneLip" />
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Ranged DPS</TextBlock>
+						<ItemsControl ItemsSource="{Binding RangedDPS}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Melee DPS</TextBlock>
+						<ItemsControl ItemsSource="{Binding MeleeDPS}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Magic DPS</TextBlock>
+						<ItemsControl ItemsSource="{Binding MagicDPS}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Crafters</TextBlock>
+						<ItemsControl ItemsSource="{Binding Crafters}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Gatherers</TextBlock>
+						<ItemsControl ItemsSource="{Binding Gatherers}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+
+						<TextBlock Margin="0,30,0,0" FontWeight="Black">Level Requirements</TextBlock>
+						<Grid ColumnDefinitions="*, *" ClipToBounds="True">
+							<StackPanel Grid.Column="0" Margin="0,0,10,0">
+								<TextBlock>Character Level</TextBlock>
+								<NumericUpDown Name="CharLevel" Value="{Binding CharacterLevel, Mode=TwoWay}" Minimum="1" Maximum="100" Increment="1" />
 							</StackPanel>
-							<ItemsControl x:Name="LipColorSwatches" Width="160">
+							<StackPanel Grid.Column="1">
+								<TextBlock>Item Level</TextBlock>
+								<NumericUpDown Name="ItemLevel" Value="{Binding ItemLevel, Mode=TwoWay}" Increment="1" />
+							</StackPanel>
+						</Grid>
+					</StackPanel>
+				</Panel>
+			</StackPanel>
+			</ScrollViewer>
+		</SplitView.Pane>
+
+
+		<Grid ColumnDefinitions="*, 5, 2*, 5, *">
+			<ScrollViewer Grid.Column="0">
+				<StackPanel>
+					<StackPanel>
+						<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
+						<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding SelectedRace, Mode=TwoWay}" ItemsSource="{Binding Race}">
+							<ComboBox.ItemTemplate>
+								<DataTemplate x:DataType="shared:ComboOption">
+									<TextBlock Text="{Binding Display}" />
+								</DataTemplate>
+							</ComboBox.ItemTemplate>
+						</ComboBox>
+						<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding SelectedTribe, Mode=TwoWay}" ItemsSource="{Binding AvailableTribes}">
+							<ComboBox.ItemTemplate>
+								<DataTemplate x:DataType="shared:ComboOption">
+									<TextBlock Text="{Binding Display}" />
+								</DataTemplate>
+							</ComboBox.ItemTemplate>
+						</ComboBox>
+						<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding SelectedGender, Mode=TwoWay}" ItemsSource="{Binding Gender}" />
+						<Grid ColumnDefinitions="*, *" HorizontalAlignment="Stretch">
+							<Button x:Name="ClearAll" HorizontalAlignment="Center" Grid.Column="0" Padding="10">Clear All</Button>
+							<Button x:Name="SubmitCharacter" HorizontalAlignment="Center" Grid.Column="1" Padding="10">Create Base Character</Button>
+						</Grid>
+						<ProgressBar x:Name="ModelLoadingBar" IsIndeterminate="False" Height="20" Margin="10" />
+					</StackPanel>
+					<StackPanel>
+						<TextBlock Text="Equipment Selection" HorizontalAlignment="Stretch" Margin="10"/>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Head
+							</Expander.Header>
+							<StackPanel>
+								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="Auto, *">
+									<TextBox x:Name="HeadSlotSearch" 
+											 HorizontalAlignment="Stretch" 
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" Grid.Row="0" />
+									<Button x:Name="HeadSearchClear"
+											HorizontalAlignment="Stretch"
+											HorizontalContentAlignment="Center"
+											Grid.Column="1"
+											Grid.Row="0"
+											Background="Transparent"
+											>✕</Button>
+									<Button x:Name="HeadClear" 
+											HorizontalAlignment="Stretch" 
+											HorizontalContentAlignment="Center" 
+											Grid.Column="2" Grid.Row="0">Clear</Button>
+									<ListBox x:Name="HeadSlot" 
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0" 
+											 Grid.ColumnSpan="2" 
+											 Grid.Row="1" 
+											 AutoScrollToSelectedItem="False" />
+								</Grid>
+								<TextBlock Text="Dye Slots" />
+								<Grid ColumnDefinitions="4*,2*,4*,2*">
+									<ComboBox x:Name="HeadDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+									<Button x:Name="HeadDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
+									<ComboBox x:Name="HeadDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
+									<Button x:Name="HeadDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Body
+							</Expander.Header>
+							<StackPanel>
+								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+									<TextBox x:Name="BodySlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+									<Button x:Name="BodySearchClear"
+											HorizontalAlignment="Stretch"
+											HorizontalContentAlignment="Center"
+											Grid.Column="1"
+											Grid.Row="0"
+											Background="Transparent"
+											>
+										✕
+									</Button>
+									<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+									<ListBox x:Name="BodySlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
+								</Grid>
+								<TextBlock Text="Dye Slots" />
+								<Grid ColumnDefinitions="4*,2*,4*,2*">
+									<ComboBox x:Name="BodyDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+									<Button x:Name="BodyDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
+									<ComboBox x:Name="BodyDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
+									<Button x:Name="BodyDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Hand
+							</Expander.Header>
+							<StackPanel>
+								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*,*">
+									<TextBox x:Name="HandSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0"/>
+									<Button x:Name="HandSearchClear"
+											HorizontalAlignment="Stretch"
+											HorizontalContentAlignment="Center"
+											Grid.Column="1"
+											Grid.Row="0"
+											Background="Transparent"
+											>
+										✕
+									</Button>
+									<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+									<ListBox x:Name="HandSlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
+								</Grid>
+								<TextBlock Text="Dye Slots" />
+								<Grid ColumnDefinitions="4*,2*,4*,2*">
+									<ComboBox x:Name="HandDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+									<Button x:Name="HandDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
+									<ComboBox x:Name="HandDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
+									<Button x:Name="HandDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Leg
+							</Expander.Header>
+							<StackPanel>
+								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+									<TextBox x:Name="LegsSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+									<Button x:Name="LegsSearchClear"
+											HorizontalAlignment="Stretch"
+											HorizontalContentAlignment="Center"
+											Grid.Column="1"
+											Grid.Row="0"
+											Background="Transparent"
+											>
+										✕
+									</Button>
+									<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+									<ListBox x:Name="LegsSlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
+								</Grid>
+								<TextBlock Text="Dye Slots" />
+								<Grid ColumnDefinitions="4*,2*,4*,2*">
+									<ComboBox x:Name="LegDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+									<Button x:Name="LegDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
+									<ComboBox x:Name="LegDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
+									<Button x:Name="LegDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch" >
+							<Expander.Header>
+								Feet
+							</Expander.Header>
+							<StackPanel>
+								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
+									<TextBox x:Name="FeetSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Row="0" />
+									<Button x:Name="FeetSearchClear"
+											HorizontalAlignment="Stretch"
+											HorizontalContentAlignment="Center"
+											Grid.Column="1"
+											Grid.Row="0"
+											Background="Transparent"
+											Foreground="{DynamicResource ThemeForegroundBrush}"
+											BorderBrush="Transparent"
+											>
+										✕
+									</Button>
+									<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
+									<ListBox x:Name="FeetSlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
+								</Grid>
+								<TextBlock Text="Dye Slots" />
+								<Grid ColumnDefinitions="4*,2*,4*,2*">
+									<ComboBox x:Name="FeetDye1" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" />
+									<Button x:Name="FeetDye1Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="1">Clear Dye 1</Button>
+									<ComboBox x:Name="FeetDye2" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="2" />
+									<Button x:Name="FeetDye2Clear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="3">Clear Slot 2</Button>
+								</Grid>
+							</StackPanel>
+						</Expander>
+					</StackPanel>
+					<Grid ColumnDefinitions="*">
+						<TextBlock HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0, 20, 0, 20">
+							Camera Controls: <LineBreak />
+							LMB: Orbit | MMB: Pan | RMB/Wheel: Zoom
+						</TextBlock>
+					</Grid>
+				</StackPanel>
+			</ScrollViewer>
+
+			<GridSplitter Grid.Column="1" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
+
+			<Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" x:Name="InputOverlay" Background="Transparent">
+				<avRender:EmbeddedWindowVeldrid x:Name="ViewerControl"/>
+			</Border>
+			<GridSplitter Grid.Column="3" Width="5" ShowsPreview="True" DragIncrement="1" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
+
+			<ScrollViewer Grid.Column="4">
+				<StackPanel>
+					<StackPanel>
+						<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
+						<ComboBox x:Name="HairSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+
+						<ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+						<ComboBox x:Name="EarSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+						<ComboBox x:Name="TailSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
+					</StackPanel>
+					<StackPanel>
+						<TextBlock Text="Character Colors" HorizontalAlignment="Stretch" Margin="19" />
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Skin Color
+							</Expander.Header>
+							<ItemsControl x:Name="SkinColorSwatches" Width="160">
 								<ItemsControl.ItemsPanel>
 									<ItemsPanelTemplate>
 										<UniformGrid Columns="8" />
@@ -340,32 +556,128 @@
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
-						</StackPanel>
-					</Expander>
+						</Expander>
 
-					<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
-						<Expander.Header>
-							Tattoo Color
-						</Expander.Header>
-						<ItemsControl x:Name="TattooColorSwatches" Width="160">
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<UniformGrid Columns="8" />
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate x:DataType="{x:Type shared:swatchOption}">
-									<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
-										<Border.Background>
-											<SolidColorBrush Color="{Binding Color}" />
-										</Border.Background>
-									</Border>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</Expander>
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Hair Color
+							</Expander.Header>
+							<Grid ColumnDefinitions="*, *" RowDefinitions="9*, *">
+								<ItemsControl x:Name="HighlightColorSwatches" Width="160" Grid.Column="0" Grid.Row="0">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<UniformGrid Columns="8" />
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+											<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+												<Border.Background>
+													<SolidColorBrush Color="{Binding Color}" />
+												</Border.Background>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+
+								<ItemsControl x:Name="HairColorSwatches" Width="160" Grid.Column="1" Grid.Row="0">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<UniformGrid Columns="8" />
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+											<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+												<Border.Background>
+													<SolidColorBrush Color="{Binding Color}" />
+												</Border.Background>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+
+								<CheckBox x:Name="HighlightsCheckbox" Grid.Column="1" Grid.Row="1">
+									Highlights
+								</CheckBox>
+							</Grid>
+						</Expander>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Eye Color
+							</Expander.Header>
+							<ItemsControl x:Name="EyeColorSwatches" Width="160">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="8" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+											<Border.Background>
+												<SolidColorBrush Color="{Binding Color}" />
+											</Border.Background>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</Expander>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Lip Color
+							</Expander.Header>
+							<StackPanel>
+								<StackPanel HorizontalAlignment="Right">
+									<RadioButton Content="Dark" GroupName="LipColor" x:Name="DarkLip" IsChecked="True" />
+									<RadioButton Content="Light" GroupName="LipColor" x:Name="LightLip" />
+									<RadioButton Content="None" GroupName="LipColor" x:Name="NoneLip" />
+								</StackPanel>
+								<ItemsControl x:Name="LipColorSwatches" Width="160">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<UniformGrid Columns="8" />
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+											<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+												<Border.Background>
+													<SolidColorBrush Color="{Binding Color}" />
+												</Border.Background>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</StackPanel>
+						</Expander>
+
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+							<Expander.Header>
+								Tattoo Color
+							</Expander.Header>
+							<ItemsControl x:Name="TattooColorSwatches" Width="160">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="8" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate x:DataType="{x:Type shared:swatchOption}">
+										<Border Width="20" Height="10" Margin="0" BorderBrush="DarkGray" BorderThickness="0">
+											<Border.Background>
+												<SolidColorBrush Color="{Binding Color}" />
+											</Border.Background>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</Expander>
+					</StackPanel>
 				</StackPanel>
-			</StackPanel>
-		</ScrollViewer>
-	</Grid>
+			</ScrollViewer>
+		</Grid>
+	</SplitView>
 </Window>

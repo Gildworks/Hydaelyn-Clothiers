@@ -7,6 +7,7 @@ open System.IO
 
 open Avalonia
 open Avalonia.Controls
+open Avalonia.Controls.Primitives
 open Avalonia.Markup.Xaml
 open Avalonia.Input
 open Avalonia.Interactivity
@@ -163,47 +164,47 @@ type MainWindow () as this =
 
     let viewModel = new VeldridWindowViewModel()
 
-    let races: ComboOption list = [
-        { Display = "Hyur"; Value = "Hyur"}; { Display = "Elezen"; Value = "Elezen"}
-        { Display = "Lalafell"; Value = "Lalafell"}; { Display = "Miqo'te"; Value = "Miqote"}
-        { Display = "Roegadyn"; Value = "Roegadyn"}; { Display = "Au Ra"; Value = "AuRa"}
-        { Display = "Hrothgar"; Value = "Hrothgar"}; { Display = "Viera"; Value = "Viera"}
-    ]
-    let HyurTribes: string list = [
-        "Highlander"; "Midlander"
-    ]
-    let ElezenTribes: string list = [
-        "Wildwood"; "Duskwight"
-    ]
-    let LalafellTribes: string list = [
-        "Plainsfolk"; "Dunesfolk"
-    ]
-    let MiqoteTribes: ComboOption list = [
-        { Display = "Seekers of the Sun"; Value = "Seeker"}; { Display = "Keepers of the Moon"; Value = "Keeper" }
-    ]
-    let RoegadynTribes: ComboOption list = [
-        { Display = "Sea Wolves"; Value = "SeaWolves" }; { Display = "Hellsguard"; Value = "Hellsguard" }
-    ]
-    let AuRaTribes: string list = [
-        "Raen"; "Xaela"
-    ]
-    let HrothgarTribes: ComboOption list = [
-        { Display = "Helions"; Value = "Helions" }; { Display = "The Lost"; Value = "Lost" }
-    ]
-    let VieraTribes: string list = [
-        "Rava"; "Veena"
-    ]
+    //let races: ComboOption list = [
+    //    { Display = "Hyur"; Value = "Hyur"}; { Display = "Elezen"; Value = "Elezen"}
+    //    { Display = "Lalafell"; Value = "Lalafell"}; { Display = "Miqo'te"; Value = "Miqote"}
+    //    { Display = "Roegadyn"; Value = "Roegadyn"}; { Display = "Au Ra"; Value = "AuRa"}
+    //    { Display = "Hrothgar"; Value = "Hrothgar"}; { Display = "Viera"; Value = "Viera"}
+    //]
+    //let HyurTribes: ComboOption list = [
+    //    { Display = "Highlander"; Value="Highlander"}; { Display = "Midlander"; Value="Midlander"}
+    //]
+    //let ElezenTribes: ComboOption list = [
+    //    { Display = "Wildwood"; Value="Wildwood"}; { Display = "Duskwight"; Value="Duskwight"}
+    //]
+    //let LalafellTribes: ComboOption list = [
+    //    { Display = "Plainsfolk"; Value="Plainsfolk"}; { Display = "Dunesfolk"; Value="Dunesfolk"}
+    //]
+    //let MiqoteTribes: ComboOption list = [
+    //    { Display = "Seekers of the Sun"; Value = "Seeker"}; { Display = "Keepers of the Moon"; Value = "Keeper" }
+    //]
+    //let RoegadynTribes: ComboOption list = [
+    //    { Display = "Sea Wolves"; Value = "SeaWolves" }; { Display = "Hellsguard"; Value = "Hellsguard" }
+    //]
+    //let AuRaTribes: ComboOption list = [
+    //    { Display = "Raen"; Value="Raen"}; { Display = "Xaela"; Value="Xaela"}
+    //]
+    //let HrothgarTribes: ComboOption list = [
+    //    { Display = "Helions"; Value = "Helions" }; { Display = "The Lost"; Value = "Lost" }
+    //]
+    //let VieraTribes: ComboOption list = [
+    //    { Display = "Rava"; Value="Rava"}; { Display = "Veena"; Value="Veena"}
+    //]
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
-    let mutable selectedRaceNameOpt: string option = None
-    let mutable selectedClanNameOpt: string option = None
-    let mutable selectedGenderNameOpt: string option = None
+    let mutable selectedRaceNameOpt: string option = Some "Hyur"
+    let mutable selectedClanNameOpt: string option = Some "Midlander"
+    let mutable selectedGenderNameOpt: string option = Some "Male"
 
     let mutable modelColors: CustomModelColors = ModelTexture.GetCustomColors()
     let mutable selectedSwatchBorders: System.Collections.Generic.Dictionary<paletteOptions, Border option> = System.Collections.Generic.Dictionary()
     let mutable modelColorId: raceIds = raceIds.AuRa_Xaela_Female
 
-    let mutable allGearCache: XivGear list = List.empty
+    let mutable allGearCache: FilterGear list = List.empty
     let mutable allCharaCache: XivCharacter list = List.empty
     let mutable dyeListCache: string list = List.empty
     let mutable currentTransaction: ModTransaction = null
@@ -293,6 +294,10 @@ type MainWindow () as this =
     let mutable lipRadioLightControl: RadioButton = null
     let mutable lipRadioNoneControl: RadioButton = null
 
+    let mutable filterOpenButton: Button = null
+    let mutable splitPane: SplitView = null
+    let mutable filterScroller: ScrollViewer = null
+
     let mutable veldridRenderView: VeldridView option = None
 
     do
@@ -300,6 +305,13 @@ type MainWindow () as this =
         this.FindGuiControls()
 
         viewerControl.DataContext <- viewModel
+        this.DataContext <- viewModel
+
+        viewModel.FSharpPropertyChanged.Add(fun args ->
+            if args.PropertyName = "GloballyFilteredGear" then
+                allGearCache <- viewModel.GloballyFilteredGear
+                this.UpdateAllSlotListsFromLocalCache()
+        )
 
         viewerControl.GetObservable(Control.BoundsProperty)
             .Subscribe(fun bounds ->
@@ -323,15 +335,12 @@ type MainWindow () as this =
                     veldridRenderView <- Some render
                     render.AttachInputHandlers(inputOverlay)
                     this.InitializeApplicationAsync(render) |> Async.StartImmediate
+                    viewModel.InitializeDataAsync(render) |> Async.StartImmediate
                 | _ -> ()
         )
     member private this.InitializeComponent() =
 #if DEBUG
         this.AttachDevTools()
-        let screens = this.Screens.All |> Seq.toList
-        let targetScreen =
-            if screens.Length > 1 then screens.[0] else screens.Head
-        this.Position <- PixelPoint(targetScreen.Bounds.Center.X - 713, targetScreen.Bounds.Center.Y - 391)
 #endif
         AvaloniaXamlLoader.Load(this)
 
@@ -387,6 +396,9 @@ type MainWindow () as this =
         lipRadioLightControl <- this.FindControl<RadioButton>("LightLip")
         lipRadioNoneControl <- this.FindControl<RadioButton>("NoneLip")
 
+        filterOpenButton <- this.FindControl<Button>("FilterOpenButton")
+        splitPane <- this.FindControl<SplitView>("FilterPanel")
+        filterScroller <- this.FindControl<ScrollViewer>("FilterScroller")
 
     member private this.UpdateSubmitButtonState() =
         let raceOk = selectedRaceNameOpt.IsSome
@@ -394,6 +406,23 @@ type MainWindow () as this =
         let clanOk = selectedClanNameOpt.IsSome
         submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk
         clearAllButton.IsEnabled <- raceOk && genderOk && clanOk
+
+    member private this.UpdateAllSlotListsFromLocalCache() =
+        let updateSlot (slotList: ListBox) (gearCategory: string) (searchTerm: string) =
+            let filteredList =
+                allGearCache
+                |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
+                |> List.filter (fun m ->
+                    if String.IsNullOrWhiteSpace(searchTerm) then true
+                    else m.Item.Name.ToLower().Contains(searchTerm.ToLower())
+                )
+            slotList.ItemsSource <- filteredList
+
+        updateSlot headSlotCombo "Head" headSlotSearchBox.Text
+        updateSlot bodySlotCombo "Body" bodySlotSearchBox.Text
+        updateSlot handSlotCombo "Hands" handSlotSearchBox.Text
+        updateSlot legsSlotCombo "Legs" legsSlotSearchBox.Text
+        updateSlot feetSlotCombo "Feet" feetSlotSearchBox.Text
 
     member private this.UpdateDyeChannelsForItem(item: IItemModel, itemSlot: EquipmentSlot, tx: ModTransaction) =
         task {
@@ -432,6 +461,7 @@ type MainWindow () as this =
         render: VeldridView) : Async<unit> =
         async {
             this.IncrementBusyCounter()
+            let helperItem = item :?> XivGear
             try
                 let mutable resetDye = true
                 match lastSelectedGearItem.TryGetValue(eqSlot) with
@@ -472,8 +502,10 @@ type MainWindow () as this =
         Async.StartImmediate(
             async {
                 try
+                    
                     let! renderPalette = DataHelpers.getColorPalette modelColorId palette |> Async.AwaitTask
                     let selectedColor = DataHelpers.vec4ToDXColor renderPalette.[index]
+                    printfn $"Selected Color Value: [{selectedColor.R}, {selectedColor.G}, {selectedColor.B}, {selectedColor.A}]"
                     match int palette with
                     | 15 ->
                         modelColors.HairColor <- selectedColor
@@ -541,7 +573,7 @@ type MainWindow () as this =
              this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1Idx, dye2Idx, modelColors) |> Async.StartImmediate
 
     member private this.ClearGearSlot(
-        slotCombo: ListBox, eqSlot: EquipmentSlot, gearList: XivGear list,
+        slotCombo: ListBox, eqSlot: EquipmentSlot, gearList: FilterGear list,
         dye1Combo: ComboBox, dye1ClearButton: Button,
         dye2Combo: ComboBox, dye2ClearButton: Button, render: VeldridView) =
 
@@ -551,13 +583,23 @@ type MainWindow () as this =
             | EquipmentSlot.Legs -> "Legs" | EquipmentSlot.Feet -> "Feet"
             | _ -> null
 
+        let emperorsNewNamePart =
+            match eqSlot with
+            | EquipmentSlot.Body -> "Robe" | EquipmentSlot.Hands -> "Gloves"
+            | EquipmentSlot.Legs -> "Breeches" | EquipmentSlot.Feet -> "Boots"
+            | _ -> null
+
         // *** FIXED HERE ***
         let defaultIndex =
             if isNull smallClothesNamePart then -1
             else
-                match gearList |> List.tryFindIndex (fun g -> g.Name.Contains("SmallClothes") && g.Name.Contains(smallClothesNamePart)) with
-                | Some idx -> idx
-                | None -> -1
+                match gearList |> List.tryFindIndex (fun g -> g.Item.Name.Contains("SmallClothes") && g.Item.Name.Contains(smallClothesNamePart)) with
+                | Some idx -> 
+                    idx
+                | None ->
+                    match gearList |> List.tryFindIndex (fun g -> g.Item.Name.Contains("Emperor's") && g.Item.Name.Contains(emperorsNewNamePart)) with
+                    | Some idx -> idx
+                    | None -> -1
 
         lastSelectedGearItem.Remove(eqSlot) |> ignore
 
@@ -576,33 +618,18 @@ type MainWindow () as this =
         dye1Combo: ComboBox, dye2Combo: ComboBox, render: VeldridView) =
         if channelToClear = 1 then dye1Combo.SelectedIndex <- -1
         elif channelToClear = 2 then dye2Combo.SelectedIndex <- -1
-        this.HandleDyeSelectionChanged(item, eqSlot, dye1Combo, dye2Combo, render)
+        this.HandleDyeSelectionChanged(item, eqSlot, dye1Combo, dye2Combo, render)        
 
     member private this.AttachEventHandlers(render: VeldridView) =
+
+        this.SizeChanged.Add(fun _ ->
+            viewModel.WindowHeight <- this.Bounds.Height
+        )
+
         raceSelector.SelectionChanged.Add(fun _ ->
             match raceSelector.SelectedValue with
             | :? ComboOption as selected ->
                 selectedRaceNameOpt <- Some selected.Value
-                match selected.Value with
-                | "Hyur" ->
-                    clanSelector.ItemsSource <- HyurTribes
-                | "Elezen" ->
-                    clanSelector.ItemsSource <- ElezenTribes
-                | "Lalafell" ->
-                    clanSelector.ItemsSource <- LalafellTribes
-                | "Miqote" ->
-                    clanSelector.ItemsSource <- MiqoteTribes
-                | "Roegadyn" ->
-                    clanSelector.ItemsSource <- RoegadynTribes
-                | "AuRa" ->
-                    clanSelector.ItemsSource <- AuRaTribes
-                | "Hrothgar" ->
-                    clanSelector.ItemsSource <- HrothgarTribes
-                | "Viera" ->
-                    clanSelector.ItemsSource <- VieraTribes
-                | _ -> 
-                    clanSelector.ItemsSource <- []
-
                 this.UpdateSubmitButtonState()
             | _ -> selectedRaceNameOpt <- None; this.UpdateSubmitButtonState()
         )
@@ -615,7 +642,7 @@ type MainWindow () as this =
         )
         genderSelector.SelectionChanged.Add(fun _ ->
             match genderSelector.SelectedValue with
-            | :? string as genderStr -> selectedGenderNameOpt <- Some genderStr
+            | :? ComboOption as genderStr -> selectedGenderNameOpt <- Some genderStr.Value
             | _ -> selectedGenderNameOpt <- None
             this.UpdateSubmitButtonState()
         )
@@ -698,6 +725,14 @@ type MainWindow () as this =
             this.ClearAllSlots(render)
         )
 
+        filterOpenButton.Click.Add(fun _ ->
+            splitPane.IsPaneOpen <- not splitPane.IsPaneOpen
+            match filterScroller.VerticalScrollBarVisibility with
+            | ScrollBarVisibility.Hidden -> filterScroller.VerticalScrollBarVisibility <- ScrollBarVisibility.Visible
+            | ScrollBarVisibility.Visible -> filterScroller.VerticalScrollBarVisibility <- ScrollBarVisibility.Hidden
+            | _ -> ()
+        )
+
         let setupCharPartSelector (selector: ComboBox) (partSlot: EquipmentSlot) (getPartList: unit -> XivCharacter list) =
             selector.SelectionChanged.Add(fun _ ->
                 let idx = selector.SelectedIndex
@@ -717,70 +752,52 @@ type MainWindow () as this =
             dye2Combo: ComboBox, dye2ClearButton: Button,
             eqSlot: EquipmentSlot, gearCategory: string) =
 
-            let getGearList() = allGearCache |> List.filter (fun m -> m.SecondaryCategory = gearCategory)
+            let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
             slotCombo.ItemsSource <- getGearList()
 
             slotCombo.SelectionChanged.Add(fun _ ->
                 if slotCombo.SelectedItem <> null then
-                    let selectedItem = slotCombo.SelectedItem :?> IItemModel
-                    do this.HandleGearSelectionChanged(selectedItem, eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
+                    let selectedItem = slotCombo.SelectedItem :?> FilterGear
+                    do this.HandleGearSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
             )
             clearButton.Click.Add(fun _ ->
                 this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
             )
             dye1ClearButton.Click.Add(fun _ ->
-                let idx = slotCombo.SelectedIndex
-                let gearList = getGearList()
-                if idx >=0 && idx < gearList.Length then
-                    this.ClearDyeChannel(gearList[idx], eqSlot, 1, dye1Combo, dye2Combo, render)
+                if slotCombo.SelectedItem <> null then
+                    let selectedItem = slotCombo.SelectedItem :?> FilterGear
+                    this.ClearDyeChannel(selectedItem.Item, eqSlot, 1, dye1Combo, dye2Combo, render)
             )
             dye2ClearButton.Click.Add(fun _ ->
-                let idx = slotCombo.SelectedIndex
-                let gearList = getGearList()
-                if idx >=0 && idx < gearList.Length then
-                    this.ClearDyeChannel(gearList[idx], eqSlot, 2, dye1Combo, dye2Combo, render)
+                if slotCombo.SelectedItem <> null then
+                    let selectedItem = slotCombo.SelectedItem :?> FilterGear
+                    this.ClearDyeChannel(selectedItem.Item, eqSlot, 2, dye1Combo, dye2Combo, render)
             )
             dye1Combo.SelectionChanged.Add(fun _ ->
-                let idx = slotCombo.SelectedIndex
-                let gearList = getGearList()
-                if idx >=0 && idx < gearList.Length then
+                if slotCombo.SelectedItem <> null then
+                    let selectedItem = slotCombo.SelectedItem :?> FilterGear
                     if dye1Combo.SelectedIndex >= 0 then
-                       this.HandleDyeSelectionChanged(gearList[idx], eqSlot, dye1Combo, dye2Combo, render)
+                       this.HandleDyeSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye2Combo, render)
             )
             dye2Combo.SelectionChanged.Add(fun _ ->
-                let idx = slotCombo.SelectedIndex
-                let gearList = getGearList()
-                if idx >=0 && idx < gearList.Length then
+                if slotCombo.SelectedItem <> null then
+                    let selectedItem = slotCombo.SelectedItem :?> FilterGear
                     if dye2Combo.SelectedIndex >= 0 then
-                        this.HandleDyeSelectionChanged(gearList[idx], eqSlot, dye1Combo, dye2Combo, render)
+                        this.HandleDyeSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye2Combo, render)
             )
-        let filterGear (slotList: ListBox, gearCategory: string, searchTerm: string) =
-            let fullList =  allGearCache |> List.filter (fun m -> m.SecondaryCategory = gearCategory)
-            let filteredList = fullList |> List.filter(fun m -> m.Name.Contains(searchTerm))
-            slotList.ItemsSource <- filteredList
 
         let clearSearch (searchBox: TextBox) =
             searchBox.Text <- String.Empty
 
-        headSlotSearchBox.TextChanged.Add(fun _ ->
-            filterGear (headSlotCombo, "Head", headSlotSearchBox.Text)
-        )
+        headSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
-        bodySlotSearchBox.TextChanged.Add(fun _ ->
-            filterGear (bodySlotCombo, "Body", bodySlotSearchBox.Text)
-        )
+        bodySlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
-        handSlotSearchBox.TextChanged.Add(fun _ ->
-            filterGear (handSlotCombo, "Hands", handSlotSearchBox.Text)
-        )
+        handSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
-        legsSlotSearchBox.TextChanged.Add(fun _ ->
-            filterGear (legsSlotCombo, "Legs", legsSlotSearchBox.Text)
-        )
+        legsSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
-        feetSlotSearchBox.TextChanged.Add(fun _ ->
-            filterGear (feetSlotCombo, "Feet", feetSlotSearchBox.Text)
-        )
+        feetSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
         headSearchClearButton.Click.Add(fun _ ->
             clearSearch headSlotSearchBox
@@ -826,7 +843,7 @@ type MainWindow () as this =
         )
 
     member private this.ClearAllSlots(render: VeldridView) =
-        let getGearListForCategory cat = allGearCache |> List.filter (fun m -> m.SecondaryCategory = cat)
+        let getGearListForCategory cat = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = cat)
 
         modelColors <- ModelTexture.GetCustomColors()
         selectedSwatchBorders.Clear()
@@ -916,10 +933,14 @@ type MainWindow () as this =
 
                         let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
                             if combo.SelectedIndex = -1 then
-                                let gear = allGearCache |> List.filter(fun g -> g.SecondaryCategory = category)
-                                match gear |> List.tryFind(fun g -> g.Name.Contains(nameFilter)) with
+                                let gear = allGearCache |> List.filter(fun g -> g.Item.SecondaryCategory = category)
+                                match gear |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
                                 | Some idx -> combo.SelectedItem <- idx
-                                | None -> ()
+                                | None -> 
+                                    match gear |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
+                                    | Some idx -> combo.SelectedItem <- idx
+                                    | None -> ()
+
                         setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
                         setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
                         setDefaultGear (legsSlotCombo, "Legs", "SmallClothes")
@@ -937,7 +958,7 @@ type MainWindow () as this =
                         let! getUiFaceDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
                         let! getUiFaceLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
                         let! getUiSkinPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
-                        let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHair |> Async.AwaitTask
+                        let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.RenderHair |> Async.AwaitTask
                         let! getUiHighlightPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
 
                         uiEyePalette <- getUiEyePalette
@@ -1053,22 +1074,19 @@ type MainWindow () as this =
                 let gameDataRootPath = gamePathFromConfigOrPrompt
                 let info = xivModdingFramework.GameInfo(DirectoryInfo(gameDataRootPath), XivLanguage.English)
                 XivCache.SetGameInfo(info) |> ignore
+                viewModel.WindowHeight <- this.Bounds.Height
 
                 currentTransaction <- ModTransaction.BeginReadonlyTransaction()
-
-                let! gear = render.GetEquipment()
-                allGearCache <- gear
                 let! chara = render.GetChara()
+                allGearCache <- viewModel.GloballyFilteredGear
                 allCharaCache <- chara
                 let! dyes = DataHelpers.getDyeSwatches() |> Async.AwaitTask
                 dyeListCache <- dyes
 
-                raceSelector.ItemsSource <- races
-                genderSelector.ItemsSource <- ["Male"; "Female"]
-                submitCharacterButton.IsEnabled <- false
-                clearAllButton.IsEnabled <- false
+                this.UpdateSubmitButtonState()
                 hairSelector.IsEnabled <- false; faceSelector.IsEnabled <- false
                 earSelector.IsEnabled <- false; tailSelector.IsEnabled <- false
+                filterScroller.VerticalScrollBarVisibility <- ScrollBarVisibility.Hidden
                 
                 this.AttachEventHandlers(render)
 

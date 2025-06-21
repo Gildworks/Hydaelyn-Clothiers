@@ -7,10 +7,13 @@ open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.General.Enums
+open xivModdingFramework.Exd.FileTypes
+
 open System
 open System.Numerics
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
+
 open Veldrid
 
 
@@ -40,6 +43,15 @@ type VertexPositionColorUv =
         Normal = normal
         Tangent = tangent
         BiTangent = bitangent
+    }
+
+[<Struct>]
+type TransformsUBO =
+    {
+        World: Matrix4x4
+        View: Matrix4x4
+        Projection: Matrix4x4
+        EyePosition: Vector4
     }
 
 type raceIds = 
@@ -95,8 +107,6 @@ type paletteOptions =
     | RenderHair = 15
     | UISkin = 16
     | UIHair = 17
-
-
 
 type LoadedTexture =
     {
@@ -229,10 +239,14 @@ type PipelineKey = {
     OutputDescription           : OutputDescription
 }
 
-type ComboOption = {
-    Display: string
-    Value: string
-}
+type ComboOption = 
+    {
+        Display: string
+        Value: string
+    }
+    override this.ToString () : string =
+        this.Display
+    
 
 type CharacterCustomizationOptions = {
     Race                        : XivRace
@@ -260,5 +274,194 @@ type swatchOption = {
     Index                       : int
 }
 
-type uiItemModel =
-    inherit IItemModel
+type EquipRestriction =
+    | None = 0
+    | Unknown = 1
+    | AllMale = 2
+    | AllFemale = 3
+    | HyurMale = 4
+    | HyurFemale = 5
+    | ElezenMale = 6
+    | ElezenFemale = 7
+    | LalafellMale = 8
+    | LalafellFemale = 9
+    | MiqoteMale = 10
+    | MiqoteFemale = 11
+    | RoegadynMale = 12
+    | RoegadynFemale = 13
+    | AuRaMale = 14
+    | AuRaFemale = 15
+    | HrothgarMale = 16
+    | VieraFemale = 17
+    | VieraMale = 18
+    | HrothgarFemale = 19
+
+type ClassJobEquip = {
+    GLA: bool
+    PGL: bool
+    MRD: bool
+    LNC: bool
+    ARC: bool
+    CNJ: bool
+    THM: bool
+    CRP: bool
+    BSM: bool
+    ARM: bool
+    GSM: bool
+    LTW: bool
+    WVR: bool
+    ALC: bool
+    CUL: bool
+    MIN: bool
+    BTN: bool
+    FSH: bool
+    PLD: bool
+    MNK: bool
+    WAR: bool
+    DRG: bool
+    BRD: bool
+    WHM: bool
+    BLM: bool
+    ACN: bool
+    SMN: bool
+    SCH: bool
+    ROG: bool
+    NIN: bool
+    MCH: bool
+    DRK: bool
+    AST: bool
+    SAM: bool
+    RDM: bool
+    BLU: bool
+    GNB: bool
+    DNC: bool
+    RPR: bool
+    SGE: bool
+    VPR: bool
+    PCT: bool
+}
+    with
+        static member AllJobs = {
+            GLA = true
+            PGL = true
+            MRD = true
+            LNC = true
+            ARC = true
+            CNJ = true
+            THM = true
+            CRP = true
+            BSM = true
+            ARM = true
+            GSM = true
+            LTW = true
+            WVR = true
+            ALC = true
+            CUL = true
+            MIN = true
+            BTN = true
+            FSH = true
+            PLD = true
+            MNK = true
+            WAR = true
+            DRG = true
+            BRD = true
+            WHM = true
+            BLM = true
+            ACN = true
+            SMN = true
+            SCH = true
+            ROG = true
+            NIN = true
+            MCH = true
+            DRK = true
+            AST = true
+            SAM = true
+            RDM = true
+            BLU = true
+            GNB = true
+            DNC = true
+            RPR = true
+            SGE = true
+            VPR = true
+            PCT = true
+        }
+        static member NoJobs = {
+            GLA = false
+            PGL = false
+            MRD = false
+            LNC = false
+            ARC = false
+            CNJ = false
+            THM = false
+            CRP = false
+            BSM = false
+            ARM = false
+            GSM = false
+            LTW = false
+            WVR = false
+            ALC = false
+            CUL = false
+            MIN = false
+            BTN = false
+            FSH = false
+            PLD = false
+            MNK = false
+            WAR = false
+            DRG = false
+            BRD = false
+            WHM = false
+            BLM = false
+            ACN = false
+            SMN = false
+            SCH = false
+            ROG = false
+            NIN = false
+            MCH = false
+            DRK = false
+            AST = false
+            SAM = false
+            RDM = false
+            BLU = false
+            GNB = false
+            DNC = false
+            RPR = false
+            SGE = false
+            VPR = false
+            PCT = false
+        }
+type Job =
+    | GLA | PGL | MRD | LNC | ARC | CNJ | THM
+    | CRP | BSM | ARM | GSM | LTW | WVR | ALC | CUL
+    | MIN | BTN | FSH
+    | PLD | MNK | WAR | DRG | BRD | WHM | BLM
+    | ACN | SMN | SCH | ROG | NIN | MCH | DRK | AST
+    | SAM | RDM | BLU | GNB | DNC | RPR | SGE
+    | VPR | PCT
+    static member ToDisplayName = function
+        | GLA -> "Gladiator" | PGL -> "Pugilist" | MRD -> "Marauder" | LNC -> "Lancer" | ARC -> "Archer" | CNJ -> "Conjurer" | THM -> "Thaumaturge"
+        | CRP -> "Carpenter" | BSM -> "Blacksmith" | ARM -> "Armorer" | GSM -> "Goldsmith" | LTW -> "Leatherworker" | WVR -> "Weaver" | ALC -> "Alchemist" | CUL -> "Culinarian"
+        | MIN -> "Miner" | BTN -> "Botanist" | FSH -> "Fisher"
+        | PLD -> "Paladin" | MNK -> "Monk" | WAR -> "Warrior" | DRG -> "Dragoon" | BRD -> "Bard" | WHM -> "White Mage" | BLM -> "Black Mage"
+        | ACN -> "Arcanist" | SMN -> "Summoner" | SCH -> "Scholar" | ROG -> "Rogue" | NIN -> "Ninja" | MCH -> "Machinist" | DRK -> "Dark Knight" | AST -> "Astrologian"
+        | SAM -> "Samurai" | RDM -> "Red Mage" | BLU -> "Blue Mage" | GNB -> "Gunbreaker" | DNC -> "Dancer" | RPR -> "Reaper" | SGE -> "Sage"
+        | VPR -> "Viper" | PCT -> "Pictomancer"
+
+type CraftingInfo =
+    {
+        Job                         : string
+        RecipeLevel                 : int
+        RecipeStars                 : int
+
+    }
+
+type FilterGear = 
+    {
+        Item                        : XivGear
+        ExdRow                      : Ex.ExdRow
+        ItemLevel                   : int
+        EquipLevel                  : int
+        EquipRestriction            : EquipRestriction
+        EquippableBy                : Set<Job>
+    }
+    override this.ToString (): string = 
+        this.Item.Name

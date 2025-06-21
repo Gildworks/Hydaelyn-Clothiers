@@ -3,6 +3,8 @@ namespace fs_mdl_viewer
 open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
 open Avalonia.Markup.Xaml
+open Avalonia.Svg
+open Avalonia.Svg.Skia
 
 open System
 
@@ -14,7 +16,7 @@ type App() =
 
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
-
+        
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===

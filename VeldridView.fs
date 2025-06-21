@@ -362,7 +362,7 @@ type VeldridView() as this =
         isResizing <- true
         resizeTimer |> Option.iter (fun t -> t.Stop(); t.Dispose())
 
-        let timer = new System.Timers.Timer(100.0)
+        let timer = new System.Timers.Timer(250.0)
         timer.AutoReset <- false
         timer.Elapsed.Add(fun _ ->
             this.Resize(w, h)
@@ -401,11 +401,191 @@ type VeldridView() as this =
 
     member this.IsFirstRenderComplete = firstRender
 
-    member this.GetEquipment() : Async<XivGear list> =
+    member this.GetEquipment() : Async<FilterGear list> =
+        let getJobEquip (row: Ex.ExdRow) : ClassJobEquip =
+            let classJobEquip = {
+                GLA = row.GetColumn(2) :?> bool
+                PGL = row.GetColumn(3) :?> bool
+                MRD = row.GetColumn(4) :?> bool
+                LNC = row.GetColumn(5) :?> bool
+                ARC = row.GetColumn(6) :?> bool
+                CNJ = row.GetColumn(7) :?> bool
+                THM = row.GetColumn(8) :?> bool
+                CRP = row.GetColumn(9) :?> bool
+                BSM = row.GetColumn(10) :?> bool
+                ARM = row.GetColumn(11) :?> bool
+                GSM = row.GetColumn(12) :?> bool
+                LTW = row.GetColumn(13) :?> bool
+                WVR = row.GetColumn(14) :?> bool
+                ALC = row.GetColumn(15) :?> bool
+                CUL = row.GetColumn(16) :?> bool
+                MIN = row.GetColumn(17) :?> bool
+                BTN = row.GetColumn(18) :?> bool
+                FSH = row.GetColumn(19) :?> bool
+                PLD = row.GetColumn(20) :?> bool
+                MNK = row.GetColumn(21) :?> bool
+                WAR = row.GetColumn(22) :?> bool
+                DRG = row.GetColumn(23) :?> bool
+                BRD = row.GetColumn(24) :?> bool
+                WHM = row.GetColumn(25) :?> bool
+                BLM = row.GetColumn(26) :?> bool
+                ACN = row.GetColumn(27) :?> bool
+                SMN = row.GetColumn(28) :?> bool
+                SCH = row.GetColumn(29) :?> bool
+                ROG = row.GetColumn(30) :?> bool
+                NIN = row.GetColumn(31) :?> bool
+                MCH = row.GetColumn(32) :?> bool
+                DRK = row.GetColumn(33) :?> bool
+                AST = row.GetColumn(34) :?> bool
+                SAM = row.GetColumn(35) :?> bool
+                RDM = row.GetColumn(36) :?> bool
+                BLU = row.GetColumn(37) :?> bool
+                GNB = row.GetColumn(38) :?> bool
+                DNC = row.GetColumn(39) :?> bool
+                RPR = row.GetColumn(40) :?> bool
+                SGE = row.GetColumn(41) :?> bool
+                VPR = row.GetColumn(42) :?> bool
+                PCT = row.GetColumn(43) :?> bool
+            }
+            classJobEquip
+
+        let getJobSet (cje: ClassJobEquip) : Set<Job> =
+            let jobs = ResizeArray()
+            if cje.GLA then jobs.Add(GLA)
+            if cje.PGL then jobs.Add(PGL)
+            if cje.MRD then jobs.Add(MRD)
+            if cje.LNC then jobs.Add(LNC)
+            if cje.ARC then jobs.Add(ARC)
+            if cje.CNJ then jobs.Add(CNJ)
+            if cje.THM then jobs.Add(THM)
+            if cje.CRP then jobs.Add(CRP)
+            if cje.BSM then jobs.Add(BSM)
+            if cje.ARM then jobs.Add(ARM)
+            if cje.GSM then jobs.Add(GSM)
+            if cje.LTW then jobs.Add(LTW)
+            if cje.WVR then jobs.Add(WVR)
+            if cje.ALC then jobs.Add(ALC)
+            if cje.CUL then jobs.Add(CUL)
+            if cje.MIN then jobs.Add(MIN)
+            if cje.BTN then jobs.Add(BTN)
+            if cje.FSH then jobs.Add(FSH)
+            if cje.PLD then jobs.Add(PLD)
+            if cje.MNK then jobs.Add(MNK)
+            if cje.WAR then jobs.Add(WAR)
+            if cje.DRG then jobs.Add(DRG)
+            if cje.BRD then jobs.Add(BRD)
+            if cje.WHM then jobs.Add(WHM)
+            if cje.BLM then jobs.Add(BLM)
+            if cje.ACN then jobs.Add(ACN)
+            if cje.SMN then jobs.Add(SMN)
+            if cje.SCH then jobs.Add(SCH)
+            if cje.ROG then jobs.Add(ROG)
+            if cje.NIN then jobs.Add(NIN)
+            if cje.MCH then jobs.Add(MCH)
+            if cje.DRK then jobs.Add(DRK)
+            if cje.AST then jobs.Add(AST)
+            if cje.SAM then jobs.Add(SAM)
+            if cje.RDM then jobs.Add(RDM)
+            if cje.BLU then jobs.Add(BLU)
+            if cje.GNB then jobs.Add(GNB)
+            if cje.DNC then jobs.Add(DNC)
+            if cje.RPR then jobs.Add(RPR)
+            if cje.SGE then jobs.Add(SGE)
+            if cje.VPR then jobs.Add(VPR)
+            if cje.PCT then jobs.Add(PCT)
+            Set.ofSeq jobs
+
         async {
-            let gear = new Gear()
-            let! gearList = gear.GetGearList() |> Async.AwaitTask
-            return gearList |> List.ofSeq
+            let! gearListAsync =
+                async {
+                    let gear = new Gear()
+                    return! gear.GetGearList() |> Async.AwaitTask
+                } |> Async.StartChild
+            let! itemExdAsync = 
+                async {
+                    let ex = new Ex()
+                    return! ex.ReadExData(XivEx.item) |> Async.AwaitTask
+                } |> Async.StartChild
+            let! classJobCategoryAsync = 
+                async {
+                    let ex = new Ex()
+                    return! ex.ReadExData(XivEx.classjobcategory) |> Async.AwaitTask
+                } |> Async.StartChild
+            let! recipeListAsync =
+                async {
+                    let ex = new Ex()
+                    return! ex.ReadExData(XivEx.recipe) |> Async.AwaitTask
+                } |> Async.StartChild
+            let! recipeLevelTableAsync =
+                async {
+                    let ex = new Ex()
+                    return! ex.ReadExData(XivEx.recipeleveltable) |> Async.AwaitTask
+                } |> Async.StartChild
+            let! craftTypeTableAsync =
+                async {
+                    let ex = new Ex()
+                    return! ex.ReadExData(XivEx.crafttype) |> Async.AwaitTask
+                } |> Async.StartChild
+
+
+
+            let! gearList = gearListAsync
+            let! itemExd = itemExdAsync
+            let! classJobCategory = classJobCategoryAsync
+
+            let! recipeExd = recipeListAsync
+            let! recipeLevelExd = recipeLevelTableAsync
+            let! craftType = craftTypeTableAsync
+
+            let itemExdMap: Map<int, Ex.ExdRow> =
+                itemExd
+                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+                |> Map.ofSeq
+            let classJobCategoryMap: Map<int, Ex.ExdRow> =
+                classJobCategory
+                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+                |> Map.ofSeq
+            let recipeMap: Map<int, Ex.ExdRow> =
+                recipeExd
+                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+                |> Map.ofSeq
+            let recipeLevelMap: Map<int, Ex.ExdRow> =
+                recipeLevelExd
+                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+                |> Map.ofSeq
+            let craftTypeMap: Map<int, Ex.ExdRow> =
+                craftType
+                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+                |> Map.ofSeq
+
+            let filterGearItems =
+                gearList
+                |> List.ofSeq
+                |> List.choose (fun gear ->
+                    match Map.tryFind gear.ExdID itemExdMap with
+                    | Some exdRow ->
+                        let equipRestrictValue = exdRow.GetColumn(42) :?> byte |> int
+                        let itemLevel = exdRow.GetColumn(11) :?> uint16 |> int
+                        let equipLevel = exdRow.GetColumn(40) :?> byte |> int
+                        let equipRestrictType = enum<EquipRestriction> equipRestrictValue
+                        let cjCategory = exdRow.GetColumn(43) :?> byte |> int
+                        let classJobs =
+                            match Map.tryFind cjCategory classJobCategoryMap with
+                            | Some catRow ->
+                                getJobEquip catRow
+                            | None -> ClassJobEquip.AllJobs
+                        
+                        Some {
+                            Item = gear
+                            ExdRow = exdRow
+                            ItemLevel = itemLevel
+                            EquipLevel = equipLevel
+                            EquipRestriction = equipRestrictType
+                            EquippableBy = getJobSet classJobs
+                        }
+                    | None -> None
+                )
+            return filterGearItems
         }
 
     member this.GetChara() : Async<XivCharacter list> =

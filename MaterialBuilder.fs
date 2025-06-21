@@ -77,7 +77,7 @@ let materialBuilder
         let srgbFormat = PixelFormat.R8_G8_B8_A8_UNorm_SRgb
 
         // --- Helper to create texture from raw bytes ---
-        let createTexture (bytes: byte[]) (width: int) (height: int) (format: PixelFormat) =
+        let createTexture (bytes: byte[]) (width: int) (height: int) (format: PixelFormat) (textureType: string) =
             let rgba = byteToRgba bytes
             let desc = TextureDescription(uint32 width, uint32 height, 1u, 1u, 1u, format, TextureUsage.Sampled, TextureType.Texture2D)
             let tex = factory.CreateTexture(desc)
@@ -95,77 +95,80 @@ let materialBuilder
         let refLength = modelTex.Width * modelTex.Height * 4
         let diffuseTex =
             if modelTex.Diffuse.Length >= refLength then
-                createTexture modelTex.Diffuse modelTex.Width modelTex.Height srgbFormat
+                createTexture modelTex.Diffuse modelTex.Width modelTex.Height srgbFormat "Diffuse"
             else
                 let length = modelTex.Diffuse.Length / 4
                 let side = int (sqrt (float length))
-                createTexture modelTex.Diffuse (int (sqrt (float (modelTex.Diffuse.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Diffuse.Length / 4) / 2.0)))) srgbFormat
+                createTexture modelTex.Diffuse (int (sqrt (float (modelTex.Diffuse.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Diffuse.Length / 4) / 2.0)))) srgbFormat "Diffuse"
 
         let normalTex =
             if modelTex.Normal.Length >= refLength then
  
-                createTexture modelTex.Normal modelTex.Width modelTex.Height linearFormat
+                createTexture modelTex.Normal modelTex.Width modelTex.Height linearFormat "Normal"
             else
           
-                createTexture modelTex.Normal (int (sqrt (float (modelTex.Normal.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Normal.Length / 4) / 2.0)))) linearFormat
+                createTexture modelTex.Normal (int (sqrt (float (modelTex.Normal.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Normal.Length / 4) / 2.0)))) linearFormat "Normal"
 
         let specularTex =
             if modelTex.Specular.Length >= refLength then
      
-                createTexture modelTex.Specular modelTex.Width modelTex.Height srgbFormat
+                createTexture modelTex.Specular modelTex.Width modelTex.Height srgbFormat"Spec"
             else
               
-                createTexture modelTex.Specular (int (sqrt (float (modelTex.Specular.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Specular.Length / 4) / 2.0)))) srgbFormat
+                createTexture modelTex.Specular (int (sqrt (float (modelTex.Specular.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Specular.Length / 4) / 2.0)))) srgbFormat"Spec"
 
         let emissiveTex =
             if modelTex.Emissive.Length >= refLength then
      
-                createTexture modelTex.Emissive modelTex.Width modelTex.Height srgbFormat
+                createTexture modelTex.Emissive modelTex.Width modelTex.Height srgbFormat "Emissive"
             else 
               
-                createTexture modelTex.Emissive (int (sqrt (float (modelTex.Emissive.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Emissive.Length / 4) / 2.0)))) srgbFormat
+                createTexture modelTex.Emissive (int (sqrt (float (modelTex.Emissive.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Emissive.Length / 4) / 2.0)))) srgbFormat "Emissive"
 
         let alphaTex =
             if modelTex.Alpha.Length >= refLength then
-                createTexture modelTex.Alpha modelTex.Width modelTex.Height linearFormat
+                createTexture modelTex.Alpha modelTex.Width modelTex.Height linearFormat "Alpha"
             else
         
-                createTexture modelTex.Alpha (int (sqrt (float (modelTex.Alpha.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Alpha.Length / 4) / 2.0)))) linearFormat
+                createTexture modelTex.Alpha (int (sqrt (float (modelTex.Alpha.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Alpha.Length / 4) / 2.0)))) linearFormat "Alpha"
 
         let roughnessTex =
             if modelTex.Roughness.Length >= refLength then
        
-                createTexture modelTex.Roughness modelTex.Width modelTex.Height linearFormat
+                createTexture modelTex.Roughness modelTex.Width modelTex.Height linearFormat "Roughness"
             else
                 
-                createTexture modelTex.Roughness (int (sqrt (float (modelTex.Roughness.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Roughness.Length / 4) / 2.0)))) linearFormat
+                createTexture modelTex.Roughness (int (sqrt (float (modelTex.Roughness.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Roughness.Length / 4) / 2.0)))) linearFormat "Roughness"
 
         let metalnessTex =
             if modelTex.Metalness.Length >= refLength then
        
-                createTexture modelTex.Metalness modelTex.Width modelTex.Height linearFormat
+                createTexture modelTex.Metalness modelTex.Width modelTex.Height linearFormat "Metalness"
             else
                 
-                createTexture modelTex.Metalness (int (sqrt (float (modelTex.Metalness.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Metalness.Length / 4) / 2.0)))) linearFormat
+                createTexture modelTex.Metalness (int (sqrt (float (modelTex.Metalness.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Metalness.Length / 4) / 2.0)))) linearFormat "Metalness"
 
         let occlusionTex =
             if modelTex.Occlusion.Length >= refLength then
 
-                createTexture modelTex.Occlusion modelTex.Width modelTex.Height linearFormat
+                createTexture modelTex.Occlusion modelTex.Width modelTex.Height linearFormat "AO"
             else
                 
-                createTexture modelTex.Occlusion (int (sqrt (float (modelTex.Occlusion.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Occlusion.Length / 4) / 2.0)))) linearFormat
+                createTexture modelTex.Occlusion (int (sqrt (float (modelTex.Occlusion.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Occlusion.Length / 4) / 2.0)))) linearFormat "AO"
 
         let subsurfaceTex =
             if modelTex.Subsurface.Length >= refLength then
   
-                createTexture modelTex.Subsurface modelTex.Width modelTex.Height linearFormat
+                createTexture modelTex.Subsurface modelTex.Width modelTex.Height linearFormat "SSS"
             else
            
-                createTexture modelTex.Subsurface (int (sqrt (float (modelTex.Subsurface.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Subsurface.Length / 4) / 2.0)))) linearFormat
+                createTexture modelTex.Subsurface (int (sqrt (float (modelTex.Subsurface.Length / 4) / 2.0))) (int (2.0 * (sqrt (float (modelTex.Subsurface.Length / 4) / 2.0)))) linearFormat "SSS"
 
         let sampler = factory.CreateSampler(SamplerDescription.Linear)
         try
+            printfn $"Diffuse color 1: {modelTex.Diffuse.[0].ToString()}, {modelTex.Diffuse.[1].ToString()}, {modelTex.Diffuse.[2].ToString()}, {modelTex.Diffuse.[3].ToString()} H: {modelTex.Height} W: {modelTex.Width}"
+            printfn $"Diffuse color 2: {modelTex.Diffuse.[8192].ToString()}, {modelTex.Diffuse.[8193].ToString()}, {modelTex.Diffuse.[8194].ToString()}, {modelTex.Diffuse.[8195].ToString()}"
+            printfn $"Read hair color: {colors.HairColor.ToString()}"
             let resourceSet =
                 factory.CreateResourceSet(ResourceSetDescription(
                     resourceLayout,
