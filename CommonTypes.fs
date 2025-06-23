@@ -451,7 +451,12 @@ type CraftingInfo =
         Job                         : string
         RecipeLevel                 : int
         RecipeStars                 : int
+    }
 
+type CrafterInfo =
+    {
+        Levels                      : System.Collections.Generic.Dictionary<int, string>
+        RecipeBooks                 : int list
     }
 
 type FilterGear = 
@@ -462,6 +467,7 @@ type FilterGear =
         EquipLevel                  : int
         EquipRestriction            : EquipRestriction
         EquippableBy                : Set<Job>
+        CraftingDetails             : CraftingInfo list
     }
     override this.ToString (): string = 
         this.Item.Name

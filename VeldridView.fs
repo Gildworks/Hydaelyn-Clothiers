@@ -495,39 +495,25 @@ type VeldridView() as this =
             if cje.PCT then jobs.Add(PCT)
             Set.ofSeq jobs
 
+        let getExdData (exd: XivEx) =
+                async {
+                    let ex = new Ex()
+                    return! ex.ReadExData(exd) |> Async.AwaitTask
+                }
+
         async {
+            
+
             let! gearListAsync =
                 async {
                     let gear = new Gear()
                     return! gear.GetGearList() |> Async.AwaitTask
                 } |> Async.StartChild
-            let! itemExdAsync = 
-                async {
-                    let ex = new Ex()
-                    return! ex.ReadExData(XivEx.item) |> Async.AwaitTask
-                } |> Async.StartChild
-            let! classJobCategoryAsync = 
-                async {
-                    let ex = new Ex()
-                    return! ex.ReadExData(XivEx.classjobcategory) |> Async.AwaitTask
-                } |> Async.StartChild
-            let! recipeListAsync =
-                async {
-                    let ex = new Ex()
-                    return! ex.ReadExData(XivEx.recipe) |> Async.AwaitTask
-                } |> Async.StartChild
-            let! recipeLevelTableAsync =
-                async {
-                    let ex = new Ex()
-                    return! ex.ReadExData(XivEx.recipeleveltable) |> Async.AwaitTask
-                } |> Async.StartChild
-            let! craftTypeTableAsync =
-                async {
-                    let ex = new Ex()
-                    return! ex.ReadExData(XivEx.crafttype) |> Async.AwaitTask
-                } |> Async.StartChild
-
-
+            let! itemExdAsync = getExdData(XivEx.item) |> Async.StartChild
+            let! classJobCategoryAsync = getExdData(XivEx.classjobcategory) |> Async.StartChild
+            let! recipeListAsync = getExdData(XivEx.recipe) |> Async.StartChild
+            let! recipeLevelTableAsync = getExdData(XivEx.recipeleveltable) |> Async.StartChild
+            let! recipeLookupTable = getExdData(XivEx.recipelookup) |> Async.StartChild
 
             let! gearList = gearListAsync
             let! itemExd = itemExdAsync
@@ -535,7 +521,7 @@ type VeldridView() as this =
 
             let! recipeExd = recipeListAsync
             let! recipeLevelExd = recipeLevelTableAsync
-            let! craftType = craftTypeTableAsync
+            let! recipeLookupExd = recipeLookupTable
 
             let itemExdMap: Map<int, Ex.ExdRow> =
                 itemExd
@@ -551,10 +537,6 @@ type VeldridView() as this =
                 |> Map.ofSeq
             let recipeLevelMap: Map<int, Ex.ExdRow> =
                 recipeLevelExd
-                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
-                |> Map.ofSeq
-            let craftTypeMap: Map<int, Ex.ExdRow> =
-                craftType
                 |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
                 |> Map.ofSeq
 
@@ -582,6 +564,7 @@ type VeldridView() as this =
                             EquipLevel = equipLevel
                             EquipRestriction = equipRestrictType
                             EquippableBy = getJobSet classJobs
+                            CraftingDetails = List.empty
                         }
                     | None -> None
                 )

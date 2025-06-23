@@ -25,7 +25,7 @@ let loadRenderModelFromItem
     (ttModel           : TTModel)
     (item              : IItemModel)
     (race              : XivRace)
-    (mtlBuilder : XivMtrl -> Task<PreparedMaterial>)
+    (mtlBuilder : XivMtrl -> string -> Task<PreparedMaterial>)
     : Task<RenderModel> =
     task {
         printfn $"////////////////////"
@@ -44,7 +44,7 @@ let loadRenderModelFromItem
                             Mtrl.GetMtrlPath(ttModel.Source, path)
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
                     
-                    let! prepared = mtlBuilder mtrl
+                    let! prepared = mtlBuilder mtrl item.Name
                     return path, prepared
                 with ex ->
                     let finalPath = Mtrl.GetMtrlPath(ttModel.Source, path)

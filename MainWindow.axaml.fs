@@ -133,13 +133,27 @@ module DataHelpers =
             let! dyeDict = STM.GetDyeNames()
             return dyeDict |> Seq.map (fun kvp -> kvp.Value) |> Seq.toList
         }
+
+    let srgbToLinear (srgb: float32) =
+        if srgb <= 0.04045f then
+            float32 (srgb / 12.92f)
+        else
+            float32 (Math.Pow(float (srgb + 0.055f) / 1.055, 2.4))
+
     let vec4ToDXColor (input: Vector4) : SharpDX.Color =
+        let normalizedSrgb = new Vector4(input.X / 255.0f, input.Y / 255.0f, input.Z / 255.0f, input.W / 255.0f)
         SharpDX.Color(
-            byte (Math.Clamp(input.X, 0.0f, 255.0f)),
-            byte (Math.Clamp(input.Y, 0.0f, 255.0f)),
-            byte (Math.Clamp(input.Z, 0.0f, 255.0f)),
-            byte (Math.Clamp(input.W, 0.0f, 255.0f))
+            srgbToLinear(normalizedSrgb.X),
+            srgbToLinear(normalizedSrgb.Y),
+            srgbToLinear(normalizedSrgb.Z),
+            srgbToLinear(normalizedSrgb.W)
         )
+        //SharpDX.Color(
+        //    byte (Math.Clamp(input.X, 0.0f, 255.0f)),
+        //    byte (Math.Clamp(input.Y, 0.0f, 255.0f)),
+        //    byte (Math.Clamp(input.Z, 0.0f, 255.0f)),
+        //    byte (Math.Clamp(input.W, 0.0f, 255.0f))
+        //)
 
     let getUIColorPalette (race: raceIds) (palette: paletteOptions) =
         task {

@@ -35,7 +35,7 @@ const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(0.5, 0.8, -0.6)); // Your "p
 
 const vec3 LIGHT_COLOR = vec3(1.0, 1.0, 0.95);
 const vec3 AMBIENT_LIGHT_COLOR = vec3(0.15, 0.15, 0.20); // Slightly increased ambient
-const float SPECULAR_INTENSITY = 0.3;
+const float SPECULAR_INTENSITY = 0.1;
 const float SHININESS = 16.0;
 const float GAMMA_INV = 1.0/2.2;
 
@@ -47,7 +47,7 @@ void main() {
     vec3 N_tex_sampled = texture(sampler2D(tex_NormalMap, SharedSampler), fs_UV_VS).rgb;
 
     // Alpha test
-    if (diffuseSample.a < 0.5) {
+    if (diffuseSample.a < 0.75) {
         discard;
     }
 
@@ -71,13 +71,13 @@ void main() {
     // Ensure correct handedness. cross(N, T) is common.
     // If normal map details look inverted (dents as bumps on one side), try cross(T, N).
     // Also, sometimes fs_Tangent_VS might have a .w component indicating handedness.
-    vec3 B_calculated = normalize(cross(N_geometric, T_interpolated));
+    vec3 B_calculated = normalize(cross(T_interpolated, N_geometric));
     // If you passed fs_Bitangent_VS from the vertex shader:
     // vec3 B_passed = normalize(fs_Bitangent_VS);
     // You might need to ensure B_passed is orthogonal to T_interpolated and N_geometric,
     // or reconcile it with B_calculated (e.g., dot(cross(N_geometric, T_interpolated), B_passed) > 0 ? B_passed : -B_passed).
     // For now, let's use the calculated B:
-    vec3 B = fs_Bitangent_VS;
+    vec3 B = normalize(fs_Bitangent_VS);
 
     // Create TBN matrix (transforms from tangent space to view space)
     mat3 TBN = mat3(T_interpolated, B, N_geometric);
@@ -99,13 +99,43 @@ void main() {
     float specularFactor = pow(NdotH, SHININESS);
     vec3 specularLighting = specularFactor * LIGHT_COLOR * SPECULAR_INTENSITY;
 
+    // SSS
+    float sss_amount = texture(sampler2D(tex_SpecularMap, SharedSampler), fs_UV_VS).b;
+
+    // 'wrap' is a parameter you can tune (e.g., 0.2 is a good start)
+    // It controls how far the light "wraps" around the object.
+    float sss_wrap = 0.5; 
+    float NdotL_wrapped = dot(N, L) + sss_wrap;
+    float light_intensity = max(0.0, NdotL_wrapped) / (1.0 + sss_wrap);
+    light_intensity = pow(light_intensity, 2.0); // Squaring it makes the falloff look nicer
+
+    // The SSS light is tinted by the skin color
+    vec3 sss_light = light_intensity * baseDiffuseColor * sss_amount;
+
     // Combine lighting
-    vec3 finalColorLinear = (AMBIENT_LIGHT_COLOR + diffuseLighting) * baseDiffuseColor
+    vec3 finalColorLinear = (AMBIENT_LIGHT_COLOR * baseDiffuseColor)
+                          + (diffuseLighting * baseDiffuseColor)
+                          + sss_light
                           + specularLighting * materialSpecularColor
                           ;
 
+    
+    // === Reinhard Tone Mapping ===
+    //vec3 toneMapped = finalColorLinear;
+    //vec3 toneMapped = finalColorLinear / (finalColorLinear + vec3(1.0));
+
+    // === Extended Reinhard Tone Mapping
+    float maxWhite = 1.5;
+    vec3 conversion = finalColorLinear * (1.0 + (finalColorLinear / vec3(maxWhite * maxWhite)));
+    vec3 toneMapped = conversion / (1.0 + finalColorLinear);
+    
+    
     // 4. Gamma Correction for non-sRGB framebuffer
-    vec3 finalColorSRGB = pow(finalColorLinear, vec3(GAMMA_INV));
+    bvec3 cutoff = lessThan(toneMapped.rgb, vec3(0.0031308));
+    vec3 higher = vec3(1.055)*pow(toneMapped.rgb, vec3(1.0/2.4)) - vec3(0.055);
+    vec3 lower = toneMapped.rgb * vec3(12.92);
+
+    vec3 finalColorSRGB = vec3 (mix(higher, lower, cutoff));
 
     fsout_Color = vec4(finalColorSRGB, diffuseSample.a);
 }

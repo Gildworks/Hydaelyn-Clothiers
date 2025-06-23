@@ -2,6 +2,9 @@
 
 open System.Threading.Tasks
 open System
+open System.IO
+open System.Drawing
+open System.Drawing.Imaging
 open Veldrid
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Materials.FileTypes
@@ -16,6 +19,7 @@ let materialBuilder
     (dye2: int)
     (colors: CustomModelColors)
     (mtrl: XivMtrl)
+    (materialFor: string)
     : Task<PreparedMaterial> =
     task {
 
@@ -61,8 +65,38 @@ let materialBuilder
 
                 | _ ->
                     ()
-
+        
         let! modelTex = ModelTexture.GetModelMaps(dyedMat, true, colors)
+
+        let getNextFilename (folder: string) (baseName: string) (extension: string) =
+            let mutable counter = 0
+            let mutable filename = Path.Combine(folder, $"{baseName}.{extension}")
+    
+            while File.Exists(filename) do
+                counter <- counter + 1
+                filename <- Path.Combine(folder, $"{baseName}_{counter:D3}.{extension}")
+    
+            filename
+
+        // Helper function to convert RGBA bytes to System.Drawing.Bitmap
+        let rgbaToBitmap (rgba: byte[]) (width: int) (height: int) =
+            let bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb)
+            let bitmapData = bitmap.LockBits(System.Drawing.Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb)
+    
+            try
+                // Convert RGBA to BGRA for System.Drawing
+                let bgra = Array.zeroCreate<byte> rgba.Length
+                for i in 0 .. 4 .. rgba.Length - 4 do
+                    bgra.[i] <- rgba.[i + 2]     // B
+                    bgra.[i + 1] <- rgba.[i + 1] // G
+                    bgra.[i + 2] <- rgba.[i]     // R
+                    bgra.[i + 3] <- rgba.[i + 3] // A
+        
+                System.Runtime.InteropServices.Marshal.Copy(bgra, 0, bitmapData.Scan0, bgra.Length)
+            finally
+                bitmap.UnlockBits(bitmapData)
+    
+            bitmap
 
         // --- Helper to convert byte[] to RgbaByte[] ---
         let byteToRgba (bytes: byte[]) : RgbaByte[] =
@@ -82,6 +116,17 @@ let materialBuilder
             let desc = TextureDescription(uint32 width, uint32 height, 1u, 1u, 1u, format, TextureUsage.Sampled, TextureType.Texture2D)
             let tex = factory.CreateTexture(desc)
             gd.UpdateTexture(tex, rgba, 0u, 0u, 0u, uint32 width, uint32 height, 1u, 0u, 0u)
+            //let debugFolder : string option = Some "textureDebug"
+            //match debugFolder with
+            //| Some folder when Directory.Exists(folder) ->
+            //    try
+            //        if materialFor.Contains("Hair") then
+            //            let bitmap = rgbaToBitmap bytes width height
+            //            let filename = getNextFilename folder $"{textureType}" "png"
+            //            bitmap.Save(filename, ImageFormat.Png)
+            //            bitmap.Dispose()
+            //    with
+            //    | ex -> printfn $"Failed to save deug texture: {ex.Message}"
             tex
 
         // --- Dummy fallback texture ---
@@ -166,9 +211,6 @@ let materialBuilder
 
         let sampler = factory.CreateSampler(SamplerDescription.Linear)
         try
-            printfn $"Diffuse color 1: {modelTex.Diffuse.[0].ToString()}, {modelTex.Diffuse.[1].ToString()}, {modelTex.Diffuse.[2].ToString()}, {modelTex.Diffuse.[3].ToString()} H: {modelTex.Height} W: {modelTex.Width}"
-            printfn $"Diffuse color 2: {modelTex.Diffuse.[8192].ToString()}, {modelTex.Diffuse.[8193].ToString()}, {modelTex.Diffuse.[8194].ToString()}, {modelTex.Diffuse.[8195].ToString()}"
-            printfn $"Read hair color: {colors.HairColor.ToString()}"
             let resourceSet =
                 factory.CreateResourceSet(ResourceSetDescription(
                     resourceLayout,
