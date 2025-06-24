@@ -517,7 +517,8 @@ type VeldridView() as this =
             let! classJobCategoryAsync = getExdData(XivEx.classjobcategory) |> Async.StartChild
             let! recipeListAsync = getExdData(XivEx.recipe) |> Async.StartChild
             let! recipeLevelTableAsync = getExdData(XivEx.recipeleveltable) |> Async.StartChild
-            let! recipeLookupTable = getExdData(XivEx.recipelookup) |> Async.StartChild
+            let! recipeLookupTableAsync = getExdData(XivEx.recipelookup) |> Async.StartChild
+            let! secretRecipeBookAsync = getExdData(XivEx.secretrecipebook) |> Async.StartChild
 
             let! gearList = gearListAsync
             let! itemExd = itemExdAsync
@@ -525,13 +526,15 @@ type VeldridView() as this =
 
             let! recipeExd = recipeListAsync
             let! recipeLevelExd = recipeLevelTableAsync
-            let! recipeLookupExd = recipeLookupTable
+            let! recipeLookupExd = recipeLookupTableAsync
+            let! secretRecipeBook = secretRecipeBookAsync
 
             let itemExdMap = exdToMap itemExd
             let classJobCategoryMap = exdToMap classJobCategory
             let recipeMap = exdToMap recipeExd
             let recipeLookupMap = exdToMap recipeLookupExd
             let recipeLevelMap = exdToMap recipeLevelExd
+            let secretRecipeBookMap = exdToMap secretRecipeBook
 
             let filterGearItems =
                 gearList
@@ -560,7 +563,14 @@ type VeldridView() as this =
                                         match Map.tryFind recipeId recipeMap with
                                         | Some recipeRow ->
                                             let recipeLevelTableId = recipeRow.GetColumn(0) :?> int32 |> int
-                                            let masterBook = enum<MasterBook> (recipeRow.GetColumn(34) :?> uint16 |> int)
+                                            let masterBookRowId = recipeRow.GetColumn(34) :?> uint16 |> int
+                                            let masterBook: MasterBookItem =
+                                                match Map.tryFind masterBookRowId secretRecipeBookMap with
+                                                | Some bookRow ->
+                                                    { Book = enum<MasterBook> (recipeRow.GetColumn(34) :?> uint16 |> int); DisplayName = bookRow.GetColumn(1) :?> string }
+                                                | None ->
+                                                    { Book = MasterBook.noBook; DisplayName = "" }
+
                                             let requiredLevel, recipeStars = 
                                                 match Map.tryFind recipeLevelTableId recipeLevelMap with
                                                 | Some levelRow -> levelRow.GetColumn(0) :?> byte |> int, levelRow.GetColumn(1) :?> byte |> int

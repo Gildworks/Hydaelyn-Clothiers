@@ -460,6 +460,11 @@ type MasterBook =
     | bsmXII = 105 | armXII = 106 | gsmXII = 107 | ltwXII = 108
     | wvrXII = 109 | alcXII = 110 | culXII = 111
 
+type MasterBookItem = {
+    Book                            : MasterBook
+    DisplayName                     : string
+}
+
 type Job =
     | GLA | PGL | MRD | LNC | ARC | CNJ | THM
     | CRP | BSM | ARM | GSM | LTW | WVR | ALC | CUL
@@ -482,7 +487,7 @@ type CraftingInfo =
         Job                         : string
         RecipeLevel                 : int
         RecipeStars                 : int
-        MasterBook                  : MasterBook
+        MasterBook                  : MasterBookItem
     }
 
 type CrafterInfo =
