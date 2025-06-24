@@ -167,9 +167,9 @@ module DataHelpers =
             return avaloniaColors
         }
 
+
 type MainWindow () as this =
     inherit Window ()
-
     let viewModel = new VeldridWindowViewModel()
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
@@ -605,7 +605,7 @@ type MainWindow () as this =
 
         this.SizeChanged.Add(fun _ ->
             viewModel.WindowHeight <- this.Bounds.Height
-        )
+        )        
 
         raceSelector.SelectionChanged.Add(fun _ ->
             match raceSelector.SelectedValue with

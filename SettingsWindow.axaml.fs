@@ -4,22 +4,19 @@ open System
 open System.IO
 
 open Avalonia.Controls
-open Avalonia.Interactivity
 open Avalonia.Markup.Xaml
 open Avalonia.Platform.Storage
-open Avalonia.Threading
 
-type GamePathPromptWindow() as this =
+type SettingsWindow() as this =
     inherit Window()
 
-    
-
-    let mutable pathTextBox                 : TextBox               = null
-    let mutable errorTextBlock              : TextBlock             = null
-    let mutable confirmButton               : Button                = null
+    let mutable pathTextBox                 : TextBox           = null
+    let mutable errorTextBlock              : TextBlock         = null
+    let mutable confirmButton               : Button            = null
 
     do
         AvaloniaXamlLoader.Load(this)
+
         pathTextBox <- this.FindControl<TextBox>("PathTextBox")
         errorTextBlock <- this.FindControl<TextBlock>("ErrorTextBlock")
         confirmButton <- this.FindControl<Button>("ConfirmButton")
@@ -53,21 +50,26 @@ type GamePathPromptWindow() as this =
                     | path ->
                         pathTextBox.Text <- path
                         this.ValidatePath(path) |> ignore
-                else
-                    ()
+                else ()
             else
                 this.ShowError("Could not open folder dialog")
         }
 
     member private this.ValidatePath(path: string) : bool =
-        if not (String.IsNullOrWhiteSpace(path)) && Directory.Exists(path) && Directory.Exists(Path.Combine(path, "game", "sqpack")) then
+        if not (String.IsNullOrWhiteSpace(path)) && Directory.Exists(path) && Directory.Exists(Path.Combine(path, "game", "sqpack")) then 
             this.ShowError("")
             confirmButton.IsEnabled <- true
             true
         else
             let errorMsg =
-                if String.IsNullOrWhiteSpace(path) then "Path cannot be empty."
-                else "Invalid game folder. Please ensure the selected directoy contains the 'game' and 'boot' subdirectories."
+                match path with
+                | emptyPath when String.IsNullOrWhiteSpace(path) ->
+                    "Path cannot be empty"
+                | nonexistentFolder when not (Directory.Exists(path)) ->
+                    "Could not find the selected folder, please try again."
+                | invalidFolder when not (Directory.Exists(Path.Combine(path, "game", "sqpack"))) ->
+                    "Invalid game folder. Please ensure the selected dirctory contains the subdirectories/folders 'game' and 'boot'. If the selected folder is correct, try running in Administrator Mode"
+                | _ -> "Unknown error, please try again."
             this.ShowError(errorMsg)
             confirmButton.IsEnabled <- false
             false
@@ -76,7 +78,7 @@ type GamePathPromptWindow() as this =
         let currentPath = pathTextBox.Text
         if this.ValidatePath(currentPath) then
             this.selectedPathOpt <- Some currentPath
-            this.Close(Some currentPath)
+            this.Close(true)
 
     member private this.ShowError(message: string) =
         errorTextBlock.Text <- message

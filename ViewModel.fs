@@ -6,6 +6,8 @@ open System.Linq
 open System.ComponentModel
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
+open System.Threading
+open System.Windows.Input
 open ReactiveUI
 open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
@@ -70,6 +72,12 @@ type JobViewModel(job: Job) =
         and set(value) = 
             this.SetValue(&_isSelected, value)
 
+type SimpleCommand(execute: unit -> unit) =
+    interface ICommand with
+        member _.CanExecute(_) = true
+        member _.Execute(_) = execute()
+        [<CLIEvent>]
+        member _.CanExecuteChanged = Event<EventHandler, EventArgs>().Publish
 
 type VeldridWindowViewModel() as this =
     inherit ViewModelBase()
@@ -97,12 +105,13 @@ type VeldridWindowViewModel() as this =
     let mutable selectedTribe = { Display = "Midlander"; Value= "Midlander" }
     let mutable selectedGender = { Display = "Male"; Value = "Male" }
     let mutable _availableTribes = ObservableCollection<ComboOption>(hyurTribes)
+
     let mutable _restrictEquip = false
+    let mutable _craftedOnly = false
+    let mutable _useProfile = false
+
     let mutable _characterLevel = 100
     let mutable _itemLevel = 1000
-
-    let closeRequested = Event<unit>()
-
 
     let canEquip (itemJobs: Set<Job>) (selectedJobs: Set<Job>) : bool =
         if Set.isEmpty selectedJobs then true
@@ -119,9 +128,8 @@ type VeldridWindowViewModel() as this =
     do
         this.FSharpPropertyChanged.Add(fun args ->
             match args.PropertyName with
-            | "EquipRestrict"
-            | "CharacterLevel"
-            | "ItemLevel" -> 
+            | "EquipRestrict" | "CharacterLevel" | "ItemLevel" 
+            | "CraftedOnly" | "UseProfile" -> 
                 this.ApplyGlobalFilters()
             | "SelectedRace" | "SelectedGender" ->
                 let raceOk = not (String.IsNullOrWhiteSpace(selectedRace.Value))
@@ -144,6 +152,16 @@ type VeldridWindowViewModel() as this =
         with get() = _restrictEquip
         and set(value) =
             this.SetValue(&_restrictEquip, value)
+
+    member this.CraftedOnly
+        with get() = _craftedOnly
+        and set(value) =
+            this.SetValue(&_craftedOnly, value)
+
+    member this.UseProfile
+        with get() = _useProfile
+        and set(value) =
+            this.SetValue(&_useProfile, value)
 
     member this.CharacterLevel
         with get() = _characterLevel
@@ -273,6 +291,10 @@ type VeldridWindowViewModel() as this =
                     | _ -> true
             )
             |> List.filter (fun item ->
+                if not _craftedOnly then true else
+                    if item.CraftingDetails.Length > 0 then true else false
+            )
+            |> List.filter (fun item ->
                 canEquip item.EquippableBy selectedJobs
             )
             |> List.filter (fun item ->
@@ -332,9 +354,19 @@ type VeldridWindowViewModel() as this =
             this.ApplyGlobalFilters()
         }
 
-    member this.OpenSettingsDialog() =
-        printfn "User tried to open settings, but it's not implemented yet"
-            
+    member this.OpenSettingsCommand =
+        SimpleCommand(fun () ->
+            Avalonia.Threading.Dispatcher.UIThread.Post(fun () ->
+                let settingsWindow = new SettingsWindow()
+
+                match Application.Current.ApplicationLifetime with
+                | :? IClassicDesktopStyleApplicationLifetime as desktop ->
+                    settingsWindow.Show(desktop.MainWindow)
+                | _ -> 
+                    settingsWindow.Show()
+            )
+        )
+
     member val ExitCommand =
         ReactiveCommand.Create(fun () ->
             match Application.Current.ApplicationLifetime with
