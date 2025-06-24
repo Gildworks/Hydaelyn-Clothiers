@@ -555,20 +555,22 @@ type VeldridView() as this =
                                 let columnsToJobs = [ (0, "Carpenter"); (1, "Blacksmith"); (2, "Armorer"); (3, "Goldsmith"); (4, "Leatherworker"); (5, "Weaver"); (6, "Alchemist"); (7, "Culinarian")]
                                 columnsToJobs
                                 |> List.choose (fun (colIndex, jobName) ->
-                                    let recipeId = lookupRow.GetColumn(colIndex) :?> int
+                                    let recipeId = lookupRow.GetColumn(colIndex) :?> uint16 |> int
                                     if recipeId > 0 then
                                         match Map.tryFind recipeId recipeMap with
                                         | Some recipeRow ->
-                                            let recipeLevelTableId = recipeRow.GetColumn(0) :?> int
+                                            let recipeLevelTableId = recipeRow.GetColumn(0) :?> int32 |> int
+                                            let masterBook = enum<MasterBook> (recipeRow.GetColumn(34) :?> uint16 |> int)
                                             let requiredLevel, recipeStars = 
                                                 match Map.tryFind recipeLevelTableId recipeLevelMap with
-                                                | Some levelRow -> levelRow.GetColumn(0) :?> int, levelRow.GetColumn(1) :?> int
+                                                | Some levelRow -> levelRow.GetColumn(0) :?> byte |> int, levelRow.GetColumn(1) :?> byte |> int
                                                 | None -> 0, 0
 
                                             Some {
                                                 Job = jobName;
                                                 RecipeLevel = requiredLevel;
-                                                RecipeStars = recipeStars
+                                                RecipeStars = recipeStars;
+                                                MasterBook = masterBook
                                             }
                                         | None -> None
                                     else None
