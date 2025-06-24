@@ -500,6 +500,10 @@ type VeldridView() as this =
                     let ex = new Ex()
                     return! ex.ReadExData(exd) |> Async.AwaitTask
                 }
+        let exdToMap (exdDictionary: System.Collections.Generic.Dictionary<int, Ex.ExdRow>) : Map<int, Ex.ExdRow> =
+            exdDictionary
+            |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+            |> Map.ofSeq
 
         async {
             
@@ -523,22 +527,11 @@ type VeldridView() as this =
             let! recipeLevelExd = recipeLevelTableAsync
             let! recipeLookupExd = recipeLookupTable
 
-            let itemExdMap: Map<int, Ex.ExdRow> =
-                itemExd
-                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
-                |> Map.ofSeq
-            let classJobCategoryMap: Map<int, Ex.ExdRow> =
-                classJobCategory
-                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
-                |> Map.ofSeq
-            let recipeMap: Map<int, Ex.ExdRow> =
-                recipeExd
-                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
-                |> Map.ofSeq
-            let recipeLevelMap: Map<int, Ex.ExdRow> =
-                recipeLevelExd
-                |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
-                |> Map.ofSeq
+            let itemExdMap = exdToMap itemExd
+            let classJobCategoryMap = exdToMap classJobCategory
+            let recipeMap = exdToMap recipeExd
+            let recipeLookupMap = exdToMap recipeLookupExd
+            let recipeLevelMap = exdToMap recipeLevelExd
 
             let filterGearItems =
                 gearList
@@ -556,7 +549,32 @@ type VeldridView() as this =
                             | Some catRow ->
                                 getJobEquip catRow
                             | None -> ClassJobEquip.AllJobs
-                        
+                        let craftRecipe =
+                            match Map.tryFind gear.ExdID recipeLookupMap with
+                            | Some lookupRow ->
+                                let columnsToJobs = [ (0, "Carpenter"); (1, "Blacksmith"); (2, "Armorer"); (3, "Goldsmith"); (4, "Leatherworker"); (5, "Weaver"); (6, "Alchemist"); (7, "Culinarian")]
+                                columnsToJobs
+                                |> List.choose (fun (colIndex, jobName) ->
+                                    let recipeId = lookupRow.GetColumn(colIndex) :?> int
+                                    if recipeId > 0 then
+                                        match Map.tryFind recipeId recipeMap with
+                                        | Some recipeRow ->
+                                            let recipeLevelTableId = recipeRow.GetColumn(0) :?> int
+                                            let requiredLevel, recipeStars = 
+                                                match Map.tryFind recipeLevelTableId recipeLevelMap with
+                                                | Some levelRow -> levelRow.GetColumn(0) :?> int, levelRow.GetColumn(1) :?> int
+                                                | None -> 0, 0
+
+                                            Some {
+                                                Job = jobName;
+                                                RecipeLevel = requiredLevel;
+                                                RecipeStars = recipeStars
+                                            }
+                                        | None -> None
+                                    else None
+                                )
+                            | None -> List.empty
+
                         Some {
                             Item = gear
                             ExdRow = exdRow
@@ -564,7 +582,7 @@ type VeldridView() as this =
                             EquipLevel = equipLevel
                             EquipRestriction = equipRestrictType
                             EquippableBy = getJobSet classJobs
-                            CraftingDetails = List.empty
+                            CraftingDetails = craftRecipe
                         }
                     | None -> None
                 )
