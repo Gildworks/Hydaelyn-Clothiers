@@ -6,7 +6,10 @@ open System.Linq
 open System.ComponentModel
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
+open ReactiveUI
 open Avalonia
+open Avalonia.Controls.ApplicationLifetimes
+open Avalonia.Controls
 open Avalonia.Media
 open Avalonia.Platform
 open Avalonia.Collections
@@ -97,6 +100,8 @@ type VeldridWindowViewModel() as this =
     let mutable _restrictEquip = false
     let mutable _characterLevel = 100
     let mutable _itemLevel = 1000
+
+    let closeRequested = Event<unit>()
 
 
     let canEquip (itemJobs: Set<Job>) (selectedJobs: Set<Job>) : bool =
@@ -326,7 +331,19 @@ type VeldridWindowViewModel() as this =
             allGearCache <- loadedGear
             this.ApplyGlobalFilters()
         }
-    
+
+    member this.OpenSettingsDialog() =
+        printfn "User tried to open settings, but it's not implemented yet"
+            
+    member val ExitCommand =
+        ReactiveCommand.Create(fun () ->
+            match Application.Current.ApplicationLifetime with
+            | :? IClassicDesktopStyleApplicationLifetime as desktop ->
+                desktop.Shutdown()
+            | :? ISingleViewApplicationLifetime as singleView ->
+                singleView.MainView <- null
+            | _ -> ()
+        )
 
     interface IVeldridWindowModel with
 

@@ -16,6 +16,9 @@ type App() =
 
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
+
+    member this.Shutdown() =
+        this.Shutdown()
         
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {

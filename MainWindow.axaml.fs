@@ -148,12 +148,6 @@ module DataHelpers =
             srgbToLinear(normalizedSrgb.Z),
             srgbToLinear(normalizedSrgb.W)
         )
-        //SharpDX.Color(
-        //    byte (Math.Clamp(input.X, 0.0f, 255.0f)),
-        //    byte (Math.Clamp(input.Y, 0.0f, 255.0f)),
-        //    byte (Math.Clamp(input.Z, 0.0f, 255.0f)),
-        //    byte (Math.Clamp(input.W, 0.0f, 255.0f))
-        //)
 
     let getUIColorPalette (race: raceIds) (palette: paletteOptions) =
         task {
@@ -177,37 +171,6 @@ type MainWindow () as this =
     inherit Window ()
 
     let viewModel = new VeldridWindowViewModel()
-
-    //let races: ComboOption list = [
-    //    { Display = "Hyur"; Value = "Hyur"}; { Display = "Elezen"; Value = "Elezen"}
-    //    { Display = "Lalafell"; Value = "Lalafell"}; { Display = "Miqo'te"; Value = "Miqote"}
-    //    { Display = "Roegadyn"; Value = "Roegadyn"}; { Display = "Au Ra"; Value = "AuRa"}
-    //    { Display = "Hrothgar"; Value = "Hrothgar"}; { Display = "Viera"; Value = "Viera"}
-    //]
-    //let HyurTribes: ComboOption list = [
-    //    { Display = "Highlander"; Value="Highlander"}; { Display = "Midlander"; Value="Midlander"}
-    //]
-    //let ElezenTribes: ComboOption list = [
-    //    { Display = "Wildwood"; Value="Wildwood"}; { Display = "Duskwight"; Value="Duskwight"}
-    //]
-    //let LalafellTribes: ComboOption list = [
-    //    { Display = "Plainsfolk"; Value="Plainsfolk"}; { Display = "Dunesfolk"; Value="Dunesfolk"}
-    //]
-    //let MiqoteTribes: ComboOption list = [
-    //    { Display = "Seekers of the Sun"; Value = "Seeker"}; { Display = "Keepers of the Moon"; Value = "Keeper" }
-    //]
-    //let RoegadynTribes: ComboOption list = [
-    //    { Display = "Sea Wolves"; Value = "SeaWolves" }; { Display = "Hellsguard"; Value = "Hellsguard" }
-    //]
-    //let AuRaTribes: ComboOption list = [
-    //    { Display = "Raen"; Value="Raen"}; { Display = "Xaela"; Value="Xaela"}
-    //]
-    //let HrothgarTribes: ComboOption list = [
-    //    { Display = "Helions"; Value = "Helions" }; { Display = "The Lost"; Value = "Lost" }
-    //]
-    //let VieraTribes: ComboOption list = [
-    //    { Display = "Rava"; Value="Rava"}; { Display = "Veena"; Value="Veena"}
-    //]
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
@@ -355,6 +318,10 @@ type MainWindow () as this =
     member private this.InitializeComponent() =
 #if DEBUG
         this.AttachDevTools()
+        let screens = this.Screens.All |> Seq.toList
+        let targetScreen =
+            if screens.Length > 1 then screens.[0] else screens.Head
+        this.Position <- PixelPoint(targetScreen.Bounds.Center.X - 1433, targetScreen.Bounds.Center.Y - 796)
 #endif
         AvaloniaXamlLoader.Load(this)
 

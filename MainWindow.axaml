@@ -33,7 +33,19 @@
 			</Style>
 		</Style>
 	</Window.Styles>
-	<SplitView x:Name="FilterPanel"
+	<DockPanel>
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="_File">
+				<MenuItem Header="_Open Glamour" />
+				<MenuItem Header="_Save Glamour" />
+				<Separator />
+				<MenuItem Header="_Exit" Command="{Binding ExitCommand}" />
+			</MenuItem>
+			<MenuItem Header="_Edit">
+				<MenuItem Header="Settings" Command="{Binding OpenSettingsDialog}"/>
+			</MenuItem>
+		</Menu>
+		<SplitView x:Name="FilterPanel"
 			   IsPaneOpen="False"
 			   DisplayMode="CompactInline"
 			   OpenPaneLength="500"
@@ -59,7 +71,8 @@
 							</Transitions>
 						</StackPanel.Transitions>
 						<CheckBox x:Name="EquipRestrict" Content="Enforce Equip Restrictions" IsChecked="{Binding EquipRestrict, Mode=TwoWay}"/>
-						<TextBlock>Class/Job Filters</TextBlock>
+						<Separator Margin="0,10,0,0"/>
+						<TextBlock FontWeight="Black" FontSize="18" Margin="0,10,0,0" TextAlignment="Center">Class/Job Filters</TextBlock>
 						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Tanks</TextBlock>
 						<ItemsControl ItemsSource="{Binding Tanks}">
 							<ItemsControl.ItemsPanel>
@@ -277,8 +290,8 @@
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
 
-
-						<TextBlock Margin="0,30,0,0" FontWeight="Black">Level Requirements</TextBlock>
+						<Separator Margin="0,20,0,0"/>
+						<TextBlock FontWeight="Black" FontSize="18" Margin="0,10,0,20" TextAlignment="Center">Level Requirements</TextBlock>
 						<Grid ColumnDefinitions="*, *" ClipToBounds="True">
 							<StackPanel Grid.Column="0" Margin="0,0,10,0">
 								<TextBlock>Character Level</TextBlock>
@@ -289,6 +302,12 @@
 								<NumericUpDown Name="ItemLevel" Value="{Binding ItemLevel, Mode=TwoWay}" Increment="1" />
 							</StackPanel>
 						</Grid>
+
+						<Separator Margin="0,20,0,0"/>
+						<TextBlock FontWeight="Black" FontSize="18" Margin="0,10,0,20" TextAlignment="Center">Crafting Requirements</TextBlock>
+						<CheckBox Content="Only Show Items That Can Be Crafted" />
+						<CheckBox Content="Apply Crafter Profile" />
+						
 					</StackPanel>
 				</Panel>
 			</StackPanel>
@@ -680,4 +699,5 @@
 			</ScrollViewer>
 		</Grid>
 	</SplitView>
+	</DockPanel>
 </Window>
