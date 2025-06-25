@@ -2,32 +2,153 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="250"
-		Width="500" Height="200"
+		xmlns:vm="using:fs_mdl_viewer"
+		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="500"
+		Width="1000" Height="500"
 		x:Class="fs_mdl_viewer.SettingsWindow"
 		Title="Hydaelyn Clothiers - Settings"
+		d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=True}"
+		x:DataType="vm:SettingsViewModel"
 		WindowStartupLocation="CenterOwner"
-		CanResize="True"
-		SizeToContent="WidthAndHeight">
+		CanResize="True">
+	<TabControl Margin="5">
+		<TabItem Header="Game Files">
+			<StackPanel Margin="15" Spacing="10" VerticalAlignment="Center">
+				<TextBlock TextWrapping="Wrap">
+					If you have moved your Final Fantasy XIV install since setting up this application, you can change it here.<LineBreak/>
+					As a reminder, the install directory will typically be named 'FINAL FANTASY XIV - A Realm Reborn'.
+				</TextBlock>
 
-	<StackPanel Margin="15" Spacing="10">
-		<TextBlock TextWrapping="Wrap">
-			Config file invalid or not found.<LineBreak />
-			This application requires a valid installation of Final Fantasy XIV to function.<LineBreak/>
-			Please select your Final Fantasy XIV install path.<LineBreak/>
-			The install directory will typically be named 'FINAL FANTASY XIV - A Realm Reborn'.
-		</TextBlock>
+				<Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+					<TextBox Name="PathTextBox" IsReadOnly="True" VerticalAlignment="Center" Grid.Column="0"/>
+					<Button Name="BrowseButton" Content="Browse Folders" Grid.Column="1" Margin="5,0,0,0" />
+				</Grid>
+				<TextBlock Name="ErrorTextBlock" Foreground="Red" TextWrapping="Wrap" IsVisible="False" Margin="0,5,0,0"/>
 
-		<Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-			<TextBox Name="PathTextBox" IsReadOnly="True" VerticalAlignment="Center" Grid.Column="0"/>
-			<Button Name="BrowseButton" Content="Browse Folders" Grid.Column="1" Margin="5,0,0,0" />
-		</Grid>
-		<TextBlock Name="ErrorTextBlock" Foreground="Red" TextWrapping="Wrap" IsVisible="False" Margin="0,5,0,0"/>
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
+					<Button Name="ConfirmButton" Content="OK" IsDefault="True"/>
+					<Button Name="CancelButton" Content="Cancel" IsCancel="True"/>
+				</StackPanel>
+			</StackPanel>
+		</TabItem>
 
-		<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
-			<Button Name="ConfirmButton" Content="OK" IsDefault="True"/>
-			<Button Name="CancelButton" Content="Cancel" IsCancel="True"/>
-		</StackPanel>
-	</StackPanel>	
+		<TabItem Header="Crafter Profile">
+			<TabControl Margin="10">
+				<TabItem Header="Carpenter">
+				
+					<ItemsControl ItemsSource="{Binding CRPBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Blacksmith">
+					<ItemsControl ItemsSource="{Binding BSMBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>					
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Armorer">
+					<ItemsControl ItemsSource="{Binding ARMBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Goldsmith">
+					<ItemsControl ItemsSource="{Binding GSMBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Leatherworker">
+					<ItemsControl ItemsSource="{Binding LTWBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Weaver">
+					<ItemsControl ItemsSource="{Binding WVRBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Alchemist">
+					<ItemsControl ItemsSource="{Binding ALCBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+				<TabItem Header="Culinarian">
+					<ItemsControl ItemsSource="{Binding CULBooks}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<WrapPanel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding DisplayName}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem>
+			</TabControl>
+		</TabItem>
+	</TabControl>
 	
 </Window>

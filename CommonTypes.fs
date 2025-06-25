@@ -8,8 +8,8 @@ open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.General.Enums
 open xivModdingFramework.Exd.FileTypes
-
 open System
+open System.ComponentModel
 open System.Numerics
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
@@ -53,6 +53,28 @@ type TransformsUBO =
         Projection: Matrix4x4
         EyePosition: Vector4
     }
+
+type ViewModelBase() =
+    let propertyChanged = Event<PropertyChangedEventHandler, PropertyChangedEventArgs>()
+
+    [<CLIEvent>]
+    member this.FSharpPropertyChanged = propertyChanged.Publish
+
+    interface INotifyPropertyChanged with
+        [<CLIEvent>]
+        member _.PropertyChanged = propertyChanged.Publish
+
+    member this.RaisePropertyChanged([<CallerMemberName>]?propertyName: string) =
+        match propertyName with
+        | Some name -> propertyChanged.Trigger(this, PropertyChangedEventArgs(name))
+        | None -> ()
+    member this.SetValue<'T>(field: byref<'T>, value: 'T, [<CallerMemberName>]?propertyName: string) =
+        match propertyName with
+            | Some name ->
+                if not (System.Object.Equals(field, value)) then
+                    field <- value
+                    this.RaisePropertyChanged(name)
+            | None -> ()
 
 type raceIds = 
     | Hyur_Midlander_Male = 0
@@ -429,6 +451,7 @@ type ClassJobEquip = {
             VPR = false
             PCT = false
         }
+
 type MasterBook =
     | noBook = 0
     | crpI = 1 | bsmI = 2 | armI = 3 | gsmI = 4
@@ -460,10 +483,14 @@ type MasterBook =
     | bsmXII = 105 | armXII = 106 | gsmXII = 107 | ltwXII = 108
     | wvrXII = 109 | alcXII = 110 | culXII = 111
 
-type MasterBookItem = {
-    Book                            : MasterBook
-    DisplayName                     : string
-}
+type MasterBookItem = 
+    {
+        Book                            : MasterBook
+        DisplayName                     : string
+    }
+    with override this.ToString (): string = 
+             this.DisplayName
+
 
 type Job =
     | GLA | PGL | MRD | LNC | ARC | CNJ | THM

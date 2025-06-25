@@ -16,7 +16,7 @@
 		<ProjectReference Include="lib\AvaloniaRender\src\AvaloniaRender.Veldrid\AvaloniaRender.Veldrid.csproj" />
     </ItemGroup>
 
-	<ItemGroup>																				
+	<ItemGroup>																																							
 		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ACN.svg" />			
 		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ALC.svg" />			
 		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ARC.svg" />			

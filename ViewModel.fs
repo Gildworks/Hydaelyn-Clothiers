@@ -20,29 +20,10 @@ open AvaloniaRender.Veldrid
 open AvaloniaRender
 open Microsoft.FSharp.Reflection
 
+open xivModdingFramework.Exd.Enums
+open xivModdingFramework.Exd.FileTypes
+
 open Shared
-
-type ViewModelBase() =
-    let propertyChanged = Event<PropertyChangedEventHandler, PropertyChangedEventArgs>()
-
-    [<CLIEvent>]
-    member this.FSharpPropertyChanged = propertyChanged.Publish
-
-    interface INotifyPropertyChanged with
-        [<CLIEvent>]
-        member _.PropertyChanged = propertyChanged.Publish
-
-    member this.RaisePropertyChanged([<CallerMemberName>]?propertyName: string) =
-        match propertyName with
-        | Some name -> propertyChanged.Trigger(this, PropertyChangedEventArgs(name))
-        | None -> ()
-    member this.SetValue<'T>(field: byref<'T>, value: 'T, [<CallerMemberName>]?propertyName: string) =
-        match propertyName with
-            | Some name ->
-                if not (System.Object.Equals(field, value)) then
-                    field <- value
-                    this.RaisePropertyChanged(name)
-            | None -> ()
 
 type JobViewModel(job: Job) =
     inherit ViewModelBase()
@@ -71,6 +52,120 @@ type JobViewModel(job: Job) =
         with get() = _isSelected
         and set(value) = 
             this.SetValue(&_isSelected, value)
+
+
+type SettingsViewModel ()  =
+    inherit ViewModelBase()
+
+    let getExdData (exd: XivEx) =
+        async {
+            let ex = new Ex()
+            return! ex.ReadExData(exd) |> Async.AwaitTask
+        }
+    let exdToMap (exDictionary: Collections.Generic.Dictionary<int, Ex.ExdRow>) : Map<int, Ex.ExdRow> =
+        exDictionary
+        |> Seq.map (fun kvp -> kvp.Key, kvp.Value)
+        |> Map.ofSeq
+
+    let createJobVm (job: Job) =
+        let vm = JobViewModel(job)
+        vm
+
+    let recipeBooks =
+        async {
+            let! masterRecipeBooksAsync = getExdData(XivEx.secretrecipebook) |> Async.StartChild
+            let! masterRecipeBooks = masterRecipeBooksAsync
+            return exdToMap masterRecipeBooks
+        } |> Async.RunSynchronously
+
+
+    let bookList =
+        let allBooks = Enum.GetValues(typeof<MasterBook>) :?> int array
+        let mappedBooks =
+            allBooks
+            |> Array.map (fun book ->
+                let bookTitle =
+                    match Map.tryFind book recipeBooks with
+                    | Some exdRow -> exdRow.GetColumn(1) :?> string
+                    | None -> ""
+                { Book = enum<MasterBook>(book); DisplayName = bookTitle }
+            )
+            |> Array.filter (fun book ->
+                not (String.IsNullOrEmpty(book.DisplayName))
+            )
+        //AvaloniaList<MasterBookItem>(mappedBooks)
+        mappedBooks
+
+    member val CRPBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Carpenter")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val BSMBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Blacksmith")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val ARMBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Armorer")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val GSMBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Goldsmith")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val LTWBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Leatherworker")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val WVRBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Weaver")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val ALCBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Alchemist")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val CULBooks =
+        let filteredBooks =
+            bookList
+            |> Array.filter (fun book ->
+                book.DisplayName.Contains("Culinarian")
+            )
+        AvaloniaList<MasterBookItem>(filteredBooks)
+
+    member val Crafters =
+        [Job.CRP; Job.BSM; Job.ARM; Job.GSM; Job.LTW; Job.WVR; Job.ALC; Job.CUL]
+        |> List.map createJobVm
+        |> fun vms -> AvaloniaList<JobViewModel>(vms)
+    
+    
 
 type SimpleCommand(execute: unit -> unit) =
     interface ICommand with
@@ -358,7 +453,7 @@ type VeldridWindowViewModel() as this =
         SimpleCommand(fun () ->
             Avalonia.Threading.Dispatcher.UIThread.Post(fun () ->
                 let settingsWindow = new SettingsWindow()
-
+                settingsWindow.DataContext <- SettingsViewModel()
                 match Application.Current.ApplicationLifetime with
                 | :? IClassicDesktopStyleApplicationLifetime as desktop ->
                     settingsWindow.Show(desktop.MainWindow)
