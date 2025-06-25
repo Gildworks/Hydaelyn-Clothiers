@@ -46,7 +46,7 @@
 							<DataTemplate>
 								<Grid ColumnDefinitions="Auto, *" VerticalAlignment="Center" Margin="20">
 									<Image Height="50" Width="50" Source="{Binding ColorIcon}" VerticalAlignment="Center" Grid.Column="0" />
-									<NumericUpDown Minimum="1" Maximum="100" VerticalAlignment="Center" HorizontalAlignment="Left" Grid.Column="1" MinWidth="120" Margin="5,0,0,0" />
+									<NumericUpDown Minimum="1" Maximum="100" Increment="1" Value="{Binding ClassLevel, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Left" Grid.Column="1" MinWidth="120" Margin="5,0,0,0" />
 								</Grid>
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
@@ -65,7 +65,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -79,7 +79,7 @@
 								</ItemsControl.ItemsPanel>					
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -93,7 +93,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -107,7 +107,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -121,7 +121,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -135,7 +135,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -149,7 +149,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -163,7 +163,7 @@
 								</ItemsControl.ItemsPanel>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate>
-										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+										<CheckBox Content="{Binding BookTitle}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="10"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>

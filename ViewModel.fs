@@ -39,6 +39,7 @@ type JobViewModel(job: Job) =
             null
 
     let mutable _isSelected = false
+    let mutable _classlevel = 1
     let colorPath = $"avares://Hydaelyn Clothiers/Assets/Icons/Jobs-Active/{job.ToString().ToUpperInvariant()}.svg"
     let greyscalePath = $"avares://Hydaelyn Clothiers/Assets/Icons/Jobs-Inactive/{job.ToString().ToUpperInvariant()}.svg"
     let colorIcon = loadImageFromResources colorPath
@@ -52,10 +53,27 @@ type JobViewModel(job: Job) =
         with get() = _isSelected
         and set(value) = 
             this.SetValue(&_isSelected, value)
+    member this.ClassLevel
+        with get() = _classlevel
+        and set(value) =
+            this.SetValue(&_classlevel, value)
+
+type BookViewModel(book: MasterBookItem) =
+    inherit ViewModelBase()
+
+    let mutable _isSelected = false
+
+    member _.BookTitle = book.DisplayName
+    member this.IsSelected
+        with get() = _isSelected
+        and set(value) =
+            this.SetValue(&_isSelected, value)
 
 
 type SettingsViewModel ()  =
     inherit ViewModelBase()
+
+    let mutable _isSelected = false
 
     let getExdData (exd: XivEx) =
         async {
@@ -69,6 +87,10 @@ type SettingsViewModel ()  =
 
     let createJobVm (job: Job) =
         let vm = JobViewModel(job)
+        vm
+
+    let createBookVm (book: MasterBookItem) =
+        let vm = BookViewModel(book)
         vm
 
     let recipeBooks =
@@ -93,72 +115,71 @@ type SettingsViewModel ()  =
             |> Array.filter (fun book ->
                 not (String.IsNullOrEmpty(book.DisplayName))
             )
-        //AvaloniaList<MasterBookItem>(mappedBooks)
         mappedBooks
 
     member val CRPBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Carpenter")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Carpenter")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val BSMBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Blacksmith")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Blacksmith")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val ARMBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Armorer")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Armorer")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val GSMBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Goldsmith")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Goldsmith")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val LTWBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Leatherworker")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Leatherworker")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val WVRBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Weaver")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Weaver")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val ALCBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Alchemist")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Alchemist")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val CULBooks =
-        let filteredBooks =
-            bookList
-            |> Array.filter (fun book ->
-                book.DisplayName.Contains("Culinarian")
-            )
-        AvaloniaList<MasterBookItem>(filteredBooks)
+        bookList
+        |> Array.filter (fun book ->
+            book.DisplayName.Contains("Culinarian")
+        )
+        |> Array.map createBookVm
+        |> fun vms -> AvaloniaList<BookViewModel>(vms)
 
     member val Crafters =
         [Job.CRP; Job.BSM; Job.ARM; Job.GSM; Job.LTW; Job.WVR; Job.ALC; Job.CUL]
