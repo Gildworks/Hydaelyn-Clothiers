@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:vm="using:fs_mdl_viewer"
 		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="500"
-		Width="1000" Height="500"
+		Width="900" Height="700"
 		x:Class="fs_mdl_viewer.SettingsWindow"
 		Title="Hydaelyn Clothiers - Settings"
 		d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=True}"
@@ -33,121 +33,146 @@
 		</TabItem>
 
 		<TabItem Header="Crafter Profile">
-			<TabControl Margin="10">
-				<TabItem Header="Carpenter">
-				
-					<ItemsControl ItemsSource="{Binding CRPBooks}">
+			<Grid RowDefinitions="Auto, 5*, *">
+				<StackPanel Grid.Row="0">
+					<TextBlock FontWeight="Black" FontSize="20" HorizontalAlignment="Center">Levels</TextBlock>
+					<ItemsControl ItemsSource="{Binding Crafters}">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>
-								<WrapPanel />
+								<UniformGrid Columns="4" VerticalAlignment="Center"/>
 							</ItemsPanelTemplate>
 						</ItemsControl.ItemsPanel>
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
+								<Grid ColumnDefinitions="Auto, *" VerticalAlignment="Center" Margin="20">
+									<Image Height="50" Width="50" Source="{Binding ColorIcon}" VerticalAlignment="Center" Grid.Column="0" />
+									<NumericUpDown Minimum="1" Maximum="100" VerticalAlignment="Center" HorizontalAlignment="Left" Grid.Column="1" MinWidth="120" Margin="5,0,0,0" />
+								</Grid>
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Blacksmith">
-					<ItemsControl ItemsSource="{Binding BSMBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>					
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Armorer">
-					<ItemsControl ItemsSource="{Binding ARMBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Goldsmith">
-					<ItemsControl ItemsSource="{Binding GSMBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Leatherworker">
-					<ItemsControl ItemsSource="{Binding LTWBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Weaver">
-					<ItemsControl ItemsSource="{Binding WVRBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Alchemist">
-					<ItemsControl ItemsSource="{Binding ALCBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-				<TabItem Header="Culinarian">
-					<ItemsControl ItemsSource="{Binding CULBooks}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<WrapPanel />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<CheckBox Content="{Binding DisplayName}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</TabItem>
-			</TabControl>
+					<Separator />
+				</StackPanel>
+				<StackPanel Grid.Row="1">
+					<TextBlock FontWeight="Black" FontSize="20" HorizontalAlignment="Center">Master Recipe Books</TextBlock>
+					<TabControl Margin="10">
+						<TabItem Header="Carpenter">				
+							<ItemsControl ItemsSource="{Binding CRPBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Blacksmith">
+							<ItemsControl ItemsSource="{Binding BSMBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>					
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Armorer">
+							<ItemsControl ItemsSource="{Binding ARMBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Goldsmith">
+							<ItemsControl ItemsSource="{Binding GSMBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Leatherworker">
+							<ItemsControl ItemsSource="{Binding LTWBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Weaver">
+							<ItemsControl ItemsSource="{Binding WVRBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Alchemist">
+							<ItemsControl ItemsSource="{Binding ALCBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+						<TabItem Header="Culinarian">
+							<ItemsControl ItemsSource="{Binding CULBooks}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<UniformGrid Columns="5" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<CheckBox Content="{Binding DisplayName}" Margin="10"/>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</TabItem>
+					</TabControl>
+					<Separator />
+				</StackPanel>
+				<Button Content="Save Profile" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,50,0" Grid.Row="2"/>
+			</Grid>
 		</TabItem>
 	</TabControl>
 	
