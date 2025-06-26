@@ -268,6 +268,62 @@ type ComboOption =
     }
     override this.ToString () : string =
         this.Display
+
+type MasterBook =
+    | noBook = 0
+    | crpI = 1 | bsmI = 2 | armI = 3 | gsmI = 4
+    | ltwI = 5 | wvrI = 6 | alcI = 7 | culI = 8
+    | crpGlam = 9 | bsmGlam = 10 | armGlam = 11 | gsmGlam = 12
+    | ltwGlam = 13 | wvrGlam = 14 | alcGlam = 15 | culGlam = 16
+    | crpDemi = 17 | bsmDemi = 18 | armDemi = 19 | gsmDemi = 20
+    | ltwDemi = 21 | wvrDemi = 22 | alcDemi = 23 | crpII = 24
+    | bsmII = 25 | armII = 26 | gsmII = 27 | ltwII = 28
+    | wvrII = 29 | alcII = 30 | culII = 31 | crpIII = 32
+    | bsmIII = 33 | armIII = 34 | gsmIII = 35 | ltwIII = 36
+    | wvrIII = 37 | alcIII = 38 | culIII = 39 | crpIV = 40
+    | bsmIV = 41 | armIV = 42 | gsmIV = 43 | ltwIV = 44
+    | wvrIV = 45 | alcIV = 46 | culIV = 47 | crpV = 48
+    | bsmV = 49 | armV = 50 | gsmV = 51 | ltwV = 52
+    | wvrV = 53 | alcV = 54 | culV = 55 | crpVI = 56
+    | bsmVI = 57 | armVI = 58 | gsmVI = 59 | ltwVI = 60
+    | wvrVI = 61 | alcVI = 62 | culVI = 63 | crpVII = 64
+    | bsmVII = 65 | armVII = 66 | gsmVII = 67 | ltwVII = 68
+    | wvrVII = 69 | alcVII = 70 | culVII = 71 | crpVIII = 72
+    | bsmVIII = 73 | armVIII = 74 | gsmVIII = 75 | ltwVIII = 76
+    | wvrVIII = 77 | alcVIII = 78 | culVIII = 79 | crpIX = 80
+    | bsmIX = 81 | armIX = 82 | gsmIX = 83 | ltwIX = 84
+    | wvrIX = 85 | alcIX = 86 | culIX = 87 | crpX = 88
+    | bsmX = 89 | armX = 90 | gsmX = 91 | ltwX = 92
+    | wvrX = 93 | alcX = 94 | culX = 95 | crpXI = 96
+    | bsmXI = 97 | armXI = 98 | gsmXI = 99 | ltwXI = 100
+    | wvrXI = 101 | alcXI = 102 | culXI = 103 | crpXII = 104
+    | bsmXII = 105 | armXII = 106 | gsmXII = 107 | ltwXII = 108
+    | wvrXII = 109 | alcXII = 110 | culXII = 111
+
+type Job =
+    | GLA | PGL | MRD | LNC | ARC | CNJ | THM
+    | CRP | BSM | ARM | GSM | LTW | WVR | ALC | CUL
+    | MIN | BTN | FSH
+    | PLD | MNK | WAR | DRG | BRD | WHM | BLM
+    | ACN | SMN | SCH | ROG | NIN | MCH | DRK | AST
+    | SAM | RDM | BLU | GNB | DNC | RPR | SGE
+    | VPR | PCT
+    static member ToDisplayName = function
+        | GLA -> "Gladiator" | PGL -> "Pugilist" | MRD -> "Marauder" | LNC -> "Lancer" | ARC -> "Archer" | CNJ -> "Conjurer" | THM -> "Thaumaturge"
+        | CRP -> "Carpenter" | BSM -> "Blacksmith" | ARM -> "Armorer" | GSM -> "Goldsmith" | LTW -> "Leatherworker" | WVR -> "Weaver" | ALC -> "Alchemist" | CUL -> "Culinarian"
+        | MIN -> "Miner" | BTN -> "Botanist" | FSH -> "Fisher"
+        | PLD -> "Paladin" | MNK -> "Monk" | WAR -> "Warrior" | DRG -> "Dragoon" | BRD -> "Bard" | WHM -> "White Mage" | BLM -> "Black Mage"
+        | ACN -> "Arcanist" | SMN -> "Summoner" | SCH -> "Scholar" | ROG -> "Rogue" | NIN -> "Ninja" | MCH -> "Machinist" | DRK -> "Dark Knight" | AST -> "Astrologian"
+        | SAM -> "Samurai" | RDM -> "Red Mage" | BLU -> "Blue Mage" | GNB -> "Gunbreaker" | DNC -> "Dancer" | RPR -> "Reaper" | SGE -> "Sage"
+        | VPR -> "Viper" | PCT -> "Pictomancer"
+
+type MasterBookItem = 
+    {
+        Book                            : MasterBook
+        DisplayName                     : string
+    }
+    with override this.ToString (): string = 
+             this.DisplayName
     
 
 type CharacterCustomizationOptions = {
@@ -279,8 +335,14 @@ type CharacterCustomizationOptions = {
     AvailableEarParts           : XivCharacter list
 }
 
+type CrafterProfile = {
+    CrafterLevels: Map<string, int>
+    MasterBooks: Map<string, bool>
+}
+
 type Config = {
     GamePath: string
+    CrafterProfile: CrafterProfile option
 }
 
 type InputModel = {
@@ -451,63 +513,6 @@ type ClassJobEquip = {
             VPR = false
             PCT = false
         }
-
-type MasterBook =
-    | noBook = 0
-    | crpI = 1 | bsmI = 2 | armI = 3 | gsmI = 4
-    | ltwI = 5 | wvrI = 6 | alcI = 7 | culI = 8
-    | crpGlam = 9 | bsmGlam = 10 | armGlam = 11 | gsmGlam = 12
-    | ltwGlam = 13 | wvrGlam = 14 | alcGlam = 15 | culGlam = 16
-    | crpDemi = 17 | bsmDemi = 18 | armDemi = 19 | gsmDemi = 20
-    | ltwDemi = 21 | wvrDemi = 22 | alcDemi = 23 | crpII = 24
-    | bsmII = 25 | armII = 26 | gsmII = 27 | ltwII = 28
-    | wvrII = 29 | alcII = 30 | culII = 31 | crpIII = 32
-    | bsmIII = 33 | armIII = 34 | gsmIII = 35 | ltwIII = 36
-    | wvrIII = 37 | alcIII = 38 | culIII = 39 | crpIV = 40
-    | bsmIV = 41 | armIV = 42 | gsmIV = 43 | ltwIV = 44
-    | wvrIV = 45 | alcIV = 46 | culIV = 47 | crpV = 48
-    | bsmV = 49 | armV = 50 | gsmV = 51 | ltwV = 52
-    | wvrV = 53 | alcV = 54 | culV = 55 | crpVI = 56
-    | bsmVI = 57 | armVI = 58 | gsmVI = 59 | ltwVI = 60
-    | wvrVI = 61 | alcVI = 62 | culVI = 63 | crpVII = 64
-    | bsmVII = 65 | armVII = 66 | gsmVII = 67 | ltwVII = 68
-    | wvrVII = 69 | alcVII = 70 | culVII = 71 | crpVIII = 72
-    | bsmVIII = 73 | armVIII = 74 | gsmVIII = 75 | ltwVIII = 76
-    | wvrVIII = 77 | alcVIII = 78 | culVIII = 79 | crpIX = 80
-    | bsmIX = 81 | armIX = 82 | gsmIX = 83 | ltwIX = 84
-    | wvrIX = 85 | alcIX = 86 | culIX = 87 | crpX = 88
-    | bsmX = 89 | armX = 90 | gsmX = 91 | ltwX = 92
-    | wvrX = 93 | alcX = 94 | culX = 95 | crpXI = 96
-    | bsmXI = 97 | armXI = 98 | gsmXI = 99 | ltwXI = 100
-    | wvrXI = 101 | alcXI = 102 | culXI = 103 | crpXII = 104
-    | bsmXII = 105 | armXII = 106 | gsmXII = 107 | ltwXII = 108
-    | wvrXII = 109 | alcXII = 110 | culXII = 111
-
-type MasterBookItem = 
-    {
-        Book                            : MasterBook
-        DisplayName                     : string
-    }
-    with override this.ToString (): string = 
-             this.DisplayName
-
-
-type Job =
-    | GLA | PGL | MRD | LNC | ARC | CNJ | THM
-    | CRP | BSM | ARM | GSM | LTW | WVR | ALC | CUL
-    | MIN | BTN | FSH
-    | PLD | MNK | WAR | DRG | BRD | WHM | BLM
-    | ACN | SMN | SCH | ROG | NIN | MCH | DRK | AST
-    | SAM | RDM | BLU | GNB | DNC | RPR | SGE
-    | VPR | PCT
-    static member ToDisplayName = function
-        | GLA -> "Gladiator" | PGL -> "Pugilist" | MRD -> "Marauder" | LNC -> "Lancer" | ARC -> "Archer" | CNJ -> "Conjurer" | THM -> "Thaumaturge"
-        | CRP -> "Carpenter" | BSM -> "Blacksmith" | ARM -> "Armorer" | GSM -> "Goldsmith" | LTW -> "Leatherworker" | WVR -> "Weaver" | ALC -> "Alchemist" | CUL -> "Culinarian"
-        | MIN -> "Miner" | BTN -> "Botanist" | FSH -> "Fisher"
-        | PLD -> "Paladin" | MNK -> "Monk" | WAR -> "Warrior" | DRG -> "Dragoon" | BRD -> "Bard" | WHM -> "White Mage" | BLM -> "Black Mage"
-        | ACN -> "Arcanist" | SMN -> "Summoner" | SCH -> "Scholar" | ROG -> "Rogue" | NIN -> "Ninja" | MCH -> "Machinist" | DRK -> "Dark Knight" | AST -> "Astrologian"
-        | SAM -> "Samurai" | RDM -> "Red Mage" | BLU -> "Blue Mage" | GNB -> "Gunbreaker" | DNC -> "Dancer" | RPR -> "Reaper" | SGE -> "Sage"
-        | VPR -> "Viper" | PCT -> "Pictomancer"
 
 type CraftingInfo =
     {

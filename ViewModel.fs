@@ -3,12 +3,12 @@
 open System
 open System.Collections.ObjectModel
 open System.Linq
-open System.ComponentModel
-open System.Runtime.CompilerServices
-open System.Runtime.InteropServices
-open System.Threading
+open System.IO
 open System.Windows.Input
+open System.Text.Json
+
 open ReactiveUI
+
 open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
 open Avalonia.Controls
@@ -16,8 +16,10 @@ open Avalonia.Media
 open Avalonia.Platform
 open Avalonia.Collections
 open Avalonia.Svg.Skia
+
 open AvaloniaRender.Veldrid
 open AvaloniaRender
+
 open Microsoft.FSharp.Reflection
 
 open xivModdingFramework.Exd.Enums
@@ -38,8 +40,25 @@ type JobViewModel(job: Job) =
         else
             null
 
+    let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
     let mutable _isSelected = false
     let mutable _classlevel = 1
+    let configFile: Config option =
+        match File.Exists(configPath) with
+        | true -> 
+            try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
+            with ex -> None
+        | false -> None
+    do
+        match configFile with
+        | Some config ->
+            match config.CrafterProfile with
+            | Some profile ->
+                match Map.tryFind (Job.ToDisplayName job) profile.CrafterLevels with
+                | Some level -> _classlevel <- level
+                | None -> ()
+            | None -> ()
+        | None -> ()
     let colorPath = $"avares://Hydaelyn Clothiers/Assets/Icons/Jobs-Active/{job.ToString().ToUpperInvariant()}.svg"
     let greyscalePath = $"avares://Hydaelyn Clothiers/Assets/Icons/Jobs-Inactive/{job.ToString().ToUpperInvariant()}.svg"
     let colorIcon = loadImageFromResources colorPath
@@ -60,8 +79,24 @@ type JobViewModel(job: Job) =
 
 type BookViewModel(book: MasterBookItem) =
     inherit ViewModelBase()
-
+    
+    let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
     let mutable _isSelected = false
+    let configFile: Config option =
+        match File.Exists(configPath) with
+        | true -> 
+            try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
+            with ex -> None
+        | false -> None
+    do
+        match configFile with
+        | Some config ->
+            match config.CrafterProfile with
+            | Some profile ->
+                _isSelected <- profile.MasterBooks.[book.DisplayName]
+            | None -> ()
+        | None -> ()
+
 
     member _.BookTitle = book.DisplayName
     member this.IsSelected
@@ -69,11 +104,20 @@ type BookViewModel(book: MasterBookItem) =
         and set(value) =
             this.SetValue(&_isSelected, value)
 
+type SimpleCommand(execute: unit -> unit) =
+    interface ICommand with
+        member _.CanExecute(_) = true
+        member _.Execute(_) = execute()
+        [<CLIEvent>]
+        member _.CanExecuteChanged = Event<EventHandler, EventArgs>().Publish
+
 
 type SettingsViewModel ()  =
     inherit ViewModelBase()
 
     let mutable _isSelected = false
+
+    let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
 
     let getExdData (exd: XivEx) =
         async {
@@ -185,15 +229,50 @@ type SettingsViewModel ()  =
         [Job.CRP; Job.BSM; Job.ARM; Job.GSM; Job.LTW; Job.WVR; Job.ALC; Job.CUL]
         |> List.map createJobVm
         |> fun vms -> AvaloniaList<JobViewModel>(vms)
-    
+
     
 
-type SimpleCommand(execute: unit -> unit) =
-    interface ICommand with
-        member _.CanExecute(_) = true
-        member _.Execute(_) = execute()
-        [<CLIEvent>]
-        member _.CanExecuteChanged = Event<EventHandler, EventArgs>().Publish
+    member this.loadConfig() : Config option =
+        if File.Exists(configPath) then
+            try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
+            with ex -> None
+        else None
+
+    member this.saveConfig (cfg: Config) =
+        try let dir = Path.GetDirectoryName(configPath)
+            if not (Directory.Exists(dir)) then Directory.CreateDirectory(dir) |> ignore
+            File.WriteAllText(configPath, JsonSerializer.Serialize(cfg))
+            printfn "File saved!"
+        with ex -> printfn $"File failed to save: {ex.Message}"
+
+    member this.SaveProfile =
+        SimpleCommand(fun () ->
+            this.saveProfileAction()
+        )
+
+    member this.saveProfileAction() =
+        let selectedBooks =
+            this.CRPBooks.Concat(this.BSMBooks).Concat(this.ARMBooks).Concat(this.GSMBooks).Concat(this.LTWBooks).Concat(this.WVRBooks).Concat(this.ALCBooks).Concat(this.CULBooks)
+            |> Seq.map (fun vm -> vm.BookTitle, vm.IsSelected)
+            |> Map.ofSeq
+
+        let crafterLevels =
+            this.Crafters
+            |> Seq.map (fun vm -> vm.JobName, vm.ClassLevel)
+            |> Map.ofSeq
+
+        let crafterProfile =
+            { CrafterLevels = crafterLevels; MasterBooks = selectedBooks }
+
+        match this.loadConfig() with
+        | Some config ->
+            let newConfig =
+                { GamePath = config.GamePath; CrafterProfile = Some crafterProfile }
+            this.saveConfig(newConfig)
+        | None -> ()
+    
+
+
 
 type VeldridWindowViewModel() as this =
     inherit ViewModelBase()
@@ -240,6 +319,13 @@ type VeldridWindowViewModel() as this =
                 this.ApplyGlobalFilters()
         )
         vm
+    let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
+    let configFile =
+        match File.Exists(configPath) with
+        | true ->
+            try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
+            with ex -> None
+        | false -> None
 
     do
         this.FSharpPropertyChanged.Add(fun args ->
@@ -409,6 +495,45 @@ type VeldridWindowViewModel() as this =
             |> List.filter (fun item ->
                 if not _craftedOnly then true else
                     if item.CraftingDetails.Length > 0 then true else false
+            )
+            |> List.filter (fun item ->
+                if not _useProfile then true else
+                    match configFile with
+                    | Some config ->
+                        match config.CrafterProfile with
+                        | Some profile ->
+                            let mutable compatibleBooks = false
+                            let masterRecipes =
+                                item.CraftingDetails
+                                |> List.filter(fun b -> (int b.MasterBook.Book) > 1)
+                            if masterRecipes.Length <= 0 then 
+                                true 
+                            else
+                                for row in masterRecipes do
+                                    match Map.tryFind row.MasterBook.DisplayName profile.MasterBooks with
+                                    | Some book ->
+                                        compatibleBooks <- book
+                                    | None -> ()
+                                compatibleBooks
+                        | None -> true
+                    | None -> true
+            )
+            |> List.filter (fun item ->
+                if not _useProfile then true else
+                    match configFile with
+                    | Some config ->
+                        match config.CrafterProfile with
+                        | Some profile ->
+                            let mutable classLevelOk = false
+                            for row in item.CraftingDetails do
+                                match Map.tryFind row.Job profile.CrafterLevels with
+                                |  Some int ->
+                                    if int >= row.RecipeLevel then 
+                                        classLevelOk <- true
+                                | None -> ()
+                            classLevelOk
+                        | None -> true
+                    | None -> true
             )
             |> List.filter (fun item ->
                 canEquip item.EquippableBy selectedJobs

@@ -1041,7 +1041,7 @@ type MainWindow () as this =
                 match pathFromDialog with
                 | Some validPath ->
                     gamePathFromConfigOrPrompt <- Path.Combine(validPath, "game", "sqpack", "ffxiv")
-                    saveConfig { GamePath = Path.Combine(validPath, "game", "sqpack", "ffxiv") }
+                    saveConfig { GamePath = Path.Combine(validPath, "game", "sqpack", "ffxiv"); CrafterProfile = None }
                     setupSucceeded <- true
                 | None ->
                     setupSucceeded <- false

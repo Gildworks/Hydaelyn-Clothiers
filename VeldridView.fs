@@ -562,7 +562,7 @@ type VeldridView() as this =
                                     if recipeId > 0 then
                                         match Map.tryFind recipeId recipeMap with
                                         | Some recipeRow ->
-                                            let recipeLevelTableId = recipeRow.GetColumn(0) :?> int32 |> int
+                                            let recipeLevelTableId = recipeRow.GetColumn(2) :?> uint16 |> int
                                             let masterBookRowId = recipeRow.GetColumn(34) :?> uint16 |> int
                                             let masterBook: MasterBookItem =
                                                 match Map.tryFind masterBookRowId secretRecipeBookMap with
@@ -571,10 +571,16 @@ type VeldridView() as this =
                                                 | None ->
                                                     { Book = MasterBook.noBook; DisplayName = "" }
 
-                                            let requiredLevel, recipeStars = 
+                                            let requiredLevel = 
                                                 match Map.tryFind recipeLevelTableId recipeLevelMap with
-                                                | Some levelRow -> levelRow.GetColumn(0) :?> byte |> int, levelRow.GetColumn(1) :?> byte |> int
-                                                | None -> 0, 0
+                                                | Some levelRow -> 
+                                                    levelRow.GetColumn(0) :?> byte |> int
+                                                | None -> 0
+                                            let recipeStars = 
+                                                match Map.tryFind recipeLevelTableId recipeLevelMap with
+                                                | Some levelRow ->
+                                                    levelRow.GetColumn(1) :?> byte |> int
+                                                | None -> 0
 
                                             Some {
                                                 Job = jobName;

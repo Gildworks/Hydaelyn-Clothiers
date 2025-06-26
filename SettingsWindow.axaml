@@ -171,7 +171,7 @@
 					</TabControl>
 					<Separator />
 				</StackPanel>
-				<Button Content="Save Profile" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,50,0" Grid.Row="2"/>
+				<Button Content="Save Profile" Command="{Binding SaveProfile}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,50,0" Grid.Row="2"/>
 			</Grid>
 		</TabItem>
 	</TabControl>
