@@ -319,13 +319,6 @@ type VeldridWindowViewModel() as this =
                 this.ApplyGlobalFilters()
         )
         vm
-    let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
-    let configFile =
-        match File.Exists(configPath) with
-        | true ->
-            try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
-            with ex -> None
-        | false -> None
 
     do
         this.FSharpPropertyChanged.Add(fun args ->
@@ -340,6 +333,15 @@ type VeldridWindowViewModel() as this =
                     this.ApplyGlobalFilters()
             | _ -> ()
         )
+
+    member this.getCurrentConfig() =
+        let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
+        match File.Exists(configPath) with
+        | true ->
+            try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
+            with ex -> None
+        | false -> None
+
 
     member this.WindowHeight
         with get() = _windowHeight
@@ -423,6 +425,7 @@ type VeldridWindowViewModel() as this =
         and private set(v) = this.SetValue(&_globallyFilteredGear, v)
 
     member private this.ApplyGlobalFilters() =
+        let configFile = this.getCurrentConfig()
         let selectedJobs =
             this.Tanks.Concat(this.Healers).Concat(this.RangedDPS).Concat(this.MeleeDPS).Concat(this.MagicDPS).Concat(this.Crafters).Concat(this.Gatherers)
             |> Seq.filter (fun vm -> vm.IsSelected)
