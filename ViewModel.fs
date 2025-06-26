@@ -527,8 +527,8 @@ type VeldridWindowViewModel() as this =
                             let mutable classLevelOk = false
                             for row in item.CraftingDetails do
                                 match Map.tryFind row.Job profile.CrafterLevels with
-                                |  Some int ->
-                                    if int >= row.RecipeLevel then 
+                                |  Some level ->
+                                    if level >= row.RecipeLevel then 
                                         classLevelOk <- true
                                 | None -> ()
                             classLevelOk
