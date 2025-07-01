@@ -18,6 +18,10 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
     let mutable isDollying = false
     let mutable lastMouse = Vector2.Zero
 
+    // === Auto-Orbit stuff
+    let mutable autoOrbitSpeed = 0.0f
+    let mutable lastUpdateTime = DateTime.Now
+
     do
         let fovY = MathF.PI / 6.0f // From your GetProjectionMatrix
         let P = Option.defaultValue 0.5f initialTargetYPercentageFromBottom // Default to center (0,0,0) if not specified
@@ -30,6 +34,23 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
         target <- Vector3(0.0f, calculatedTargetY, 0.0f)
 
         this.RecalculateCameraState() // Initialize position and up based on new target and other params
+
+    // Public members to add auto orbit for turntable mode
+    member _.StartAutoOrbit (speed: float32) =
+        autoOrbitSpeed <- speed
+        lastUpdateTime <- DateTime.Now
+
+    member _.StopAutoOrbit() =
+        autoOrbitSpeed <- 0.0f
+
+    member _.Update() =
+        if autoOrbitSpeed <> 0.0f then
+            let currentTime = DateTime.Now
+            let deltaTime = float32 (currentTime - lastUpdateTime).TotalSeconds
+            lastUpdateTime <- currentTime
+
+            orbitAngles <- Vector2(orbitAngles.X + autoOrbitSpeed * deltaTime, orbitAngles.Y)
+            this.RecalculateCameraState()
 
     // Private method to update camera's position and its dynamic "up" vector
     member private this.RecalculateCameraState() =

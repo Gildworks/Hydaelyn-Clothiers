@@ -27,7 +27,7 @@ layout(location = 0) out vec4 fsout_Color;
 
 // Let's define LIGHT_VECTOR_TO_SOURCE as the vector from surface point TO the light source
 // This is what you directly used as 'L' previously.
-const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(0.5, 0.8, -0.6)); // Your "perfect" L for projection
+const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(10.5, 10.8, -10.6)); // Your "perfect" L for projection
                                                                   // For lighting, you might want to adjust this.
                                                                   // e.g., for a light more from the front:
                                                                   // const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(vec3(0.3, 0.7, -0.5));
@@ -104,13 +104,13 @@ void main() {
 
     // 'wrap' is a parameter you can tune (e.g., 0.2 is a good start)
     // It controls how far the light "wraps" around the object.
-    float sss_wrap = 0.5; 
+    float sss_wrap = 0.2; 
     float NdotL_wrapped = dot(N, L) + sss_wrap;
     float light_intensity = max(0.0, NdotL_wrapped) / (1.0 + sss_wrap);
     light_intensity = pow(light_intensity, 2.0); // Squaring it makes the falloff look nicer
 
     // The SSS light is tinted by the skin color
-    vec3 sss_light = light_intensity * baseDiffuseColor * sss_amount;
+    vec3 sss_light = light_intensity * baseDiffuseColor; // * sss_amount;
 
     // Combine lighting
     vec3 finalColorLinear = (AMBIENT_LIGHT_COLOR * baseDiffuseColor)
@@ -125,7 +125,7 @@ void main() {
     //vec3 toneMapped = finalColorLinear / (finalColorLinear + vec3(1.0));
 
     // === Extended Reinhard Tone Mapping
-    float maxWhite = 1.5;
+    float maxWhite = 2.5;
     vec3 conversion = finalColorLinear * (1.0 + (finalColorLinear / vec3(maxWhite * maxWhite)));
     vec3 toneMapped = conversion / (1.0 + finalColorLinear);
     
