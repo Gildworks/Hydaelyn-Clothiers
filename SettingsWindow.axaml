@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:vm="using:fs_mdl_viewer"
+		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="500"
+		Width="900" Height="700"
+		x:Class="fs_mdl_viewer.SettingsWindow"
+		Title="Hydaelyn Clothiers - Settings"
+		d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=True}"
+		x:DataType="vm:SettingsViewModel"
+		WindowStartupLocation="CenterOwner"
+		CanResize="True">
+
+	<TabControl Margin="5">
+		<TabItem Header="Game Files">
+			<TextBlock>Not yet implemented</TextBlock>
+		</TabItem>
+		<TabItem Header="Patreon">
+			<StackPanel>
+				<TextBlock TextAlignment="Center">
+					Connect your Patreon account here for all Patrons subscribed at the $5 tier or higher!<LineBreak/>
+					Connecting your Patreon account will give you access to the Development Build release channel<LineBreak/>
+					The dev release channel gets new features added as soon as they're completed<LineBreak/>
+					so if you're waiting on a specific feature, dev channel releases will remain the fastest way to access them!<LineBreak/><LineBreak/>
+					Public releases will always remain free to access, dev releases simply grant access sooner.
+				</TextBlock>
+				<Button Content="Connect to Patreon" HorizontalAlignment="Center" Command="{Binding AuthorizePatreon}"/>
+			</StackPanel>
+		</TabItem>
+	</TabControl>
+	
+</Window>

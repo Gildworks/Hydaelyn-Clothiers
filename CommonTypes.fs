@@ -8,6 +8,7 @@ open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.General.Enums
 open System
+open System.ComponentModel
 open System.Numerics
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
@@ -41,6 +42,28 @@ type VertexPositionColorUv =
         Tangent = tangent
         BiTangent = bitangent
     }
+
+type ViewModelBase() =
+    let propertyChanged = Event<PropertyChangedEventHandler, PropertyChangedEventArgs>()
+
+    [<CLIEvent>]
+    member this.FSharpPropertyChanged = propertyChanged.Publish
+
+    interface INotifyPropertyChanged with
+        [<CLIEvent>]
+        member _.PropertyChanged = propertyChanged.Publish
+
+    member this.RaisePropertyChanged([<CallerMemberName>]?propertyName: string) =
+        match propertyName with
+        | Some name -> propertyChanged.Trigger(this, PropertyChangedEventArgs(name))
+        | None -> ()
+    member this.SetValue<'T>(field: byref<'T>, value: 'T, [<CallerMemberName>]?propertyName: string) =
+        match propertyName with
+            | Some name ->
+                if not (System.Object.Equals(field, value)) then
+                    field <- value
+                    this.RaisePropertyChanged(name)
+            | None -> ()
 
 type raceIds = 
     | Hyur_Midlander_Male = 0
@@ -245,6 +268,7 @@ type CharacterCustomizationOptions = {
 
 type Config = {
     GamePath: string
+    PatreonID: string option
 }
 
 type InputModel = {

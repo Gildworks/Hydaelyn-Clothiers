@@ -10,6 +10,7 @@ open SixLabors.ImageSharp
 
 open Avalonia
 open Avalonia.Controls
+open Avalonia.Diagnostics
 open Avalonia.Markup.Xaml
 open Avalonia.Input
 open Avalonia.Interactivity
@@ -175,14 +176,14 @@ type MainWindow () as this =
         { Display = "Roegadyn"; Value = "Roegadyn"}; { Display = "Au Ra"; Value = "AuRa"}
         { Display = "Hrothgar"; Value = "Hrothgar"}; { Display = "Viera"; Value = "Viera"}
     ]
-    let HyurTribes: string list = [
-        "Highlander"; "Midlander"
+    let HyurTribes: ComboOption list = [
+        { Display = "Highlander"; Value = "Highlander"};{ Display = "Midlander"; Value="Midlander" }
     ]
-    let ElezenTribes: string list = [
-        "Wildwood"; "Duskwight"
+    let ElezenTribes: ComboOption list = [
+        { Display = "Wildwood"; Value = "Wildwood"};{ Display = "Duskwight"; Value="Duskwight" }
     ]
-    let LalafellTribes: string list = [
-        "Plainsfolk"; "Dunesfolk"
+    let LalafellTribes: ComboOption list = [
+        { Display = "Plainsfolk"; Value = "Plainsfolk"};{ Display = "Dunesfolk"; Value="Dunesfolk" }
     ]
     let MiqoteTribes: ComboOption list = [
         { Display = "Seekers of the Sun"; Value = "Seeker"}; { Display = "Keepers of the Moon"; Value = "Keeper" }
@@ -190,14 +191,14 @@ type MainWindow () as this =
     let RoegadynTribes: ComboOption list = [
         { Display = "Sea Wolves"; Value = "SeaWolves" }; { Display = "Hellsguard"; Value = "Hellsguard" }
     ]
-    let AuRaTribes: string list = [
-        "Raen"; "Xaela"
+    let AuRaTribes: ComboOption list = [
+        { Display = "Raen"; Value = "Raen"};{ Display = "Xaela"; Value="Xaela" }
     ]
     let HrothgarTribes: ComboOption list = [
         { Display = "Helions"; Value = "Helions" }; { Display = "The Lost"; Value = "Lost" }
     ]
-    let VieraTribes: string list = [
-        "Rava"; "Veena"
+    let VieraTribes: ComboOption list = [
+        { Display = "Rava"; Value = "Rava"};{ Display = "Veena"; Value="Veena" }
     ]
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
@@ -294,6 +295,7 @@ type MainWindow () as this =
         this.FindGuiControls()
 
         viewerControl.DataContext <- viewModel
+        this.DataContext <- viewModel
 
         viewerControl.GetObservable(Control.BoundsProperty)
             .Subscribe(fun bounds ->
@@ -322,7 +324,7 @@ type MainWindow () as this =
 
     member private this.InitializeComponent() =
 #if DEBUG
-        this.AttachDevTools()
+        //this.AttachDevTools();
 #endif
         AvaloniaXamlLoader.Load(this)
 
@@ -972,7 +974,7 @@ type MainWindow () as this =
                 match pathFromDialog with
                 | Some validPath ->
                     gamePathFromConfigOrPrompt <- Path.Combine(validPath, "game", "sqpack", "ffxiv")
-                    saveConfig { GamePath = Path.Combine(validPath, "game", "sqpack", "ffxiv") }
+                    saveConfig { GamePath = Path.Combine(validPath, "game", "sqpack", "ffxiv"); PatreonID = None }
                     setupSucceeded <- true
                 | None ->
                     setupSucceeded <- false

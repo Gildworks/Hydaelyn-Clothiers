@@ -2,14 +2,27 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d"
         x:Class="fs_mdl_viewer.MainWindow"
 		xmlns:local="clr-namespace:fs_mdl_viewer"
 		xmlns:shared="clr-namespace:Shared"
         Title="Hydaelyn Clothiers"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
-	<Grid ColumnDefinitions="*, 5, 3*, 5, *">
+	<DockPanel>
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="_File">
+				<MenuItem Header="_Open Glamour" />
+				<MenuItem Header="_Save Glamour" />
+				<MenuItem Header="Save Current _As Default" />
+				<Separator />
+				<MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
+			</MenuItem>
+			<MenuItem Header="_Edit">
+				<MenuItem Header="Settings" Command="{Binding OpenSettingsCommand}"/>
+			</MenuItem>
+		</Menu>
+		<Grid ColumnDefinitions="*, 5, 3*, 5, *">
 		<ScrollViewer Grid.Column="0">
 			<StackPanel>
 				<StackPanel>
@@ -303,4 +316,5 @@
 			</StackPanel>
 		</ScrollViewer>
 	</Grid>
+	</DockPanel>
 </Window>
