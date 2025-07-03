@@ -2,8 +2,12 @@
 ### Glamour Planning and Previewing for Final Fantasy XIV
 [Hydaelyn Clothiers Discord Server](https://discord.gg/uBnM4fvMJj)  |  [Hydaelyn Clothiers on Patreon](https://www.patreon.com/HydaelynClothiers)
 
+[Latest Release](https://github.com/Gildworks/Hydaelyn-Clothiers/releases/latest)
+![Screenshot 001](https://i.imgur.com/cqNgqiH.png)
+
+
 ## Basic Use
-Hydaelyn Clothiers aims to be intuitive and easy to use. 
+Hydaelyn Clothiers aims to be intuitive and easy to use, however **a local install of Final Fantasy XIV is required for this application to function.**
 
 Vulkan compatibility is **required** for this app. Additional graphical backend support is planned, but currently unavailable.
 
@@ -12,6 +16,8 @@ To begin planning and previewing your glamours, please follow these instructions
 1) Select your character's Race, Clan/Tribe, and Gender using the first 3 dropdown boxes.
 2) Press the `Create Base Character` button.
 3) From here, you may either select a new Hairstyle, Face, Tail, or Ears (when applicable), change your character colors (Skin, Hair, Eye, etc), or proceed directly to adding equipment.
+![Screenshot 002](https://i.imgur.com/yYREEPD.png)
+
 
 ### Notes:
 - At all stages, the loading bar beneath the `Create Base Character` button will be active if the application is in the process of loading any items. If the loading bar is inactive, but nothing visually changed, the selected item may not have an actual model to display. Support for these items is coming in the future.
@@ -19,7 +25,7 @@ To begin planning and previewing your glamours, please follow these instructions
 - If any equipped gear looks incorrect for any reason (parts clipping through each other, as an example) try pressing the `Create Base Character` button again. This tends to fix *most* display issues.
 - There are several known bugs with the application that are being worked on, but please never hesitate to reach out on the Discord for any issues you may have
 
-
+![Screenshot 003](https://i.imgur.com/qCs7HT6.png)
 
 ## Future Features
 This application is currently in its minimally viable state. I have dozens of features planned for future releases, here are some of them, in no particular order:
@@ -37,3 +43,5 @@ This application is currently in its minimally viable state. I have dozens of fe
   - Ideally, the saved glamours would be shareable so you can share your creations with your friends!
 
 I have so many more plans for this app, and I'm also open to any suggestions you may have! Be sure to visit the Discord server if you want to add a feature request!
+
+![Screenshot 004](https://i.imgur.com/aOeGElO.png) 

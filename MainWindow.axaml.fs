@@ -2,11 +2,8 @@ namespace fs_mdl_viewer
 
 open System
 open System.Numerics
-open System.Threading.Tasks
 open System.Text.Json
 open System.IO
-
-open SixLabors.ImageSharp
 
 open Avalonia
 open Avalonia.Controls
@@ -14,10 +11,8 @@ open Avalonia.Diagnostics
 open Avalonia.Markup.Xaml
 open Avalonia.Input
 open Avalonia.Interactivity
-open Avalonia.Layout
 open Avalonia.Media
 open Avalonia.Threading
-open Avalonia.Platform.Storage
 
 open AvaloniaRender.Veldrid
 open xivModdingFramework.General.Enums
@@ -32,7 +27,6 @@ open xivModdingFramework.Mods
 open xivModdingFramework.Materials.FileTypes
 
 open Shared
-open TTModelLoader
 
 module DataHelpers =
 
@@ -235,36 +229,48 @@ type MainWindow () as this =
     let mutable faceSelector: ComboBox = null
     let mutable earSelector: ComboBox = null
     let mutable tailSelector: ComboBox = null
-    let mutable headSlotCombo: ComboBox = null
+    let mutable headSlotCombo: ListBox = null
     let mutable headClearButton: Button = null
     let mutable headDye1Combo: ComboBox = null
     let mutable headDye1ClearButton: Button = null
     let mutable headDye2Combo: ComboBox = null
     let mutable headDye2ClearButton: Button = null
-    let mutable bodySlotCombo: ComboBox = null
+    let mutable bodySlotCombo: ListBox = null
     let mutable bodyClearButton: Button = null
     let mutable bodyDye1Combo: ComboBox = null
     let mutable bodyDye1ClearButton: Button = null
     let mutable bodyDye2Combo: ComboBox = null
     let mutable bodyDye2ClearButton: Button = null
-    let mutable handSlotCombo: ComboBox = null
+    let mutable handSlotCombo: ListBox = null
     let mutable handClearButton: Button = null
     let mutable handDye1Combo: ComboBox = null
     let mutable handDye1ClearButton: Button = null
     let mutable handDye2Combo: ComboBox = null
     let mutable handDye2ClearButton: Button = null
-    let mutable legsSlotCombo: ComboBox = null
+    let mutable legsSlotCombo: ListBox = null
     let mutable legsClearButton: Button = null
     let mutable legsDye1Combo: ComboBox = null
     let mutable legsDye1ClearButton: Button = null
     let mutable legsDye2Combo: ComboBox = null
     let mutable legsDye2ClearButton: Button = null
-    let mutable feetSlotCombo: ComboBox = null
+    let mutable feetSlotCombo: ListBox = null
     let mutable feetClearButton: Button = null
     let mutable feetDye1Combo: ComboBox = null
     let mutable feetDye1ClearButton: Button = null
     let mutable feetDye2Combo: ComboBox = null
     let mutable feetDye2ClearButton: Button = null
+
+    let mutable headSlotSearchBox: TextBox = null
+    let mutable bodySlotSearchBox: TextBox = null
+    let mutable handSlotSearchBox: TextBox = null
+    let mutable legsSlotSearchBox: TextBox = null
+    let mutable feetSlotSearchBox: TextBox = null
+
+    let mutable headSearchClearButton: Button = null
+    let mutable bodySearchClearButton: Button = null
+    let mutable handSearchClearButton: Button = null
+    let mutable legsSearchClearButton: Button = null
+    let mutable feetSearchClearButton: Button = null
 
     let mutable skinColorSwatchesControl: ItemsControl = null
     let mutable hairColorSwatchesControl: ItemsControl = null
@@ -321,7 +327,6 @@ type MainWindow () as this =
                     this.InitializeApplicationAsync(render) |> Async.StartImmediate
                 | _ -> ()
         )
-
     member private this.InitializeComponent() =
 #if DEBUG
         //this.AttachDevTools();
@@ -340,21 +345,33 @@ type MainWindow () as this =
         faceSelector <- this.FindControl<ComboBox>("FaceSelector")
         earSelector <- this.FindControl<ComboBox>("EarSelector")
         tailSelector <- this.FindControl<ComboBox>("TailSelector")
-        headSlotCombo <- this.FindControl<ComboBox>("HeadSlot"); headClearButton <- this.FindControl<Button>("HeadClear")
+        headSlotCombo <- this.FindControl<ListBox>("HeadSlot"); headClearButton <- this.FindControl<Button>("HeadClear")
         headDye1Combo <- this.FindControl<ComboBox>("HeadDye1"); headDye1ClearButton <- this.FindControl<Button>("HeadDye1Clear")
         headDye2Combo <- this.FindControl<ComboBox>("HeadDye2"); headDye2ClearButton <- this.FindControl<Button>("HeadDye2Clear")
-        bodySlotCombo <- this.FindControl<ComboBox>("BodySlot"); bodyClearButton <- this.FindControl<Button>("BodyClear")
+        bodySlotCombo <- this.FindControl<ListBox>("BodySlot"); bodyClearButton <- this.FindControl<Button>("BodyClear")
         bodyDye1Combo <- this.FindControl<ComboBox>("BodyDye1"); bodyDye1ClearButton <- this.FindControl<Button>("BodyDye1Clear")
         bodyDye2Combo <- this.FindControl<ComboBox>("BodyDye2"); bodyDye2ClearButton <- this.FindControl<Button>("BodyDye2Clear")
-        handSlotCombo <- this.FindControl<ComboBox>("HandSlot"); handClearButton <- this.FindControl<Button>("HandClear")
+        handSlotCombo <- this.FindControl<ListBox>("HandSlot"); handClearButton <- this.FindControl<Button>("HandClear")
         handDye1Combo <- this.FindControl<ComboBox>("HandDye1"); handDye1ClearButton <- this.FindControl<Button>("HandDye1Clear")
         handDye2Combo <- this.FindControl<ComboBox>("HandDye2"); handDye2ClearButton <- this.FindControl<Button>("HandDye2Clear")
-        legsSlotCombo <- this.FindControl<ComboBox>("LegsSlot"); legsClearButton <- this.FindControl<Button>("LegClear")
+        legsSlotCombo <- this.FindControl<ListBox>("LegsSlot"); legsClearButton <- this.FindControl<Button>("LegClear")
         legsDye1Combo <- this.FindControl<ComboBox>("LegDye1"); legsDye1ClearButton <- this.FindControl<Button>("LegDye1Clear")
         legsDye2Combo <- this.FindControl<ComboBox>("LegDye2"); legsDye2ClearButton <- this.FindControl<Button>("LegDye2Clear")
-        feetSlotCombo <- this.FindControl<ComboBox>("FeetSlot"); feetClearButton <- this.FindControl<Button>("FeetClear")
+        feetSlotCombo <- this.FindControl<ListBox>("FeetSlot"); feetClearButton <- this.FindControl<Button>("FeetClear")
         feetDye1Combo <- this.FindControl<ComboBox>("FeetDye1"); feetDye1ClearButton <- this.FindControl<Button>("FeetDye1Clear")
         feetDye2Combo <- this.FindControl<ComboBox>("FeetDye2"); feetDye2ClearButton <- this.FindControl<Button>("FeetDye2Clear")
+
+        headSlotSearchBox <- this.FindControl<TextBox>("HeadSlotSearch")
+        bodySlotSearchBox <- this.FindControl<TextBox>("BodySlotSearch")
+        handSlotSearchBox <- this.FindControl<TextBox>("HandSlotSearch")
+        legsSlotSearchBox <- this.FindControl<TextBox>("LegsSlotSearch")
+        feetSlotSearchBox <- this.FindControl<TextBox>("FeetSlotSearch")
+
+        headSearchClearButton <- this.FindControl<Button>("HeadSearchClear")
+        bodySearchClearButton <- this.FindControl<Button>("BodySearchClear")
+        handSearchClearButton <- this.FindControl<Button>("HandSearchClear")
+        legsSearchClearButton <- this.FindControl<Button>("LegsSearchClear")
+        feetSearchClearButton <- this.FindControl<Button>("FeetSearchClear")
 
         skinColorSwatchesControl <- this.FindControl<ItemsControl>("SkinColorSwatches")
         hairColorSwatchesControl <- this.FindControl<ItemsControl>("HairColorSwatches")
@@ -522,7 +539,7 @@ type MainWindow () as this =
              this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1Idx, dye2Idx, modelColors) |> Async.StartImmediate
 
     member private this.ClearGearSlot(
-        slotCombo: ComboBox, eqSlot: EquipmentSlot, gearList: XivGear list,
+        slotCombo: ListBox, eqSlot: EquipmentSlot, gearList: XivGear list,
         dye1Combo: ComboBox, dye1ClearButton: Button,
         dye2Combo: ComboBox, dye2ClearButton: Button, render: VeldridView) =
 
@@ -693,19 +710,18 @@ type MainWindow () as this =
         setupCharPartSelector tailSelector EquipmentSlot.Tail (fun () -> currentTailList)
 
         let setupGearSlot (
-            slotCombo: ComboBox, clearButton: Button,
+            slotCombo: ListBox, clearButton: Button,
             dye1Combo: ComboBox, dye1ClearButton: Button,
             dye2Combo: ComboBox, dye2ClearButton: Button,
             eqSlot: EquipmentSlot, gearCategory: string) =
 
             let getGearList() = allGearCache |> List.filter (fun m -> m.SecondaryCategory = gearCategory)
-            slotCombo.ItemsSource <- getGearList() |> List.map (fun g -> g.Name)
+            slotCombo.ItemsSource <- getGearList()
 
             slotCombo.SelectionChanged.Add(fun _ ->
-                let idx = slotCombo.SelectedIndex
-                let gearList = getGearList()
-                if idx >= 0 && idx < gearList.Length then
-                    do this.HandleGearSelectionChanged(gearList[idx], eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
+                if slotCombo.SelectedItem <> null then
+                    let selectedItem = slotCombo.SelectedItem :?> IItemModel
+                    do this.HandleGearSelectionChanged(selectedItem, eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
             )
             clearButton.Click.Add(fun _ ->
                 this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
@@ -736,6 +752,53 @@ type MainWindow () as this =
                     if dye2Combo.SelectedIndex >= 0 then
                         this.HandleDyeSelectionChanged(gearList[idx], eqSlot, dye1Combo, dye2Combo, render)
             )
+        let filterGear (slotList: ListBox, gearCategory: string, searchTerm: string) =
+            let fullList =  allGearCache |> List.filter (fun m -> m.SecondaryCategory = gearCategory)
+            let filteredList = fullList |> List.filter(fun m -> m.Name.Contains(searchTerm))
+            slotList.ItemsSource <- filteredList
+
+        let clearSearch (searchBox: TextBox) =
+            searchBox.Text <- String.Empty
+
+        headSlotSearchBox.TextChanged.Add(fun _ ->
+            filterGear (headSlotCombo, "Head", headSlotSearchBox.Text)
+        )
+
+        bodySlotSearchBox.TextChanged.Add(fun _ ->
+            filterGear (bodySlotCombo, "Body", bodySlotSearchBox.Text)
+        )
+
+        handSlotSearchBox.TextChanged.Add(fun _ ->
+            filterGear (handSlotCombo, "Hands", handSlotSearchBox.Text)
+        )
+
+        legsSlotSearchBox.TextChanged.Add(fun _ ->
+            filterGear (legsSlotCombo, "Legs", legsSlotSearchBox.Text)
+        )
+
+        feetSlotSearchBox.TextChanged.Add(fun _ ->
+            filterGear (feetSlotCombo, "Feet", feetSlotSearchBox.Text)
+        )
+
+        headSearchClearButton.Click.Add(fun _ ->
+            clearSearch headSlotSearchBox
+        )
+
+        bodySearchClearButton.Click.Add(fun _ ->
+            clearSearch bodySlotSearchBox
+        )
+
+        handSearchClearButton.Click.Add(fun _ ->
+            clearSearch handSlotSearchBox
+        )
+
+        legsSearchClearButton.Click.Add(fun _ ->
+            clearSearch legsSlotSearchBox
+        )
+
+        feetSearchClearButton.Click.Add(fun _ ->
+            clearSearch feetSlotSearchBox
+        )        
 
         setupGearSlot (headSlotCombo, headClearButton, headDye1Combo, headDye1ClearButton, headDye2Combo, headDye2ClearButton, EquipmentSlot.Head, "Head")
         setupGearSlot (bodySlotCombo, bodyClearButton, bodyDye1Combo, bodyDye1ClearButton, bodyDye2Combo, bodyDye2ClearButton, EquipmentSlot.Body, "Body")
@@ -842,18 +905,18 @@ type MainWindow () as this =
                         if currentEarList |> List.isEmpty |> not then do assignSelectedOrDefault currentEarList EquipmentSlot.Ear earSelector
                         if currentTailList |> List.isEmpty |> not then do assignSelectedOrDefault currentTailList EquipmentSlot.Tail tailSelector
 
-                        let reselectIfPopulated (combo: ComboBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
+                        let reselectIfPopulated (combo: ListBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
                         reselectIfPopulated headSlotCombo
                         reselectIfPopulated bodySlotCombo
                         reselectIfPopulated handSlotCombo
                         reselectIfPopulated legsSlotCombo
                         reselectIfPopulated feetSlotCombo
 
-                        let setDefaultGear (combo: ComboBox, category: string, nameFilter: string) =
+                        let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
                             if combo.SelectedIndex = -1 then
                                 let gear = allGearCache |> List.filter(fun g -> g.SecondaryCategory = category)
-                                match gear |> List.tryFindIndex(fun g -> g.Name.Contains(nameFilter)) with
-                                | Some idx -> combo.SelectedIndex <- idx
+                                match gear |> List.tryFind(fun g -> g.Name.Contains(nameFilter)) with
+                                | Some idx -> combo.SelectedItem <- idx
                                 | None -> ()
                         setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
                         setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
