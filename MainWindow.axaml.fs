@@ -317,11 +317,7 @@ type MainWindow () as this =
         )
     member private this.InitializeComponent() =
 #if DEBUG
-        this.AttachDevTools()
-        let screens = this.Screens.All |> Seq.toList
-        let targetScreen =
-            if screens.Length > 1 then screens.[0] else screens.Head
-        this.Position <- PixelPoint(targetScreen.Bounds.Center.X - 1433, targetScreen.Bounds.Center.Y - 796)
+        //this.AttachDevTools()
 #endif
         AvaloniaXamlLoader.Load(this)
 

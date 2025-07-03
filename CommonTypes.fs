@@ -345,7 +345,7 @@ type CrafterProfile = {
 type Config = {
     GamePath: string
     CrafterProfile: CrafterProfile option
-	PatreonID: string option
+    PatreonID: string option
 }
 
 type InputModel = {

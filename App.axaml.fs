@@ -30,7 +30,7 @@ type App() =
     member this.Shutdown() =
         this.Shutdown()
 
-	member this.loadConfig() : Config option =
+    member this.loadConfig() : Config option =
         if File.Exists(configPath) then
             try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
             with ex -> None
@@ -76,10 +76,8 @@ type App() =
 
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {
-             //=== Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
-
-            
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
+
             do! this.GetReleaseChannelURL()
             let finalURL =
                 match releaseChannelURL with

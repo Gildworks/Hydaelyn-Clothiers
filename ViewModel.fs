@@ -234,10 +234,8 @@ type SettingsViewModel ()  =
         [Job.CRP; Job.BSM; Job.ARM; Job.GSM; Job.LTW; Job.WVR; Job.ALC; Job.CUL]
         |> List.map createJobVm
         |> fun vms -> AvaloniaList<JobViewModel>(vms)
-
-    
-
-	member this.AuthorizePatreon() =
+        
+    member this.AuthorizePatreon() =
 
         let mutable isAuthenticating = false
         
@@ -311,7 +309,7 @@ type SettingsViewModel ()  =
         match this.loadConfig() with
         | Some config ->
             let newConfig =
-                { GamePath = config.GamePath; PatreonID = Some patreonId }
+                { GamePath = config.GamePath; CrafterProfile=config.CrafterProfile; PatreonID = Some patreonId }
             this.saveConfig(newConfig)
         | _ -> ()
 
@@ -350,7 +348,7 @@ type SettingsViewModel ()  =
         match this.loadConfig() with
         | Some config ->
             let newConfig =
-                { GamePath = config.GamePath; CrafterProfile = Some crafterProfile }
+                { GamePath = config.GamePath; CrafterProfile = Some crafterProfile; PatreonID = config.PatreonID }
             this.saveConfig(newConfig)
         | None -> ()
     
