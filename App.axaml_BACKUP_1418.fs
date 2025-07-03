@@ -27,10 +27,21 @@ type App() =
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
 
+<<<<<<< HEAD
     member this.Shutdown() =
         this.Shutdown()
+        
+    override this.OnFrameworkInitializationCompleted() =
+        let asyncUpdateApp = async {
+             //=== Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
 
-	member this.loadConfig() : Config option =
+            ////let mgr = UpdateManager(new GithubSource("https://github.com/Gildworks/Hydaelyn-Clothiers", String.Empty, true))
+            //let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
+            //if not (isNull newVer) then
+            //    do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
+            //    mgr.ApplyUpdatesAndRestart(newVer)
+=======
+    member this.loadConfig() : Config option =
         if File.Exists(configPath) then
             try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
             with ex -> None
@@ -76,7 +87,6 @@ type App() =
 
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {
-             //=== Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
 
             
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
@@ -95,8 +105,9 @@ type App() =
             if not (isNull newVer) then
                 do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
                 mgr.ApplyUpdatesAndRestart(newVer)
+>>>>>>> main
 
-            // === End Velopack Automatic Updates Section ===
+             //=== End Velopack Automatic Updates Section ===
 
             match this.ApplicationLifetime with
             | :? IClassicDesktopStyleApplicationLifetime as desktop ->

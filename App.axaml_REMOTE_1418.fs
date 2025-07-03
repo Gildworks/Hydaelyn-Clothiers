@@ -3,8 +3,6 @@ namespace fs_mdl_viewer
 open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
 open Avalonia.Markup.Xaml
-open Avalonia.Svg
-open Avalonia.Svg.Skia
 
 open System
 open System.IO
@@ -27,10 +25,7 @@ type App() =
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
 
-    member this.Shutdown() =
-        this.Shutdown()
-
-	member this.loadConfig() : Config option =
+    member this.loadConfig() : Config option =
         if File.Exists(configPath) then
             try JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath)) |> Some
             with ex -> None
@@ -76,7 +71,6 @@ type App() =
 
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {
-             //=== Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
 
             
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===

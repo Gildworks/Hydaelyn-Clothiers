@@ -1,11 +1,16 @@
 ﻿namespace fs_mdl_viewer
 
 open System
+open System.ComponentModel
 open System.Collections.ObjectModel
 open System.Linq
-open System.IO
 open System.Windows.Input
+open System.IO
+open System.Diagnostics
+open System.Net.Http
 open System.Text.Json
+open System.Web
+open System.Runtime.CompilerServices
 
 open ReactiveUI
 
@@ -231,6 +236,84 @@ type SettingsViewModel ()  =
         |> fun vms -> AvaloniaList<JobViewModel>(vms)
 
     
+
+	member this.AuthorizePatreon() =
+
+        let mutable isAuthenticating = false
+        
+        async {
+            try
+                try
+                    isAuthenticating <- true
+
+                    let clientId = "KJUu49q1cFtcRG5TUNIuXsBufdbrwnRnahkGvW2l5vaSBwEKAuv1_Ctj9oaaTIfB"
+                    let redirectUri = "https://www.hydaelynclothiers.com/confirm"
+                    let scopes = "identity"
+                    let sessionId = Guid.NewGuid().ToString()
+
+                    let authUrl =
+                        sprintf "https://www.patreon.com/oauth2/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&state=%s"
+                            clientId
+                            (HttpUtility.UrlEncode(redirectUri))
+                            scopes
+                            sessionId
+
+                    Process.Start(ProcessStartInfo(authUrl, UseShellExecute = true)) |> ignore
+                    //let! authCode = this.WaitForCallback()
+                    //let! accessToken = this.ExchangeCodeForToken(authCode, clientId)
+                    let! patreonId = this.PollForAuthResult(sessionId)
+                    printfn $"Fetched Patreon ID: {patreonId}"
+                    this.SavePatreonId(patreonId)
+
+                finally
+
+                    isAuthenticating <- false
+
+            with
+            | ex ->
+                printfn $"Error authorizing: {ex.Message}"
+
+        } |> Async.Start
+
+    member private this.PollForAuthResult(sessionId: string) =
+        async {
+            let rec poll attempts =
+                async {
+                    if attempts >= 30 then
+                        return failwith "Authorization timeout"
+                    else
+                        try
+                            use client = new HttpClient()
+                            let! response = client.GetAsync($"https://www.hydaelynclothiers.com/api/patreon-auth-status?sessionId={sessionId}") |> Async.AwaitTask
+                            printfn "Fetched reponse"
+
+                            if response.IsSuccessStatusCode then
+                                let! json = response.Content.ReadAsStringAsync() |> Async.AwaitTask
+                                let result = JsonSerializer.Deserialize<{| patreonId: string option |}>(json)
+
+                                match result.patreonId with
+                                | Some id -> return id
+                                | None ->
+                                    do! Async.Sleep(3000)
+                                    return! poll (attempts + 1)
+                            else
+                                do! Async.Sleep(3000)
+                                return! poll (attempts + 1)
+
+                        with
+                        | ex ->
+                            do! Async.Sleep(3000)
+                            return! poll (attempts + 1)
+                }
+            return! poll 0
+        }
+    member private this.SavePatreonId(patreonId: string) =
+        match this.loadConfig() with
+        | Some config ->
+            let newConfig =
+                { GamePath = config.GamePath; PatreonID = Some patreonId }
+            this.saveConfig(newConfig)
+        | _ -> ()
 
     member this.loadConfig() : Config option =
         if File.Exists(configPath) then
@@ -643,3 +726,4 @@ type VeldridWindowViewModel() as this =
     interface System.IDisposable with
         member this.Dispose() =
             this.DisposeGraphicsContext()
+

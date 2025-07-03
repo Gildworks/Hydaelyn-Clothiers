@@ -115,8 +115,10 @@
 		<Compile Include="ApplyFlags.fs" />
 		<Compile Include="TTModelLoader.fs" />
 		<Compile Include="ShaderUtils.fs" />		
+		
 		<Compile Include="MaterialInterpreter.fs" />		
 		<Compile Include="TextureUtils.fs" />
+		<!-- <Compile Include="MaterialHelper.fs"  -->
 		<None Include="shaders\empty.frag" />
 		<None Include="shaders\empty.vert" />
 		<None Include="shaders\fragment.frag" />
@@ -124,9 +126,11 @@
 		<Compile Include="ShaderBuilder.fs" />
 		<Compile Include="SharpToNumerics.fs" />
 		<Compile Include="MaterialLoader.fs" />
+		<!-- <Compile Include="ModelLoaderRedux.fs" /> -->
         <Compile Include="ModelLoader.fs" />		
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
+        <!--<Compile Include="CustomVeldridControl.fs" /> -->
 		<Compile Include="VeldridView.fs" />
 		<Compile Include="ViewModel.fs" />
         <Compile Include="MainWindow.axaml.fs" />
@@ -139,22 +143,26 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.1" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.1" />
+        <PackageReference Include="Avalonia" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
         <PackageReference Include="Avalonia.FuncUI.Elmish" Version="1.5.1" />
-        <PackageReference Include="Avalonia.Svg" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Svg.Skia" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.1" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.1" />
+		<PackageReference Include="Avalonia.Svg" Version="11.3.0" />
+		<PackageReference Include="Avalonia.Svg.Skia" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.1">
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.2">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>none</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Material.Icons.Avalonia" Version="2.4.1" />
+        <PackageReference Include="Lumina" Version="6.3.0" />
         <PackageReference Include="MessageBox.Avalonia" Version="3.2.0" />
-        <PackageReference Include="ReactiveUI" Version="20.3.1" />
-        <PackageReference Include="System.Drawing.Common" Version="9.0.6" />
+		<PackageReference Include="Material.Icons.Avalonia" Version="2.4.1" />
+        <PackageReference Include="ReactiveUI" Version="20.4.1" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.6" />
+        <PackageReference Include="System.Net.Http" Version="4.3.4" />
         <PackageReference Include="Veldrid" Version="4.9.0" />
         <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
         <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
@@ -170,6 +178,10 @@
 		<None Include="NotAssetCc.exe">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="FSharp.Core" Version="9.0.300" />
 	</ItemGroup>
 
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">

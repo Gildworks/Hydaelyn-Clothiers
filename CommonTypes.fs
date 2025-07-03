@@ -130,6 +130,8 @@ type paletteOptions =
     | UISkin = 16
     | UIHair = 17
 
+
+
 type LoadedTexture =
     {
         Usage                   : XivTexType
@@ -343,6 +345,7 @@ type CrafterProfile = {
 type Config = {
     GamePath: string
     CrafterProfile: CrafterProfile option
+	PatreonID: string option
 }
 
 type InputModel = {
