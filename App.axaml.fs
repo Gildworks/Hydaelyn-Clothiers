@@ -21,8 +21,8 @@ type App() =
 
     let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
 
-    let mutable releaseChannelURL: string option = None
-    let mutable userAccessToken: string option = None
+    let mutable releaseChannelURL: string = ""
+    let mutable userAccessToken: string = ""
 
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
@@ -36,7 +36,7 @@ type App() =
             with ex -> None
         else None
 
-    member this.GetLicenseInfo() : Async<string option * string option> =
+    member this.GetLicenseInfo() : Async<string * string> =
         async {
             try
                 use client = new HttpClient()
@@ -48,21 +48,20 @@ type App() =
                         | None -> None
                     | None -> None
                 if memberId.IsSome then
-                    let! response = client.GetAsync($"https://www.hydaelynclothiers.com/api/license-check?patreonId={memberId}") |> Async.AwaitTask
+                    let! response = client.GetAsync($"https://www.hydaelynclothiers.com/api/license-check?patreonId={memberId.Value}") |> Async.AwaitTask
 
                     if response.IsSuccessStatusCode then
                         let! json = response.Content.ReadAsStringAsync() |> Async.AwaitTask
-                        let result = JsonSerializer.Deserialize<{| releaseURL: string option; accessToken: string option |}>(json)
+                        let result = JsonSerializer.Deserialize<{| releaseURL: string; accessToken: string |}>(json)
 
-                        match result.accessToken with
-                        | Some token ->
-                            return result.releaseURL, result.accessToken
-                        | None -> return None, None
-                    else return None, None
-                else return None, None
+                        if String.IsNullOrWhiteSpace(result.accessToken) then
+                            return "", ""
+                        else return result.releaseURL, result.accessToken
+                    else return "", ""
+                else return "", ""
             with
             | ex ->
-                return None, None
+                return "", ""
         }
 
     member this.GetReleaseChannelURL() =
@@ -80,13 +79,15 @@ type App() =
 
             do! this.GetReleaseChannelURL()
             let finalURL =
-                match releaseChannelURL with
-                | Some url -> url
-                | None -> "https://github.com/Gildworks/Hydaelyn-Clothiers"
+                if String.IsNullOrWhiteSpace(releaseChannelURL) then
+                    "https://github.com/Gildworks/Hydaelyn-Clothiers"
+                else
+                    releaseChannelURL
             let accToken =
-                match userAccessToken with
-                | Some token -> token
-                | None -> String.Empty
+                if String.IsNullOrWhiteSpace(userAccessToken) then
+                    String.Empty
+                else
+                    userAccessToken
 
             let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
             let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
