@@ -42,6 +42,8 @@
 				<MenuItem Header="_Save Glamour" />
 				<MenuItem Header="Save Current _As Default" />
 				<Separator />
+				<MenuItem Header="Export Glamour to TeamCraft" Command="{Binding ExportCommand}" />
+				<Separator />
 				<MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
 			</MenuItem>
 			<MenuItem Header="_Edit">

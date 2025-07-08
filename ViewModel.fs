@@ -692,6 +692,9 @@ type VeldridWindowViewModel() as this =
             )
         )
 
+    member this.ExportCommand =
+        ()
+
     member val ExitCommand =
         ReactiveCommand.Create(fun () ->
             match Application.Current.ApplicationLifetime with

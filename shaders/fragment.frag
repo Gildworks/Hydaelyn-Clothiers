@@ -27,7 +27,7 @@ layout(location = 0) out vec4 fsout_Color;
 
 // Let's define LIGHT_VECTOR_TO_SOURCE as the vector from surface point TO the light source
 // This is what you directly used as 'L' previously.
-const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(10.5, 10.8, -10.6)); // Your "perfect" L for projection
+const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(vec3(0.5, -1.0, 0.6)); // Your "perfect" L for projection
                                                                   // For lighting, you might want to adjust this.
                                                                   // e.g., for a light more from the front:
                                                                   // const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(vec3(0.3, 0.7, -0.5));
@@ -43,6 +43,7 @@ void main() {
     // 1. Sample Textures (GPU converts sRGB textures to linear here)
     vec4 diffuseSample = texture(sampler2D(tex_Diffuse, SharedSampler), fs_UV_VS);
     vec3 specularSample = texture(sampler2D(tex_SpecularMap, SharedSampler), fs_UV_VS).rgb;
+    vec4 specularAlpha = texture(sampler2D(tex_SpecularMap, SharedSampler), fs_UV_VS);
     vec3 emissiveSample = texture(sampler2D(tex_EmissiveMap, SharedSampler), fs_UV_VS).rgb;
     vec3 N_tex_sampled = texture(sampler2D(tex_NormalMap, SharedSampler), fs_UV_VS).rgb;
 
@@ -77,7 +78,7 @@ void main() {
     // You might need to ensure B_passed is orthogonal to T_interpolated and N_geometric,
     // or reconcile it with B_calculated (e.g., dot(cross(N_geometric, T_interpolated), B_passed) > 0 ? B_passed : -B_passed).
     // For now, let's use the calculated B:
-    vec3 B = normalize(fs_Bitangent_VS);
+    vec3 B = normalize(-fs_Bitangent_VS);
 
     // Create TBN matrix (transforms from tangent space to view space)
     mat3 TBN = mat3(T_interpolated, B, N_geometric);
@@ -86,7 +87,7 @@ void main() {
     vec3 N = normalize(TBN * tangentSpaceNormal); // THIS IS THE FINAL PER-PIXEL NORMAL
 
     // 3. Lighting Calculations (in View Space)
-    vec3 V = normalize(-fs_Position_VS); // View vector
+    vec3 V = normalize(fs_Position_VS); // View vector
     vec3 L = LIGHT_VECTOR_TO_SOURCE;     // Vector from surface point TO light source
 
     // Diffuse

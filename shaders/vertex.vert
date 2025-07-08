@@ -38,7 +38,7 @@ void main() {
     mat3 viewModelMatrix3x3 = mat3(u_WorldView);
     fs_Normal_VS = normalize(viewModelMatrix3x3 * in_Normal_OS);
     fs_Tangent_VS = normalize(viewModelMatrix3x3 * in_Tangent_OS);
-    // fs_BiTangent_VS = normalize(viewModelMatrix3x3 * in_BiTangent_OS); // If passing bitangent
+    fs_BiTangent_VS = normalize(viewModelMatrix3x3 * in_BiTangent_OS); // If passing bitangent
 
     // Pass through color and UV
     fs_Color_VS = in_Color;
