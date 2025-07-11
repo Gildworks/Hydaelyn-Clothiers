@@ -45,7 +45,7 @@ type VeldridView() as this =
     let mutable modelMap : Map<EquipmentSlot, RenderModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
     let mutable skeletalResources: SkeletalRenderResources option = None
-    let mutable currentRace: XivRace option = Some XivRace.Hyur_Midlander_Male
+    let mutable currentRace: XivRace option = Some Unchecked.defaultof<XivRace>
     let mutable characterModel: SkinnedCharacterModel option = None
 
     let mutable gearItem        : IItemModel option             = None
@@ -152,7 +152,7 @@ type VeldridView() as this =
             let aspect = w / h
             match skeletalResources with
             | Some resources ->
-                SkeletalRenderer.renderSkeletalCharacter gd cmdList resources camera aspect
+                SkeletalRenderer.debugRenderSkeletalCharacter gd cmdList resources camera aspect
             | None -> ()
 
         cmdList.End()
@@ -265,7 +265,7 @@ type VeldridView() as this =
                     }
             
                 do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
-                ModelModifiers.FixUpSkinReferences(ttModel, race)
+                do ModelModifiers.FixUpSkinReferences(ttModel, race)
             
                 printfn $"TTModel loaded with {ttModel.MeshGroups.Count} mesh groups and {ttModel.Bones.Count} bones"
             
@@ -287,19 +287,24 @@ type VeldridView() as this =
             try
                 match skeletalResources with
                 | Some resources ->
-                    let! newCharacterModel = SkeletalRenderer.loadCharacterModel gd.ResourceFactory gd ttModelMap race resources.TextureLayout
+                    // Load character model and material texture info
+                    let! (newCharacterModel, materialTextureInfos) = 
+                        SkeletalRenderer.loadCharacterModel gd.ResourceFactory gd ttModelMap race resources.TextureLayout
 
+                    // Dispose old model
                     match characterModel with
                     | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
                     | None -> ()
-                    printfn "Updating resources"
+
+                    printfn "Updating resources with texture arrays"
                     let opDesc =
                         match sc with
                         | Some swapchain -> swapchain.Framebuffer.OutputDescription
                         | None -> gd.MainSwapchain.Framebuffer.OutputDescription
-                    printfn $"Output Description: {opDesc.ToString()}"
-                    let updatedResources = SkeletalRenderer.updateWithCharacterModel gd resources newCharacterModel opDesc
-                    printfn "Resources updated"
+
+                    // CHANGED: Now pass materialTextureInfos to updateWithCharacterModel
+                    let updatedResources = SkeletalRenderer.debugUpdateWithCharacterModel gd resources newCharacterModel materialTextureInfos opDesc
+                    printfn "Resources updated successfully"
                     skeletalResources <- Some updatedResources
                     characterModel <- Some newCharacterModel
 

@@ -9,7 +9,7 @@ open xivModdingFramework.Models.FileTypes
 
 open Shared
 
-let convertToSkinnedVertex (ttVertex: TTVertex) (boneNameMap: Map<string, int>) (meshBones: string list) : SkinnedVertex =
+let convertToSkinnedVertex (ttVertex: TTVertex) (boneNameMap: Map<string, int>) (meshBones: string list) (materialIndex: int) : SkinnedVertex =
     // Convert bone IDs from mesh-local to global skeleton indices
     let convertBoneIndex (meshLocalIndex: byte) =
         if int meshLocalIndex < meshBones.Length then
@@ -54,6 +54,7 @@ let convertToSkinnedVertex (ttVertex: TTVertex) (boneNameMap: Map<string, int>) 
             normalizedWeights.[2],
             normalizedWeights.[3]
         )
+        MaterialIndex = float32 materialIndex  // NEW: Set the material index
     }
 
 let buildSkeletonFromTTModel (ttModel: TTModel) (race: xivModdingFramework.General.Enums.XivRace) : Async<CharacterSkeleton> =
@@ -252,12 +253,11 @@ let combineModelsToSkinnedMesh
     (skeleton: CharacterSkeleton)
     : SkinnedMesh =
 
-    printfn $"Combining {ttModels.Length} models into skinned mesh"
+    printfn $"Combining {ttModels.Length} models into skinned mesh with material indices"
     printfn $"Skeleton has {skeleton.Bones.Length} bones"
 
     let allVertices = ResizeArray<SkinnedVertex>()
     let allIndices = ResizeArray<uint16>()
-    let materialIndices = ResizeArray<int>()
 
     let mutable currentVertexOffset = 0us
     let mutable materialIndex = 0
@@ -265,48 +265,25 @@ let combineModelsToSkinnedMesh
     for (slot, ttModel) in ttModels do
         printfn $"Processing slot {slot} with {ttModel.MeshGroups.Count} mesh groups"
         
-        if isNull ttModel.MeshGroups then
-            printfn $"ERROR: MeshGroups is null for slot {slot}"
-            failwith $"MeshGroups is null for slot {slot}"
-        
         for meshGroup in ttModel.MeshGroups do
-            printfn $"  Processing mesh group with {meshGroup.Parts.Count} parts and {meshGroup.Bones.Count} bones"
-            
-            if isNull meshGroup.Parts then
-                printfn $"ERROR: Parts is null for mesh group"
-                failwith "Parts is null for mesh group"
-            
-            if isNull meshGroup.Bones then
-                printfn $"ERROR: Bones is null for mesh group"
-                failwith "Bones is null for mesh group"
+            printfn $"  Processing mesh group with {meshGroup.Parts.Count} parts (material: {meshGroup.Material})"
             
             for part in meshGroup.Parts do
-                printfn $"    Processing part with {part.Vertices.Count} vertices and {part.TriangleIndices.Count} indices"
+                printfn $"    Processing part with {part.Vertices.Count} vertices and {part.TriangleIndices.Count} indices (material index: {materialIndex})"
                 
-                if isNull part.Vertices then
-                    printfn $"ERROR: Vertices is null for part"
-                    failwith "Vertices is null for part"
-                
-                if isNull part.TriangleIndices then
-                    printfn $"ERROR: TriangleIndices is null for part"
-                    failwith "TriangleIndices is null for part"
-                
-                // Convert vertices
+                // Convert vertices WITH material index
                 let meshBonesList = meshGroup.Bones |> Seq.toList
-                printfn $"    Converting vertices with {meshBonesList.Length} mesh bones"
-                
                 let skinnedVerts =
                     part.Vertices
                     |> Seq.mapi (fun i ttVertex ->
                         try
-                            convertToSkinnedVertex ttVertex skeleton.BoneNameToIndex meshBonesList
+                            convertToSkinnedVertex ttVertex skeleton.BoneNameToIndex meshBonesList materialIndex
                         with ex ->
                             printfn $"ERROR converting vertex {i}: {ex.Message}"
                             reraise()
                     )
                     |> Array.ofSeq
 
-                printfn $"    Converted {skinnedVerts.Length} vertices"
                 allVertices.AddRange(skinnedVerts)
 
                 // Convert indices with offset
@@ -317,22 +294,18 @@ let combineModelsToSkinnedMesh
 
                 allIndices.AddRange(offsetIndices)
 
-                // Track material for each triangle
-                let triangleCount = offsetIndices.Length / 3
-                for _ in 0 .. triangleCount - 1 do
-                    materialIndices.Add(materialIndex)
-
                 currentVertexOffset <- currentVertexOffset + uint16 skinnedVerts.Length
-            materialIndex <- materialIndex + 1
+                materialIndex <- materialIndex + 1  // Each part gets its own material index
 
     // Create GPU buffers
     let vertices = allVertices.ToArray()
     let indices = allIndices.ToArray()
     
     printfn $"Creating GPU buffers for {vertices.Length} vertices and {indices.Length} indices"
+    printfn $"Total materials used: {materialIndex}"
 
     let vertexBuffer = factory.CreateBuffer(
-        BufferDescription(uint32 (vertices.Length * sizeof<SkinnedVertex>), BufferUsage.VertexBuffer)
+        BufferDescription(uint32 (vertices.Length * SkinnedVertex.SizeInBytes), BufferUsage.VertexBuffer)
     )
     let indexBuffer = factory.CreateBuffer(
         BufferDescription(uint32 (indices.Length * sizeof<uint16>), BufferUsage.IndexBuffer)
@@ -348,5 +321,91 @@ let combineModelsToSkinnedMesh
         Indices = indices
         VertexBuffer = vertexBuffer
         IndexBuffer = indexBuffer
-        MaterialIndices = materialIndices.ToArray()
     }
+
+let debugCombineModelsToSkinnedMesh
+    (factory: ResourceFactory)
+    (gd: GraphicsDevice)
+    (ttModels: (EquipmentSlot * TTModel) array)
+    (skeleton: CharacterSkeleton)
+    : SkinnedMesh =
+
+    printfn "=== DEBUG: Starting combineModelsToSkinnedMesh ==="
+    printfn $"DEBUG: SkinnedVertex.SizeInBytes = {SkinnedVertex.SizeInBytes}"
+    
+    let allVertices = ResizeArray<SkinnedVertex>()
+    let allIndices = ResizeArray<uint16>()
+
+    let mutable currentVertexOffset = 0us
+    let mutable materialIndex = 0
+
+    for (slot, ttModel) in ttModels do
+        printfn $"DEBUG: Processing slot {slot} with {ttModel.MeshGroups.Count} mesh groups"
+        
+        for meshGroup in ttModel.MeshGroups do
+            for part in meshGroup.Parts do
+                printfn $"DEBUG: Processing part with {part.Vertices.Count} vertices (material index: {materialIndex})"
+                
+                // Convert vertices WITH material index
+                let meshBonesList = meshGroup.Bones |> Seq.toList
+                let skinnedVerts =
+                    part.Vertices
+                    |> Seq.mapi (fun i ttVertex ->
+                        try
+                            convertToSkinnedVertex ttVertex skeleton.BoneNameToIndex meshBonesList materialIndex
+                        with ex ->
+                            printfn $"ERROR converting vertex {i}: {ex.Message}"
+                            reraise()
+                    )
+                    |> Array.ofSeq
+
+                allVertices.AddRange(skinnedVerts)
+
+                // Convert indices with offset
+                let offsetIndices =
+                    part.TriangleIndices
+                    |> Seq.map (fun i -> uint16 i + currentVertexOffset)
+                    |> Array.ofSeq
+
+                allIndices.AddRange(offsetIndices)
+
+                currentVertexOffset <- currentVertexOffset + uint16 skinnedVerts.Length
+                materialIndex <- materialIndex + 1
+
+    // Create GPU buffers
+    let vertices = allVertices.ToArray()
+    let indices = allIndices.ToArray()
+    
+    printfn $"DEBUG: Final vertex count: {vertices.Length}"
+    printfn $"DEBUG: Final index count: {indices.Length}"
+    printfn $"DEBUG: Vertex buffer size will be: {vertices.Length * SkinnedVertex.SizeInBytes} bytes"
+    printfn $"DEBUG: Index buffer size will be: {indices.Length * sizeof<uint16>} bytes"
+
+    try
+        let vertexBuffer = factory.CreateBuffer(
+            BufferDescription(uint32 (vertices.Length * SkinnedVertex.SizeInBytes), BufferUsage.VertexBuffer)
+        )
+        printfn "DEBUG: Vertex buffer created successfully"
+        
+        let indexBuffer = factory.CreateBuffer(
+            BufferDescription(uint32 (indices.Length * sizeof<uint16>), BufferUsage.IndexBuffer)
+        )
+        printfn "DEBUG: Index buffer created successfully"
+
+        gd.UpdateBuffer(vertexBuffer, 0u, vertices)
+        printfn "DEBUG: Vertex buffer updated successfully"
+        
+        gd.UpdateBuffer(indexBuffer, 0u, indices)
+        printfn "DEBUG: Index buffer updated successfully"
+        
+        printfn "=== DEBUG: combineModelsToSkinnedMesh completed successfully ==="
+
+        {
+            Vertices = vertices
+            Indices = indices
+            VertexBuffer = vertexBuffer
+            IndexBuffer = indexBuffer
+        }
+    with ex ->
+        printfn $"DEBUG: Buffer creation/update failed: {ex.Message}"
+        reraise()

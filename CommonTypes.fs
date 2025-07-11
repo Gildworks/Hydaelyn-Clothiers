@@ -554,7 +554,19 @@ type SkinnedVertex = {
     Bitangent: Vector3
     BoneIndices: Vector4
     BoneWeights: Vector4
-}
+    MaterialIndex: float32  // NEW: Material index for GPU material selection
+} with
+    static member SizeInBytes = 
+        sizeof<Vector3> +     // Position (12 bytes)
+        sizeof<Vector4> +     // Color (16 bytes)
+        sizeof<Vector2> +     // UV (8 bytes)
+        sizeof<Vector3> +     // Normal (12 bytes)
+        sizeof<Vector3> +     // Tangent (12 bytes)
+        sizeof<Vector3> +     // Bitangent (12 bytes)
+        sizeof<Vector4> +     // BoneIndices (16 bytes)
+        sizeof<Vector4> +     // BoneWeights (16 bytes)
+        sizeof<float32>       // MaterialIndex (4 bytes)
+                              // Total: 112 bytes per vertex
 
 type BoneTransform = {
     LocalMatrix: Matrix4x4
@@ -577,12 +589,17 @@ type CharacterSkeleton = {
     RootBoneIndices: int list
 }
 
+type MaterialRange = {
+    MaterialIndex: int
+    StartIndex: int
+    IndexCount: int
+}
+
 type SkinnedMesh = {
     Vertices: SkinnedVertex array
     Indices: uint16 array
     VertexBuffer: DeviceBuffer
     IndexBuffer: DeviceBuffer
-    MaterialIndices: int array
 }
 
 type SkinnedCharacterModel = {
@@ -591,18 +608,73 @@ type SkinnedCharacterModel = {
     Materials: PreparedMaterial array
 }
 
+[<System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)>]
+[<Struct>]  // Make it a struct
+type MaterialData = {
+    DiffuseIndex: int32
+    NormalIndex: int32  
+    SpecularIndex: int32
+    EmissiveIndex: int32
+    AlphaIndex: int32
+    RoughnessIndex: int32
+    MetalnessIndex: int32
+    OcclusionIndex: int32
+    SubsurfaceIndex: int32
+    Padding1: int32  // Individual padding fields instead of tuple
+    Padding2: int32
+    Padding3: int32
+    Padding4: int32
+    Padding5: int32
+    Padding6: int32
+    Padding7: int32
+} with
+    static member SizeInBytes = 64  // 16 * 4 bytes, GPU-friendly alignment
+
 type SkeletalRenderResources = {
+    // Existing bone and transform resources
     BoneMatricesBuffer: DeviceBuffer
     BoneMatricesLayout: ResourceLayout
     BoneMatricesSet: ResourceSet
-    SkeletalPipeline: Pipeline option
-
     MVPBuffer: DeviceBuffer
     MVPLayout: ResourceLayout
     MVPSet: ResourceSet
-    TextureLayout: ResourceLayout
-
+    
+    // NEW: Material system resources
+    MaterialBuffer: DeviceBuffer
+    MaterialLayout: ResourceLayout
+    MaterialSet: ResourceSet
+    
+    // NEW: Texture array resources
+    DiffuseTextureArray: Texture
+    NormalTextureArray: Texture
+    SpecularTextureArray: Texture
+    EmissiveTextureArray: Texture
+    AlphaTextureArray: Texture
+    RoughnessTextureArray: Texture
+    MetalnessTextureArray: Texture
+    OcclusionTextureArray: Texture
+    SubsurfaceTextureArray: Texture
+    TextureArrayLayout: ResourceLayout
+    TextureArraySet: ResourceSet
+    
+    // Existing fields
+    SkeletalPipeline: Pipeline option
+    TextureLayout: ResourceLayout  // Keep for compatibility, but we'll use TextureArrayLayout
     CharacterModel: SkinnedCharacterModel option
-
     BoneTransforms: Matrix4x4 array
+}
+
+type MaterialTextureInfo = {
+    MaterialIndex: int
+    DiffuseData: byte array
+    NormalData: byte array
+    SpecularData: byte array
+    EmissiveData: byte array
+    AlphaData: byte array
+    RoughnessData: byte array
+    MetalnessData: byte array
+    OcclusionData: byte array
+    SubsurfaceData: byte array
+    Width: int
+    Height: int
 }

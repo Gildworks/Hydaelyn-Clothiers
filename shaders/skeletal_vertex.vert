@@ -1,33 +1,35 @@
 #version 450
 
-// Uniforms - set 0: Transform matrices (matching your existing setup)
+// Uniforms - set 0: Transform matrices
 layout(set = 0, binding = 0) uniform TransformsBuffer {
-    mat4 u_WorldViewProjection; // For gl_Position
-    mat4 u_WorldView;           // For transforming positions, normals, tangents to View Space
+    mat4 u_WorldViewProjection;
+    mat4 u_WorldView;
 };
 
 // Uniforms - set 1: Bone matrices for skeletal animation
 layout(set = 1, binding = 0) uniform BoneMatrices {
-    mat4 u_BoneMatrices[256];   // Up to 256 bones
+    mat4 u_BoneMatrices[256];
 };
 
-// Input from Vertex Buffer (updated with bone data)
-layout(location = 0) in vec3 in_Position_OS;    // Object Space (Model Space)
+// Input from Vertex Buffer (UPDATED with MaterialIndex)
+layout(location = 0) in vec3 in_Position_OS;
 layout(location = 1) in vec4 in_Color;
 layout(location = 2) in vec2 in_UV;
-layout(location = 3) in vec3 in_Normal_OS;      // Object Space
-layout(location = 4) in vec3 in_Tangent_OS;     // Object Space
-layout(location = 5) in vec3 in_BiTangent_OS;   // Object Space
-layout(location = 6) in vec4 in_BoneIndices;    // Bone indices (up to 4 bones per vertex)
-layout(location = 7) in vec4 in_BoneWeights;    // Bone weights (normalized 0-1)
+layout(location = 3) in vec3 in_Normal_OS;
+layout(location = 4) in vec3 in_Tangent_OS;
+layout(location = 5) in vec3 in_BiTangent_OS;
+layout(location = 6) in vec4 in_BoneIndices;
+layout(location = 7) in vec4 in_BoneWeights;
+layout(location = 8) in float in_MaterialIndex;  // NEW: Material index
 
-// Output to Fragment Shader (same as your existing setup)
-layout(location = 0) out vec3 fs_Position_VS;   // View Space
+// Output to Fragment Shader (UPDATED with MaterialIndex)
+layout(location = 0) out vec3 fs_Position_VS;
 layout(location = 1) out vec4 fs_Color_VS;
 layout(location = 2) out vec2 fs_UV_VS;
-layout(location = 3) out vec3 fs_Normal_VS;     // View Space
-layout(location = 4) out vec3 fs_Tangent_VS;    // View Space
-layout(location = 5) out vec3 fs_BiTangent_VS;  // View Space
+layout(location = 3) out vec3 fs_Normal_VS;
+layout(location = 4) out vec3 fs_Tangent_VS;
+layout(location = 5) out vec3 fs_BiTangent_VS;
+layout(location = 6) out float fs_MaterialIndex;  // NEW: Pass material index to fragment shader
 
 void main() {
     // === SKELETAL ANIMATION CALCULATIONS ===
@@ -73,7 +75,8 @@ void main() {
     fs_Tangent_VS = normalize(viewModelMatrix3x3 * skinnedTangent);
     fs_BiTangent_VS = normalize(viewModelMatrix3x3 * skinnedBitangent);
 
-    // Pass through color and UV
+    // Pass through color, UV, and material index
     fs_Color_VS = in_Color;
     fs_UV_VS = in_UV;
+    fs_MaterialIndex = in_MaterialIndex;  // NEW: Pass material index to fragment shader
 }
