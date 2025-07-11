@@ -40,10 +40,13 @@ type VeldridView() as this =
 
     // === Model Resources ===
     let allSlots = [ Head; Body; Hands; Legs; Feet ]
-    let mutable ttModelMap : Map<EquipmentSlot, InputModel> = Map.empty
+    let mutable ttModelMap : Map<EquipmentSlot, TTModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
     let mutable modelMap : Map<EquipmentSlot, RenderModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
+    let mutable skeletalResources: SkeletalRenderResources option = None
+    let mutable currentRace: XivRace option = Some XivRace.Hyur_Midlander_Male
+    let mutable characterModel: SkinnedCharacterModel option = None
 
     let mutable gearItem        : IItemModel option             = None
     let mutable modelRace       : XivRace option                = None
@@ -57,6 +60,8 @@ type VeldridView() as this =
     let mutable mvpSet          : ResourceSet option            = None
     let mutable texLayout       : ResourceLayout option         = None
 
+    let mutable sc              : Swapchain option              = None
+
     let mutable device          : GraphicsDevice option         = None
     let mutable models          : RenderModel list              = []
 
@@ -64,7 +69,7 @@ type VeldridView() as this =
     let mutable emptyMVPBuffer  : DeviceBuffer option           = None
     let mutable emptyMVPSet     : ResourceSet option            = None
 
-    let disposeQueue = System.Collections.Generic.Queue<RenderModel * int>()
+    let disposeQueue = System.Collections.Generic.Queue<SkinnedCharacterModel * int>()
 
     // === Camera Resources ===
     let mutable camera          : CameraController              = CameraController()
@@ -89,7 +94,10 @@ type VeldridView() as this =
         loop ()
     )
 
-    member this.ModelCount = models.Length
+    member this.ModelCount =
+        match characterModel with
+        | Some model -> 1
+        | None -> 0
 
     override this.Prepare (gd: GraphicsDevice): unit = 
         base.Prepare(gd: GraphicsDevice)
@@ -107,8 +115,23 @@ type VeldridView() as this =
         mvpLayout <- Some layout
         mvpSet    <- Some set
 
-    override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain): unit = 
+        let textureLayout =
+                gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(
+                    ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_NormalMap", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_SpecularMap", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_EmissiveMap", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_Alpha", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_Roughness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_Metalness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                    ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
+                ))
+        skeletalResources <- Some (SkeletalRenderer.createSkeletalResources gd textureLayout)
 
+    override this.RenderFrame (gd: GraphicsDevice, cmdList: CommandList, swapchain: Swapchain): unit = 
+        if sc.IsNone then sc <- Some swapchain
 
         if isResizing then () else       
 
@@ -120,100 +143,34 @@ type VeldridView() as this =
         let w = float32 fb.Width
         let h = float32 fb.Height
 
-        if pipeline.IsNone && texLayout.IsSome && not assignModel then
-            let vertexLayout = VertexLayoutDescription(
-                [|
-                    VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
-                    VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-                    VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Bitangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                |]
-            )
-            let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
-            let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
-            let blendState = BlendStateDescription(
-                RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
-                BlendAttachmentDescription(
-                    true,
-                    BlendFactor.SourceAlpha,
-                    BlendFactor.InverseSourceAlpha,
-                    BlendFunction.Add,
-                    BlendFactor.One,
-                    BlendFactor.InverseSourceAlpha,
-                    BlendFunction.Add
-                )
-            )
-            let pipelineDesc = GraphicsPipelineDescription(
-                blendState,
-                DepthStencilStateDescription(
-                    depthTestEnabled = true,
-                    depthWriteEnabled = true,
-                    comparisonKind = ComparisonKind.LessEqual
-                ),
-                RasterizerStateDescription(
-                    cullMode = FaceCullMode.Front,
-                    fillMode = PolygonFillMode.Solid,
-                    frontFace = FrontFace.Clockwise,
-                    depthClipEnabled = true,
-                    scissorTestEnabled = true
-                ),
-                PrimitiveTopology.TriangleList,
-                shaderSet,
-                [| mvpLayout.Value; texLayout.Value|],
-                fb.OutputDescription
-            )
-            let pipe = gd.ResourceFactory.CreateGraphicsPipeline(pipelineDesc)
-            pipeline <- Some pipe
+        cmdList.Begin()
+        cmdList.SetFramebuffer(fb)
+        cmdList.ClearColorTarget(0u, RgbaFloat.Grey)
+        cmdList.ClearDepthStencil(1.0f)
 
         if w > 0.0f && h > 0.0f then
             let aspect = w / h
-            let view = camera.GetViewMatrix()
-            let proj = camera.GetProjectionMatrix(aspect)
-            let modelMatrix = Matrix4x4.CreateScale(-2.5f, 2.5f, 2.5f)
-            
-            let worldViewMatrix = modelMatrix * view
-            let worldViewProjectionMatrix = worldViewMatrix * proj
+            match skeletalResources with
+            | Some resources ->
+                SkeletalRenderer.renderSkeletalCharacter gd cmdList resources camera aspect
+            | None -> ()
 
-            let transformsData = [| worldViewProjectionMatrix; worldViewMatrix |]
+        cmdList.End()
+        gd.SubmitCommands(cmdList)
+        gd.SwapBuffers(swapchain)
 
-            cmdList.Begin()
-            cmdList.SetFramebuffer(fb)
-            cmdList.ClearColorTarget(0u, RgbaFloat.Grey)
-            cmdList.ClearDepthStencil(1.0f)
+        if not firstRender then firstRender <- true
 
-            let visibleModels = modelMap |> Map.values |> Seq.toList
-
-            if visibleModels.IsEmpty then
-                if pipeline.IsNone then
-                    this.CreateEmptyPipeline gd swapchain.Framebuffer.OutputDescription
-                cmdList.SetPipeline(emptyPipeline.Value)
-                cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
+        let mutable count = disposeQueue.Count
+        for _ in 0 .. count - 1 do
+            let model, framesLeft = disposeQueue.Dequeue()
+            if framesLeft <= 0 then
+                model.UnifiedMesh.VertexBuffer.Dispose()
+                model.UnifiedMesh.IndexBuffer.Dispose()
+                for material in model.Materials do
+                    material.Dispose()
             else
-                for model in visibleModels do
-                    for mesh in model.Meshes do
-                        gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
-                        cmdList.SetPipeline(pipeline.Value)
-                        cmdList.SetGraphicsResourceSet(0u, mvpSet.Value)
-                        cmdList.SetGraphicsResourceSet(1u, mesh.Material.ResourceSet)
-                        cmdList.SetVertexBuffer(0u, mesh.VertexBuffer)
-                        cmdList.SetIndexBuffer(mesh.IndexBuffer, IndexFormat.UInt16)
-                        cmdList.DrawIndexed(uint32 mesh.IndexCount, 1u, 0u, 0, 0u)
-
-            cmdList.End()
-            gd.SubmitCommands(cmdList)
-            gd.SwapBuffers(swapchain)
-
-            if not firstRender then firstRender <- true
-
-            let mutable count = disposeQueue.Count
-            for _ in 0 .. count - 1 do
-                let model, framesLeft = disposeQueue.Dequeue()
-                if framesLeft <= 0 then
-                    model.Dispose()
-                else
-                    disposeQueue.Enqueue((model, framesLeft - 1))
+                disposeQueue.Enqueue((model, framesLeft - 1))
 
     override this.Dispose (gd: GraphicsDevice): unit =
         pipeline    |> Option.iter (fun p -> p.Dispose())
@@ -225,24 +182,13 @@ type VeldridView() as this =
     member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
         async {
             let tx = ModTransaction.BeginReadonlyTransaction()
-            let eqp = new Eqp()       
-
-            let textureLayout =
-                gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(
-                    ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Normal", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Specular", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Emissive", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Alpha", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Roughness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Metalness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
-                ))
+            let eqp = new Eqp()
 
             try
+                printfn $"Loading gear for slot {slot}: {item.Name}"
+            
                 let! ttModel =
+                    // ... keep your existing ttModel loading logic ...
                     let loadModel (item: IItemModel) (race: XivRace) =
                         task {
                             let! model = Mdl.GetTTModel(item, race)
@@ -291,18 +237,15 @@ type VeldridView() as this =
                                     | EquipmentSlot.Legs -> "dwn"
                                     | EquipmentSlot.Feet -> "sho"
                                     | _ -> ""
-                            
-                            
+                        
                                 async {
                                     let! eqdp = eqp.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
                                     return! tryResolveRace searchSlot races race eqdp
                                 }
-                        
+                    
                             let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
                             let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
-                        
-                        
-
+                    
                             let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
                                 async {
                                     match races with
@@ -314,39 +257,58 @@ type VeldridView() as this =
                                         with ex ->
                                             return! racialFallbacks item rest race
                                 }
-
-                        
+                    
                             try
                                 return! loadModel item race |> Async.AwaitTask
                             with _ ->
-                            
                                 return! racialFallbacks item priorityList resolvedRace
                     }
+            
                 do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
                 ModelModifiers.FixUpSkinReferences(ttModel, race)
-                ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
-                let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
-                ttModelMap <- adjustedModels
-                for model in Map.toSeq adjustedModels do
-                    let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2 adjustedModels[slot].Colors
-                    let! renderModel =
-                        async{
-                            try
-                                let fixedModel = adjustedModels[slot].Model
-                                return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
-                            with ex ->
-                                return raise ex 
-                        }
-                    match modelMap.TryFind(slot) with
-                    | Some oldModel when not (obj.ReferenceEquals(oldModel, renderModel)) -> disposeQueue.Enqueue((oldModel, 5))
-                    | None -> ()
-                    | _ -> ()
-
-                    modelMap <- modelMap.Add(slot, renderModel)
-                texLayout <- Some textureLayout
-            with ex ->
-                return ()
             
+                printfn $"TTModel loaded with {ttModel.MeshGroups.Count} mesh groups and {ttModel.Bones.Count} bones"
+            
+                ttModelMap <- ttModelMap.Add(slot, ttModel)
+                currentRace <- Some race
+            
+                if ttModelMap.Count > 0 then
+                    printfn $"Rebuilding character model with {ttModelMap.Count} equipment pieces for {race}"
+                    do! this.RebuildCharacterModel(gd, race)
+                
+            with ex ->
+                printfn $"Error in AssignGear: {ex.Message}"
+                printfn $"Stack trace: {ex.StackTrace}"
+                return ()
+        }
+
+    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace) : Async<unit> =
+        async {
+            try
+                match skeletalResources with
+                | Some resources ->
+                    let! newCharacterModel = SkeletalRenderer.loadCharacterModel gd.ResourceFactory gd ttModelMap race resources.TextureLayout
+
+                    match characterModel with
+                    | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
+                    | None -> ()
+                    printfn "Updating resources"
+                    let opDesc =
+                        match sc with
+                        | Some swapchain -> swapchain.Framebuffer.OutputDescription
+                        | None -> gd.MainSwapchain.Framebuffer.OutputDescription
+                    printfn $"Output Description: {opDesc.ToString()}"
+                    let updatedResources = SkeletalRenderer.updateWithCharacterModel gd resources newCharacterModel opDesc
+                    printfn "Resources updated"
+                    skeletalResources <- Some updatedResources
+                    characterModel <- Some newCharacterModel
+
+                | None ->
+                    printfn "Skeletal resources not initialized."
+
+            with ex ->
+                printfn $"Error rebuilding character model: {ex.Message}"
+                printfn $"Stack trace: {ex.StackTrace}"
         }
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors) : Async<unit> =

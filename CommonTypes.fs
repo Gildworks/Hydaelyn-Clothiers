@@ -543,3 +543,66 @@ type FilterGear =
     }
     override this.ToString (): string = 
         this.Item.Name
+
+[<Struct>]
+type SkinnedVertex = {
+    Position: Vector3
+    Color: Vector4
+    UV: Vector2
+    Normal: Vector3
+    Tangent: Vector3
+    Bitangent: Vector3
+    BoneIndices: Vector4
+    BoneWeights: Vector4
+}
+
+type BoneTransform = {
+    LocalMatrix: Matrix4x4
+    WorldMatrix: Matrix4x4
+    InverseBindMatrix: Matrix4x4
+}
+
+type SkeletonBone = {
+    Name: string
+    Index: int
+    ParentIndex: int
+    Children: int list
+    BindPose: Matrix4x4
+    InverseBindPose: Matrix4x4
+}
+
+type CharacterSkeleton = {
+    Bones: SkeletonBone array
+    BoneNameToIndex: Map<string, int>
+    RootBoneIndices: int list
+}
+
+type SkinnedMesh = {
+    Vertices: SkinnedVertex array
+    Indices: uint16 array
+    VertexBuffer: DeviceBuffer
+    IndexBuffer: DeviceBuffer
+    MaterialIndices: int array
+}
+
+type SkinnedCharacterModel = {
+    Skeleton: CharacterSkeleton
+    UnifiedMesh: SkinnedMesh
+    Materials: PreparedMaterial array
+}
+
+type SkeletalRenderResources = {
+    BoneMatricesBuffer: DeviceBuffer
+    BoneMatricesLayout: ResourceLayout
+    BoneMatricesSet: ResourceSet
+    SkeletalPipeline: Pipeline option
+
+    MVPBuffer: DeviceBuffer
+    MVPLayout: ResourceLayout
+    MVPSet: ResourceSet
+    TextureLayout: ResourceLayout
+
+    CharacterModel: SkinnedCharacterModel option
+
+    BoneTransforms: Matrix4x4 array
+}

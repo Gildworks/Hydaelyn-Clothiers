@@ -49,3 +49,13 @@ let getStandardShaderSet (factory: ResourceFactory) : Shader[] =
             loadShader factory ShaderStages.Fragment "shaders/fragment.frag.glsl"
         |]
     | _ -> failwith "Failed to get a graphics backend for some reason?"
+
+let getSkeletalShaderSet (factory: ResourceFactory) : Shader[] =
+    match factory.BackendType with
+    | GraphicsBackend.Metal
+    | GraphicsBackend.Vulkan ->
+        [|
+            loadShader factory ShaderStages.Vertex "shaders/skeletal_vertex.spv"
+            loadShader factory ShaderStages.Fragment "shaders/skeletal_fragment.spv"
+        |]
+    | _ -> failwith "Graphics backend not yet supported."

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
+		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<AssemblyName>Hydaelyn Clothiers</AssemblyName>
 		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -16,7 +16,7 @@
 		<ProjectReference Include="lib\AvaloniaRender\src\AvaloniaRender.Veldrid\AvaloniaRender.Veldrid.csproj" />
     </ItemGroup>
 
-	<ItemGroup>																																							
+	<ItemGroup>																																																																																																																																																										
 		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ACN.svg" />			
 		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ALC.svg" />			
 		<AvaloniaResource Include="Assets\Icons\Jobs-Inactive\ARC.svg" />			
@@ -100,11 +100,7 @@
 		<AvaloniaResource Include="Assets\Icons\Jobs-Active\VPR.svg" />			
 		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WAR.svg" />			
 		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WHM.svg" />			
-		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WVR.svg" />			
-		<Content Include="shaders\**\*.*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-		</Content>
+		<AvaloniaResource Include="Assets\Icons\Jobs-Active\WVR.svg" />
 	</ItemGroup>
     
     <ItemGroup>
@@ -114,11 +110,11 @@
 		<Compile Include="MaterialBuilder.fs" />
 		<Compile Include="ApplyFlags.fs" />
 		<Compile Include="TTModelLoader.fs" />
-		<Compile Include="ShaderUtils.fs" />		
-		
+		<Compile Include="ShaderUtils.fs" />
 		<Compile Include="MaterialInterpreter.fs" />		
 		<Compile Include="TextureUtils.fs" />
 		<!-- <Compile Include="MaterialHelper.fs"  -->
+		<None Include="shaders\*" />
 		<None Include="shaders\empty.frag" />
 		<None Include="shaders\empty.vert" />
 		<None Include="shaders\fragment.frag" />
@@ -131,6 +127,8 @@
         <Compile Include="CameraController.fs" />
         <Compile Include="generateNormals.fs" />
         <!--<Compile Include="CustomVeldridControl.fs" /> -->
+		<Compile Include="SkeletalData.fs" />
+		<Compile Include="SkeletalRenderer.fs" />
 		<Compile Include="VeldridView.fs" />
 		<Compile Include="ViewModel.fs" />
         <Compile Include="MainWindow.axaml.fs" />
