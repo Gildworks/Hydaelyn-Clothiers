@@ -45,24 +45,33 @@ type VeldridView() as this =
     let mutable modelMap : Map<EquipmentSlot, RenderModel> = Map.empty
         //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
 
-    let mutable gearItem        : IItemModel option             = None
-    let mutable modelRace       : XivRace option                = None
-    let mutable modelSlot       : EquipmentSlot option          = None
-    let mutable assignModel     : bool                          = false
+    let mutable boneTransforms: Matrix4x4[] = Array.empty<Matrix4x4>
+    let mutable skeleton: List<SkeletonData> = []
+
+    let mutable boneTransformBuffer     : DeviceBuffer option       = None
+    let mutable boneTransformLayout     : ResourceLayout option     = None
+    let mutable boneTransformSet        : ResourceSet option        = None
+
+    let mutable currentCharacterModel   : RenderModel option        = None
+
+    let mutable gearItem                : IItemModel option         = None
+    let mutable modelRace               : XivRace option            = None
+    let mutable modelSlot               : EquipmentSlot option      = None
+    let mutable assignModel             : bool                      = false
 
     // === Render Resources ===
-    let mutable pipeline        : Pipeline option               = None
-    let mutable mvpBuffer       : DeviceBuffer option           = None
-    let mutable mvpLayout       : ResourceLayout option         = None
-    let mutable mvpSet          : ResourceSet option            = None
-    let mutable texLayout       : ResourceLayout option         = None
+    let mutable pipeline                : Pipeline option           = None
+    let mutable mvpBuffer               : DeviceBuffer option       = None
+    let mutable mvpLayout               : ResourceLayout option     = None
+    let mutable mvpSet                  : ResourceSet option        = None
+    let mutable texLayout               : ResourceLayout option     = None
 
-    let mutable device          : GraphicsDevice option         = None
-    let mutable models          : RenderModel list              = []
+    let mutable device                  : GraphicsDevice option     = None
+    let mutable models                  : RenderModel list          = []
 
-    let mutable emptyPipeline   : Pipeline option               = None
-    let mutable emptyMVPBuffer  : DeviceBuffer option           = None
-    let mutable emptyMVPSet     : ResourceSet option            = None
+    let mutable emptyPipeline           : Pipeline option           = None
+    let mutable emptyMVPBuffer          : DeviceBuffer option       = None
+    let mutable emptyMVPSet             : ResourceSet option        = None
 
     let disposeQueue = System.Collections.Generic.Queue<RenderModel * int>()
 
@@ -93,6 +102,7 @@ type VeldridView() as this =
 
     override this.Prepare (gd: GraphicsDevice): unit = 
         base.Prepare(gd: GraphicsDevice)
+        let factory = gd.ResourceFactory
         device <- Some gd
 
         let mvp = gd.ResourceFactory.CreateBuffer(
@@ -102,6 +112,18 @@ type VeldridView() as this =
             ResourceLayoutDescription(ResourceLayoutElementDescription("MVPBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex))
         )
         let set = gd.ResourceFactory.CreateResourceSet(ResourceSetDescription(layout, mvp))
+
+        let boneBuffer = factory.CreateBuffer(BufferDescription(uint32 (256 * sizeof<Matrix4x4>), BufferUsage.UniformBuffer ||| BufferUsage.Dynamic))
+        boneTransformBuffer <- Some boneBuffer
+        let boneLayout = factory.CreateResourceLayout(
+            ResourceLayoutDescription(
+                ResourceLayoutElementDescription("BoneTransforms", ResourceKind.UniformBuffer, ShaderStages.Vertex)
+            )
+        )
+        boneTransformLayout <- Some boneLayout
+
+        let boneSet = factory.CreateResourceSet(ResourceSetDescription(boneLayout, boneBuffer))
+        boneTransformSet <- Some boneSet
 
         mvpBuffer <- Some mvp
         mvpLayout <- Some layout
@@ -124,11 +146,15 @@ type VeldridView() as this =
             let vertexLayout = VertexLayoutDescription(
                 [|
                     VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
+                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
                     VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Bitangent", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+                    VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    // --- ADD THESE NEW LAYOUT ELEMENTS ---
+                    VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                    VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+            
                 |]
             )
             let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
@@ -161,7 +187,7 @@ type VeldridView() as this =
                 ),
                 PrimitiveTopology.TriangleList,
                 shaderSet,
-                [| mvpLayout.Value; texLayout.Value|],
+                [| mvpLayout.Value; texLayout.Value; boneTransformLayout.Value |],
                 fb.OutputDescription
             )
             let pipe = gd.ResourceFactory.CreateGraphicsPipeline(pipelineDesc)
@@ -193,13 +219,19 @@ type VeldridView() as this =
             else
                 for model in visibleModels do
                     for mesh in model.Meshes do
-                        gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
-                        cmdList.SetPipeline(pipeline.Value)
-                        cmdList.SetGraphicsResourceSet(0u, mvpSet.Value)
-                        cmdList.SetGraphicsResourceSet(1u, mesh.Material.ResourceSet)
-                        cmdList.SetVertexBuffer(0u, mesh.VertexBuffer)
-                        cmdList.SetIndexBuffer(mesh.IndexBuffer, IndexFormat.UInt16)
-                        cmdList.DrawIndexed(uint32 mesh.IndexCount, 1u, 0u, 0, 0u)
+                        try
+                            gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
+                            cmdList.SetPipeline(pipeline.Value)
+                            cmdList.SetGraphicsResourceSet(0u, mvpSet.Value)
+                            cmdList.SetGraphicsResourceSet(1u, mesh.Material.ResourceSet)
+                            cmdList.SetGraphicsResourceSet(2u, boneTransformSet.Value)
+                            cmdList.SetVertexBuffer(0u, mesh.VertexBuffer)
+                            cmdList.SetIndexBuffer(mesh.IndexBuffer, IndexFormat.UInt16)
+                            cmdList.DrawIndexed(uint32 mesh.IndexCount, 1u, 0u, 0, 0u)
+                        with ex ->
+                            printfn $"Draw call failed: {ex.Message}"
+                            printfn $"Error stack trace: {ex.StackTrace}"
+                            reraise()
 
             cmdList.End()
             gd.SubmitCommands(cmdList)
@@ -221,6 +253,42 @@ type VeldridView() as this =
         mvpSet      |> Option.iter (fun s -> s.Dispose())
         mvpLayout   |> Option.iter (fun l -> l.Dispose())
         base.Dispose(gd: GraphicsDevice)
+
+    member this.calculateBoneTransforms (skeleton: List<SkeletonData>) : Matrix4x4[] =
+        let boneCount = skeleton.Length
+        let worldMatrices = Array.create boneCount Matrix4x4.Identity
+        let finalTransforms = Array.create boneCount Matrix4x4.Identity
+
+        // First, calculate the world matrix for each bone
+        for i = 0 to boneCount - 1 do
+            let bone = skeleton.[i]
+            let parentIndex = bone.BoneParent
+            let localMatrix = new Matrix4x4(
+                bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
+                bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
+                bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
+                bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
+            )
+        
+            if parentIndex > -1 then
+                worldMatrices.[i] <- localMatrix * worldMatrices.[parentIndex]
+            else
+                worldMatrices.[i] <- localMatrix
+
+        // Then, calculate the final skinning matrix for each bone
+        for i = 0 to boneCount - 1 do
+            let bone = skeleton.[i]
+            let invBindMatrix = new Matrix4x4(
+                bone.InversePoseMatrix.[0], bone.InversePoseMatrix.[1], bone.InversePoseMatrix.[2], bone.InversePoseMatrix.[3],
+                bone.InversePoseMatrix.[4], bone.InversePoseMatrix.[5], bone.InversePoseMatrix.[6], bone.InversePoseMatrix.[7],
+                bone.InversePoseMatrix.[8], bone.InversePoseMatrix.[9], bone.InversePoseMatrix.[10], bone.InversePoseMatrix.[11],
+                bone.InversePoseMatrix.[12], bone.InversePoseMatrix.[13], bone.InversePoseMatrix.[14], bone.InversePoseMatrix.[15]
+            )
+
+            // The final transform sent to the shader is InverseBindPose * WorldTransformOfBone
+            finalTransforms.[i] <- invBindMatrix * worldMatrices.[i]
+
+        finalTransforms
 
     member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
         async {
@@ -323,7 +391,22 @@ type VeldridView() as this =
                                 return! racialFallbacks item priorityList resolvedRace
                     }
                 do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
-                ModelModifiers.FixUpSkinReferences(ttModel, race)
+                let skinRace = XivRaceTree.GetSkinRace(race)
+                let skinRaceString = "c" + XivRaces.GetRaceCode(skinRace)
+                let raceRegex = new System.Text.RegularExpressions.Regex("(c[0-9]{4})")
+                let bodyRegex = new System.Text.RegularExpressions.Regex("(b[0-9]{4})")
+
+                for m in ttModel.MeshGroups do
+                    if m.Material <> null && ModelModifiers.IsSkinMaterial(m.Material) then
+                        let mtrlMatch = raceRegex.Match(m.Material)
+                        if mtrlMatch.Success && mtrlMatch.Groups.[1].Value <> skinRaceString then
+                            // Perform the replacement directly on the mutable field
+                            let newMaterial = m.Material.Replace(mtrlMatch.Groups.[1].Value, skinRaceString)
+                            m.Material <- bodyRegex.Replace(newMaterial, "b0001")
+                //for m in ttModel.MeshGroups do
+                    //if m.Material <> null && ModelModifiers.IsSkinMaterial(m.Material) then
+                        //printfn $"Skin material found! {m.Material}"
+                //ModelModifiers.FixUpSkinReferences(ttModel, race)
                 ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
                 let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
                 ttModelMap <- adjustedModels
@@ -333,6 +416,9 @@ type VeldridView() as this =
                         async{
                             try
                                 let fixedModel = adjustedModels[slot].Model
+                                //for m in fixedModel.MeshGroups do
+                                    //if m.Material <> null && ModelModifiers.IsSkinMaterial(m.Material) then
+                                        //printfn $"Inside rendermodel loop. Skin material found! {m.Material}"
                                 return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
                             with ex ->
                                 return raise ex 
@@ -344,6 +430,22 @@ type VeldridView() as this =
 
                     modelMap <- modelMap.Add(slot, renderModel)
                 texLayout <- Some textureLayout
+
+                let root = item.GetRoot()
+                let rootComparison = root.Info
+                let testRoot = new XivDependencyRootInfo(PrimaryId = race.GetRaceCodeInt(), PrimaryType = xivModdingFramework.Items.Enums.XivItemType.human, SecondaryId = 1, SecondaryType = xivModdingFramework.Items.Enums.XivItemType.body, Slot = "top")
+                //printfn $"Testing Dependency Root Info construction. {testRoot.ToString()}"
+                //printfn $"Compared to proper: {rootComparison.ToString()}"
+
+                let! sklbPath = Sklb.GetBaseSkeletonFile(root.Info, race) |> Async.AwaitTask
+                let! boneGenericList = Sklb.GetBones(root.Info, race) |> Async.AwaitTask
+                let boneList = boneGenericList |> Seq.toList
+                skeleton <- boneList
+                let finalTransforms = this.calculateBoneTransforms skeleton
+                gd.UpdateBuffer(boneTransformBuffer.Value, 0u, finalTransforms)
+                boneTransforms <- Array.create skeleton.Length Matrix4x4.Identity
+
+                
             with ex ->
                 return ()
             

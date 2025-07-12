@@ -140,13 +140,20 @@ module DataHelpers =
         else
             float32 (Math.Pow(float (srgb + 0.055f) / 1.055, 2.4))
 
-    let vec4ToDXColor (input: Vector4) : SharpDX.Color =
+    let vec4ToLinearDXColor (input: Vector4) : SharpDX.Color =
         let normalizedSrgb = new Vector4(input.X / 255.0f, input.Y / 255.0f, input.Z / 255.0f, input.W / 255.0f)
         SharpDX.Color(
             srgbToLinear(normalizedSrgb.X),
             srgbToLinear(normalizedSrgb.Y),
             srgbToLinear(normalizedSrgb.Z),
             srgbToLinear(normalizedSrgb.W)
+        )
+    let vec4ToDXColor (input: Vector4) : SharpDX.Color =
+        SharpDX.Color(
+            byte (Math.Clamp(input.X, 0.0f, 255.0f)),
+            byte (Math.Clamp(input.Y, 0.0f, 255.0f)),
+            byte (Math.Clamp(input.Z, 0.0f, 255.0f)),
+            byte (Math.Clamp(input.W, 0.0f, 255.0f))
         )
 
     let getUIColorPalette (race: raceIds) (palette: paletteOptions) =
@@ -481,11 +488,19 @@ type MainWindow () as this =
                 try
                     
                     let! renderPalette = DataHelpers.getColorPalette modelColorId palette |> Async.AwaitTask
-                    let selectedColor = DataHelpers.vec4ToDXColor renderPalette.[index]
+                    let selectedColor = //DataHelpers.vec4ToLinearDXColor renderPalette.[index]
+                        match int palette with
+                        | 0 | 4 | 14 | 15 ->
+                            DataHelpers.vec4ToLinearDXColor renderPalette.[index]
+                        | _ ->
+                            DataHelpers.vec4ToDXColor renderPalette.[index]
+
                     printfn $"Selected Color Value: [{selectedColor.R}, {selectedColor.G}, {selectedColor.B}, {selectedColor.A}]"
                     match int palette with
                     | 15 ->
                         modelColors.HairColor <- selectedColor
+                        if not (highlightEnableControl.IsChecked.GetValueOrDefault(false)) then
+                            modelColors.HairHighlightColor <- Nullable selectedColor
                     | 0 ->
                         modelColors.HairHighlightColor <- Nullable selectedColor
                     | 1 ->
@@ -656,7 +671,10 @@ type MainWindow () as this =
                 elif lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
                     this.PaletteSwatchPointerPressed sender args paletteOptions.UILipLight render
                 else
-                    modelColors.LipColor <- SharpDX.Color(0uy)
+                    modelColors.LipColor <- xivModdingFramework.Models.ModelTextures.ModelTexture.GetCustomColors().LipColor
+                    async {
+                        do! this.OnSubmitCharacter(render)
+                    } |> Async.StartImmediate
             ),
             RoutingStrategies.Bubble
         )
@@ -673,6 +691,10 @@ type MainWindow () as this =
                 highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
             | _ -> 
                 highlightsColorSwatchesControl.ItemsSource <- []
+                modelColors.HairHighlightColor <- Nullable modelColors.HairColor
+                async {
+                    do! this.OnSubmitCharacter(render)
+                } |> Async.StartImmediate
         )
 
         lipRadioDarkControl.IsCheckedChanged.Add(fun _ ->
@@ -693,8 +715,14 @@ type MainWindow () as this =
             match lipRadioNoneControl.IsChecked.GetValueOrDefault(false) with
             | true ->
                 lipColorSwatchesControl.IsEnabled <- false
-                modelColors.LipColor <- SharpDX.Color(0uy)
-                do this.OnSubmitCharacter(render) |> ignore
+                let noneColor = xivModdingFramework.Models.ModelTextures.ModelTexture.GetCustomColors().LipColor
+                if modelColors.LipColor = noneColor then
+                    ()
+                else
+                    modelColors.LipColor <- noneColor
+                    async {
+                        do! this.OnSubmitCharacter(render)
+                    } |> Async.StartImmediate
             | _ ->
                 lipColorSwatchesControl.IsEnabled <- true                
         )

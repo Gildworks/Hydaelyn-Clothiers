@@ -44,6 +44,36 @@ type VertexPositionColorUv =
         Tangent = tangent
         BiTangent = bitangent
     }
+[<Struct; StructLayout(LayoutKind.Explicit)>]
+type VertexPositionSkinned =
+    [<FieldOffset(0)>]
+    val Position    : Vector3
+    [<FieldOffset(12)>]
+    val Normal      : Vector3
+    [<FieldOffset(24)>]
+    val Color       : Vector4
+    [<FieldOffset(40)>]
+    val UV          : Vector2
+    [<FieldOffset(48)>]
+    val Tangent     : Vector3
+    [<FieldOffset(60)>]
+    val Bitangent   : Vector3
+    [<FieldOffset(72)>]
+    val BoneIndices : System.Numerics.Vector4 // Using a Vector4 to hold 4 bone indices
+    [<FieldOffset(88)>]
+    val BoneWeights : Vector4 // And a Vector4 for their corresponding weights
+
+    new (pos, norm, col, uv, tan, bitan, boneIndices, boneWeights) =
+        {
+            Position = pos
+            Normal = norm
+            Color = col
+            UV = uv
+            Tangent = tan
+            Bitangent = bitan
+            BoneIndices = boneIndices
+            BoneWeights = boneWeights
+        }
 
 [<Struct>]
 type TransformsUBO =
