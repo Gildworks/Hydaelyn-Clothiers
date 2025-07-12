@@ -35,14 +35,16 @@ let loadRenderModelFromItem
                 try
                     let finalPath =
                         try
-                            printfn $"Passed path: {path}"
+                            //printfn $"Passed path: {path}"
                             let material = Mtrl.GetXivMtrl(path, false)
                             material.Result.MTRLPath
                         with
                         | _ ->
-                            printfn "Using fallback logic for material."
+                            if ModelModifiers.IsSkinMaterial(path) then
+                                printfn $"Skin material hitting fallback logic. {path}"
                             Mtrl.GetMtrlPath(ttModel.Source, path)
-                    printfn $"Final path: {finalPath}"
+                    if ModelModifiers.IsSkinMaterial(path) then
+                        printfn $"Final skin path: {finalPath}"
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
                     
                     let! prepared = mtlBuilder mtrl item.Name
