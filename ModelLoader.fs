@@ -36,7 +36,7 @@ let loadRenderModelFromItem
                     let finalPath =
                         try
                             //printfn $"Passed path: {path}"
-                            let material = Mtrl.GetXivMtrl(path, false)
+                            let material = Mtrl.GetXivMtrl(path, item, false)
                             material.Result.MTRLPath
                         with
                         | _ ->
