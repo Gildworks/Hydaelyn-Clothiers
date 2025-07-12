@@ -85,11 +85,11 @@ type App() =
                 else
                     userAccessToken
 
-            let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
-            let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
-            if not (isNull newVer) then
-                do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
-                mgr.ApplyUpdatesAndRestart(newVer)
+            //let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
+            //let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
+            //if not (isNull newVer) then
+            //    do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
+            //    mgr.ApplyUpdatesAndRestart(newVer)
 
             // === End Velopack Automatic Updates Section ===
 
