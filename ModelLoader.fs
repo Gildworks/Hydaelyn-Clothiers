@@ -39,19 +39,16 @@ let loadRenderModelFromItem
                     let finalPath =
                         try
                             //printfn $"Passed path: {path}"
-                            let material = Mtrl.GetXivMtrl(path, false)
-                            if ModelModifiers.IsSkinMaterial(path) then
-                                $"chara/human/c{race.GetRaceCodeInt()}/obj/body/b0001/material{path}"
-                            else
-                                material.Result.MTRLPath
+                            let material = Mtrl.GetXivMtrl(path, item, false)
+                            material.Result.MTRLPath
                         with
                         | _ ->
-                            if ModelModifiers.IsSkinMaterial(path) then
-                                printfn $"Skin material hitting default logic. {path}"
+                            //if ModelModifiers.IsSkinMaterial(path) then
+                                //printfn $"Skin material hitting default logic. {path}"
                             Mtrl.GetMtrlPath(ttModel.Source, path)
                     //printfn $"Final path: {finalPath}"
-                    if ModelModifiers.IsSkinMaterial(path) then
-                        printfn $"Final Material path: {finalPath} | Original path: {path}"
+                    //if ModelModifiers.IsSkinMaterial(path) then
+                        //printfn $"Final Material path: {finalPath} | Original path: {path}"
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
 
                     

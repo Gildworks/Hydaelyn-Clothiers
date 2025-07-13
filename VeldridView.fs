@@ -390,23 +390,12 @@ type VeldridView() as this =
                             
                                 return! racialFallbacks item priorityList resolvedRace
                     }
-                do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
-                let skinRace = XivRaceTree.GetSkinRace(race)
-                let skinRaceString = "c" + XivRaces.GetRaceCode(skinRace)
-                let raceRegex = new System.Text.RegularExpressions.Regex("(c[0-9]{4})")
-                let bodyRegex = new System.Text.RegularExpressions.Regex("(b[0-9]{4})")
+                let mutable shapes = new ResizeArray<string>()
+                shapes.Add("eye_shp_a")
 
-                for m in ttModel.MeshGroups do
-                    if m.Material <> null && ModelModifiers.IsSkinMaterial(m.Material) then
-                        let mtrlMatch = raceRegex.Match(m.Material)
-                        if mtrlMatch.Success && mtrlMatch.Groups.[1].Value <> skinRaceString then
-                            // Perform the replacement directly on the mutable field
-                            let newMaterial = m.Material.Replace(mtrlMatch.Groups.[1].Value, skinRaceString)
-                            m.Material <- bodyRegex.Replace(newMaterial, "b0001")
-                //for m in ttModel.MeshGroups do
-                    //if m.Material <> null && ModelModifiers.IsSkinMaterial(m.Material) then
-                        //printfn $"Skin material found! {m.Material}"
-                //ModelModifiers.FixUpSkinReferences(ttModel, race)
+                do ModelModifiers.ApplyShapes(ttModel, shapes)
+                do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
+                ModelModifiers.FixUpSkinReferences(ttModel, race)
                 ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
                 let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
                 ttModelMap <- adjustedModels
@@ -441,6 +430,19 @@ type VeldridView() as this =
                 let! boneGenericList = Sklb.GetBones(root.Info, race) |> Async.AwaitTask
                 let boneList = boneGenericList |> Seq.toList
                 skeleton <- boneList
+                if slot = EquipmentSlot.Face then
+                    for i = 0 to skeleton.Length - 1 do
+                        let pI = skeleton.[i].BoneParent
+                        let pIndex = Math.Max(0, pI)
+                        printfn $"pI value: {pI}"
+                        printfn $"Bone Name: {skeleton.[i].BoneName} | Parent Name: {skeleton.[pIndex].BoneName}"
+                        let boneName = skeleton.[i].BoneName
+                        if boneName.StartsWith("j_f_mabdn") || boneName.StartsWith("j_f_miken") then
+                            let identityMatrix = [| 1.0f; 0.0f; 0.0f; 0.0f;
+                                                    0.0f; 1.0f; 0.0f; 0.0f;
+                                                    0.0f; 0.0f; 1.0f; 0.0f;
+                                                    0.0f; 0.0f; 0.0f; 1.0f |]
+                            skeleton.[i].PoseMatrix <- identityMatrix
                 let finalTransforms = this.calculateBoneTransforms skeleton
                 gd.UpdateBuffer(boneTransformBuffer.Value, 0u, finalTransforms)
                 boneTransforms <- Array.create skeleton.Length Matrix4x4.Identity
