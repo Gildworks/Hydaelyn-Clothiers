@@ -42,6 +42,7 @@
 				<MenuItem Header="_Save Glamour" />
 				<MenuItem Header="Save Current _As Default" />
 				<Separator />
+				<MenuItem Header="Export to TeamCraft" />
 				<MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
 			</MenuItem>
 			<MenuItem Header="_Edit">
@@ -371,6 +372,7 @@
 									<ListBox x:Name="HeadSlot" 
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding HeadGear, Mode=TwoWay}"
 											 Margin="10, 10, 0, 10" Grid.Column="0" 
 											 Grid.ColumnSpan="2" 
 											 Grid.Row="1" 
@@ -407,6 +409,7 @@
 									<ListBox x:Name="BodySlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding BodyGear, Mode=TwoWay}"
 											 Margin="10, 10, 0, 10" Grid.Column="0"
 											 Grid.ColumnSpan="2"
 											 Grid.Row="1"
@@ -442,6 +445,7 @@
 									<ListBox x:Name="HandSlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding HandGear, Mode=TwoWay}"
 											 Margin="10, 10, 0, 10" Grid.Column="0"
 											 Grid.ColumnSpan="2"
 											 Grid.Row="1"
@@ -477,6 +481,7 @@
 									<ListBox x:Name="LegsSlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding LegGear, Mode=TwoWay}"
 											 Margin="10, 10, 0, 10" Grid.Column="0"
 											 Grid.ColumnSpan="2"
 											 Grid.Row="1"
@@ -514,6 +519,7 @@
 									<ListBox x:Name="FeetSlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding FeetGear, Mode=TwoWay}"
 											 Margin="10, 10, 0, 10" Grid.Column="0"
 											 Grid.ColumnSpan="2"
 											 Grid.Row="1"

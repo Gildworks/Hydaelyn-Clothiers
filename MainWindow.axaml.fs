@@ -284,11 +284,11 @@ type MainWindow () as this =
         viewerControl.DataContext <- viewModel
         this.DataContext <- viewModel
 
-        viewModel.FSharpPropertyChanged.Add(fun args ->
-            if args.PropertyName = "GloballyFilteredGear" then
-                allGearCache <- viewModel.GloballyFilteredGear
-                this.UpdateAllSlotListsFromLocalCache()
-        )
+        //viewModel.FSharpPropertyChanged.Add(fun args ->
+        //    if args.PropertyName = "GloballyFilteredGear" then
+        //        allGearCache <- viewModel.GloballyFilteredGear
+        //        this.UpdateAllSlotListsFromLocalCache()
+        //)
 
         viewerControl.GetObservable(Control.BoundsProperty)
             .Subscribe(fun bounds ->
@@ -729,17 +729,17 @@ type MainWindow () as this =
             dye2Combo: ComboBox, dye2ClearButton: Button,
             eqSlot: EquipmentSlot, gearCategory: string) =
 
-            let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
-            slotCombo.ItemsSource <- getGearList()
+            //let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
+            //slotCombo.ItemsSource <- getGearList()
 
             slotCombo.SelectionChanged.Add(fun _ ->
                 if slotCombo.SelectedItem <> null then
                     let selectedItem = slotCombo.SelectedItem :?> FilterGear
                     do this.HandleGearSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
             )
-            clearButton.Click.Add(fun _ ->
-                this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
-            )
+            //clearButton.Click.Add(fun _ ->
+                //this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
+            //)
             dye1ClearButton.Click.Add(fun _ ->
                 if slotCombo.SelectedItem <> null then
                     let selectedItem = slotCombo.SelectedItem :?> FilterGear

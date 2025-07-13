@@ -389,6 +389,12 @@ type VeldridWindowViewModel() as this =
     let mutable _characterLevel = 100
     let mutable _itemLevel = 1000
 
+    let mutable _headGear: FilterGear list = List.empty
+    let mutable _bodyGear: FilterGear list = List.empty
+    let mutable _handGear: FilterGear list = List.empty
+    let mutable _legGear: FilterGear list = List.empty
+    let mutable _feetGear: FilterGear list = List.empty
+
     let canEquip (itemJobs: Set<Job>) (selectedJobs: Set<Job>) : bool =
         if Set.isEmpty selectedJobs then true
         else not (Set.isEmpty (Set.intersect itemJobs selectedJobs))
@@ -628,6 +634,31 @@ type VeldridWindowViewModel() as this =
                 levelOk && iLvlOk
             )
         this.GloballyFilteredGear <- filteredList
+        this.HeadGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Head")
+        this.BodyGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Body")
+        this.HandGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands")
+        this.LegGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs")
+        this.FeetGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet")
+
+    member this.HeadGear
+        with get() = _headGear
+        and private set(v) = this.SetValue(&_headGear, v)
+
+    member this.BodyGear
+        with get() = _bodyGear
+        and private set(v) = this.SetValue(&_bodyGear, v)
+
+    member this.HandGear
+        with get() = _handGear
+        and private set(v) = this.SetValue(&_handGear, v)
+
+    member this.LegGear
+        with get() = _legGear
+        and private set(v) = this.SetValue(&_legGear, v)
+
+    member this.FeetGear
+        with get() = _feetGear
+        and private set(v) = this.SetValue(&_feetGear, v)
 
     member this.SelectedRace
         with get() = selectedRace
