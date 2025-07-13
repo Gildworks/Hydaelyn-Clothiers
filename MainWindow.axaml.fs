@@ -2,6 +2,8 @@ namespace fs_mdl_viewer
 
 open System
 open System.Numerics
+open System.Diagnostics
+open System.Text
 open System.Text.Json
 open System.IO
 
@@ -275,6 +277,8 @@ type MainWindow () as this =
     let mutable splitPane: SplitView = null
     let mutable filterScroller: ScrollViewer = null
 
+    let mutable exportButton: MenuItem = null
+
     let mutable veldridRenderView: VeldridView option = None
 
     do
@@ -373,9 +377,13 @@ type MainWindow () as this =
         lipRadioLightControl <- this.FindControl<RadioButton>("LightLip")
         lipRadioNoneControl <- this.FindControl<RadioButton>("NoneLip")
 
+        exportButton <- this.FindControl<MenuItem>("ExportCommand")
+
         filterOpenButton <- this.FindControl<Button>("FilterOpenButton")
         splitPane <- this.FindControl<SplitView>("FilterPanel")
         filterScroller <- this.FindControl<ScrollViewer>("FilterScroller")
+
+
 
     member private this.UpdateSubmitButtonState() =
         let raceOk = selectedRaceNameOpt.IsSome
@@ -468,8 +476,8 @@ type MainWindow () as this =
                     dye2Combo.SelectedIndex <- -1
                     do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, -1, -1, modelColors)
                 else
-                    let dye1ToApply = if currentDye1Index >= 0 then currentDye1Index + 1 else -1
-                    let dye2ToApply = if currentDye2Index >= 0 then currentDye2Index + 1 else -1
+                    let dye1ToApply = if currentDye1Index >= 0 then currentDye1Index else -1
+                    let dye2ToApply = if currentDye2Index >= 0 then currentDye2Index else -1
                     do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1ToApply, dye2ToApply, modelColors)
             finally
                 this.DecrementBusyCounter()
@@ -544,9 +552,9 @@ type MainWindow () as this =
     member private this.HandleDyeSelectionChanged(
         item: IItemModel, eqSlot: EquipmentSlot,
         dye1Combo: ComboBox, dye2Combo: ComboBox, render: VeldridView) =
-        let dye1Idx = if dye1Combo.IsEnabled && dye1Combo.SelectedIndex >=0 then dye1Combo.SelectedIndex + 1 else -1
-        let dye2Idx = if dye2Combo.IsEnabled && dye2Combo.SelectedIndex >=0 then dye2Combo.SelectedIndex + 1 else -1
-        if dye1Idx > 0 || dye2Idx > 0 then
+        let dye1Idx = if dye1Combo.IsEnabled && dye1Combo.SelectedIndex >=0 then dye1Combo.SelectedIndex else -1
+        let dye2Idx = if dye2Combo.IsEnabled && dye2Combo.SelectedIndex >=0 then dye2Combo.SelectedIndex else -1
+        if dye1Idx >= 0 || dye2Idx >= 0 then
              this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1Idx, dye2Idx, modelColors) |> Async.StartImmediate
 
     member private this.ClearGearSlot(
@@ -710,6 +718,86 @@ type MainWindow () as this =
             | _ -> ()
         )
 
+        let createCraftingList () : ResizeArray<string> =
+            let tempList = ResizeArray<string>()
+            let emptyGear: FilterGear =
+                {
+                    Item = Unchecked.defaultof<XivGear>
+                    ExdRow = Unchecked.defaultof<xivModdingFramework.Exd.FileTypes.Ex.ExdRow>
+                    ItemLevel = 0
+                    EquipLevel = 0
+                    EquipRestriction = Unchecked.defaultof<EquipRestriction>
+                    EquippableBy = Unchecked.defaultof<Set<Job>>
+                    CraftingDetails = []
+                }
+            let headItem = 
+                match headSlotCombo.SelectedItem with
+                | :? FilterGear as gear -> gear
+                | _ -> emptyGear
+            let bodyItem =
+                match bodySlotCombo.SelectedItem with
+                | :? FilterGear as gear -> gear
+                | _ -> emptyGear
+            let handItem =
+                match handSlotCombo.SelectedItem with
+                | :? FilterGear as gear -> gear
+                | _ -> emptyGear
+            let legsItem =
+                match legsSlotCombo.SelectedItem with
+                | :? FilterGear as gear -> gear
+                | _ -> emptyGear
+            let feetItem =
+                match feetSlotCombo.SelectedItem with
+                | :? FilterGear as gear -> gear
+                | _ -> emptyGear
+
+            let createListString (item: FilterGear) : string option =
+                if item.CraftingDetails.Length < 1 then
+                    None
+                else
+                    Some $"{item.Item.ExdID},null,1"
+
+            let addString (string: string) =
+                tempList.Add(string)
+
+            let headString = createListString headItem
+            let bodyString = createListString bodyItem
+            let handString = createListString handItem
+            let legsString = createListString legsItem
+            let feetString = createListString feetItem
+
+            do
+                match headString with
+                | Some string -> addString string
+                | None -> ()
+                match bodyString with
+                | Some string -> addString string
+                | None -> ()
+                match handString with
+                | Some string -> addString string
+                | None -> ()
+                match legsString with
+                | Some string -> addString string
+                | None -> ()
+                match feetString with
+                | Some string -> addString string
+                | None -> ()
+
+            tempList
+
+
+        exportButton.Click.Add(fun _ ->
+            let craftList = createCraftingList()
+            if craftList.Count < 1 then () else
+                let finalString = String.Join(";", craftList)
+                let stringBase64 =
+                    finalString
+                    |> Encoding.UTF8.GetBytes
+                    |> Convert.ToBase64String
+                let tcURL = $"https://ffxivteamcraft.com/import/{stringBase64}"
+                Process.Start(ProcessStartInfo(tcURL, UseShellExecute = true)) |> ignore
+        )
+
         let setupCharPartSelector (selector: ComboBox) (partSlot: EquipmentSlot) (getPartList: unit -> XivCharacter list) =
             selector.SelectionChanged.Add(fun _ ->
                 let idx = selector.SelectedIndex
@@ -765,16 +853,6 @@ type MainWindow () as this =
 
         let clearSearch (searchBox: TextBox) =
             searchBox.Text <- String.Empty
-
-        headSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
-
-        bodySlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
-
-        handSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
-
-        legsSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
-
-        feetSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
         headSearchClearButton.Click.Add(fun _ ->
             clearSearch headSlotSearchBox
@@ -909,12 +987,26 @@ type MainWindow () as this =
                         reselectIfPopulated feetSlotCombo
 
                         let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
-                            if combo.SelectedIndex = -1 then
-                                let gear = allGearCache |> List.filter(fun g -> g.Item.SecondaryCategory = category)
-                                match gear |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
+                            //if combo.SelectedIndex <> null then () else
+                            //    let gear = allGearCache |> List.filter(fun g -> g.Item.SecondaryCategory = category)
+                            //    match gear |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
+                            //    | Some idx -> combo.SelectedItem <- idx
+                            //    | None -> 
+                            //        match gear |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
+                            //        | Some idx -> combo.SelectedItem <- idx
+                            //        | None -> ()
+                            match combo.SelectedItem with
+                            | :? FilterGear as gear -> ()
+                            | _ ->
+                                //let gear = allGearCache |> List.filter(fun g -> g.Item.SecondaryCategory = category)
+                                let list =
+                                    combo.Items
+                                    |> Seq.cast<FilterGear>
+                                    |> Seq.toList
+                                match list |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
                                 | Some idx -> combo.SelectedItem <- idx
-                                | None -> 
-                                    match gear |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
+                                | None ->
+                                    match list |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
                                     | Some idx -> combo.SelectedItem <- idx
                                     | None -> ()
 

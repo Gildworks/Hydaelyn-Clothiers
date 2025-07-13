@@ -395,6 +395,12 @@ type VeldridWindowViewModel() as this =
     let mutable _legGear: FilterGear list = List.empty
     let mutable _feetGear: FilterGear list = List.empty
 
+    let mutable _headSearch: string = String.Empty
+    let mutable _bodySearch: string = String.Empty
+    let mutable _handSearch: string = String.Empty
+    let mutable _legsSearch: string = String.Empty
+    let mutable _feetSearch: string = String.Empty
+
     let canEquip (itemJobs: Set<Job>) (selectedJobs: Set<Job>) : bool =
         if Set.isEmpty selectedJobs then true
         else not (Set.isEmpty (Set.intersect itemJobs selectedJobs))
@@ -640,6 +646,35 @@ type VeldridWindowViewModel() as this =
         this.LegGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs")
         this.FeetGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet")
 
+    member private this.FilterSlotResults(slot: string) =
+        match slot with
+        | "Head" -> 
+            this.HeadGear <- 
+                this.GloballyFilteredGear 
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Head")
+                |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_headSearch.ToLowerInvariant()))
+        | "Body" -> 
+            this.BodyGear <- 
+                this.GloballyFilteredGear 
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Body")
+                |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_bodySearch.ToLowerInvariant()))
+        | "Hand" -> 
+            this.HandGear <- 
+                this.GloballyFilteredGear
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands")
+                |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_handSearch.ToLowerInvariant()))
+        | "Legs" -> 
+            this.LegGear <- 
+                this.GloballyFilteredGear
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs")
+                |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_legsSearch.ToLowerInvariant()))
+        | "Feet" -> 
+            this.FeetGear <- 
+                this.GloballyFilteredGear
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet")
+                |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_feetSearch.ToLowerInvariant()))
+        | _ -> ()
+
     member this.HeadGear
         with get() = _headGear
         and private set(v) = this.SetValue(&_headGear, v)
@@ -659,6 +694,36 @@ type VeldridWindowViewModel() as this =
     member this.FeetGear
         with get() = _feetGear
         and private set(v) = this.SetValue(&_feetGear, v)
+
+    member this.HeadSearch
+        with get() = _headSearch
+        and private set(v) = 
+            this.SetValue(&_headSearch, v)
+            this.FilterSlotResults("Head")
+
+    member this.BodySearch
+        with get() = _bodySearch
+        and private set(v) =
+            this.SetValue(&_bodySearch, v)
+            this.FilterSlotResults("Body")
+
+    member this.HandSearch
+        with get() = _handSearch
+        and private set(v) =
+            this.SetValue(&_handSearch, v)
+            this.FilterSlotResults("Hand")
+
+    member this.LegsSearch
+        with get() = _legsSearch
+        and private set(v) =
+            this.SetValue(&_legsSearch, v)
+            this.FilterSlotResults("Legs")
+
+    member this.FeetSearch
+        with get() = _feetSearch
+        and private set(v) =
+            this.SetValue(&_feetSearch, v)
+            this.FilterSlotResults("Feet")
 
     member this.SelectedRace
         with get() = selectedRace

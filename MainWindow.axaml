@@ -42,7 +42,8 @@
 				<MenuItem Header="_Save Glamour" />
 				<MenuItem Header="Save Current _As Default" />
 				<Separator />
-				<MenuItem Header="Export to TeamCraft" />
+				<MenuItem Header="Export to TeamCraft (Web)" x:Name="ExportCommand" />
+				<Separator />
 				<MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
 			</MenuItem>
 			<MenuItem Header="_Edit">
@@ -355,7 +356,8 @@
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="Auto, *">
 									<TextBox x:Name="HeadSlotSearch" 
-											 HorizontalAlignment="Stretch" 
+											 HorizontalAlignment="Stretch"
+											 Text="{Binding HeadSearch, Mode=TwoWay}"
 											 Margin="10,10,0,10" 
 											 Grid.Column="0" Grid.Row="0" />
 									<Button x:Name="HeadSearchClear"
@@ -368,7 +370,7 @@
 									<Button x:Name="HeadClear" 
 											HorizontalAlignment="Stretch" 
 											HorizontalContentAlignment="Center" 
-											Grid.Column="2" Grid.Row="0">Clear</Button>
+											Grid.Column="2" Grid.Row="0">Remove</Button>
 									<ListBox x:Name="HeadSlot" 
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
@@ -395,7 +397,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="BodySlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+									<TextBox x:Name="BodySlotSearch"
+											 Text="{Binding BodySearch, Mode=TwoWay}"
+											 HorizontalAlignment="Stretch" 
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" 
+											 Grid.Row="0" />
 									<Button x:Name="BodySearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
@@ -405,7 +412,7 @@
 											>
 										✕
 									</Button>
-									<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+									<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
 									<ListBox x:Name="BodySlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
@@ -431,7 +438,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*,*">
-									<TextBox x:Name="HandSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0"/>
+									<TextBox x:Name="HandSlotSearch" 
+											 HorizontalAlignment="Stretch"
+											 Text="{Binding HandSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" 
+											 Grid.Row="0"/>
 									<Button x:Name="HandSearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
@@ -441,7 +453,7 @@
 											>
 										✕
 									</Button>
-									<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+									<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
 									<ListBox x:Name="HandSlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
@@ -467,7 +479,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="LegsSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+									<TextBox x:Name="LegsSlotSearch" 
+											 HorizontalAlignment="Stretch"
+												 Text="{Binding LegsSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" 
+											 Grid.Row="0" />
 									<Button x:Name="LegsSearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
@@ -477,7 +494,7 @@
 											>
 										✕
 									</Button>
-									<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
+									<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
 									<ListBox x:Name="LegsSlot"
 											 HorizontalAlignment="Stretch"
 											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
@@ -503,7 +520,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="FeetSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Row="0" />
+									<TextBox x:Name="FeetSlotSearch" 
+											 HorizontalAlignment="Stretch"
+											 Text="{Binding FeetSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10"
+											 Grid.Column="0"
+											 Grid.Row="0" />
 									<Button x:Name="FeetSearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
