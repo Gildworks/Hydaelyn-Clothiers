@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Numerics
 open System.Threading.Tasks
+open System.Runtime.InteropServices
 
 open Avalonia
 open Avalonia.Controls
@@ -41,9 +42,7 @@ type VeldridView() as this =
     // === Model Resources ===
     let allSlots = [ Head; Body; Hands; Legs; Feet ]
     let mutable ttModelMap : Map<EquipmentSlot, InputModel> = Map.empty
-        //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
     let mutable modelMap : Map<EquipmentSlot, RenderModel> = Map.empty
-        //allSlots |> List.map (fun slot -> slot, None) |> Map.ofList
 
     let mutable boneTransforms: Matrix4x4[] = Array.empty<Matrix4x4>
     let mutable skeleton: List<SkeletonData> = []
@@ -209,29 +208,28 @@ type VeldridView() as this =
             cmdList.ClearColorTarget(0u, RgbaFloat.Grey)
             cmdList.ClearDepthStencil(1.0f)
 
-            let visibleModels = modelMap |> Map.values |> Seq.toList
+            let visibleModels = currentCharacterModel
 
-            if visibleModels.IsEmpty then
+            if visibleModels.IsNone then
                 if pipeline.IsNone then
                     this.CreateEmptyPipeline gd swapchain.Framebuffer.OutputDescription
                 cmdList.SetPipeline(emptyPipeline.Value)
                 cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
             else
-                for model in visibleModels do
-                    for mesh in model.Meshes do
-                        try
-                            gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
-                            cmdList.SetPipeline(pipeline.Value)
-                            cmdList.SetGraphicsResourceSet(0u, mvpSet.Value)
-                            cmdList.SetGraphicsResourceSet(1u, mesh.Material.ResourceSet)
-                            cmdList.SetGraphicsResourceSet(2u, boneTransformSet.Value)
-                            cmdList.SetVertexBuffer(0u, mesh.VertexBuffer)
-                            cmdList.SetIndexBuffer(mesh.IndexBuffer, IndexFormat.UInt16)
-                            cmdList.DrawIndexed(uint32 mesh.IndexCount, 1u, 0u, 0, 0u)
-                        with ex ->
-                            printfn $"Draw call failed: {ex.Message}"
-                            printfn $"Error stack trace: {ex.StackTrace}"
-                            reraise()
+                for mesh in visibleModels.Value.Meshes do
+                    try
+                        gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
+                        cmdList.SetPipeline(pipeline.Value)
+                        cmdList.SetGraphicsResourceSet(0u, mvpSet.Value)
+                        cmdList.SetGraphicsResourceSet(1u, mesh.Material.ResourceSet)
+                        cmdList.SetGraphicsResourceSet(2u, boneTransformSet.Value)
+                        cmdList.SetVertexBuffer(0u, mesh.VertexBuffer)
+                        cmdList.SetIndexBuffer(mesh.IndexBuffer, IndexFormat.UInt16)
+                        cmdList.DrawIndexed(uint32 mesh.IndexCount, 1u, 0u, 0, 0u)
+                    with ex ->
+                        printfn $"Draw call failed: {ex.Message}"
+                        printfn $"Error stack trace: {ex.StackTrace}"
+                        reraise()
 
             cmdList.End()
             gd.SubmitCommands(cmdList)
@@ -256,39 +254,42 @@ type VeldridView() as this =
 
     member this.calculateBoneTransforms (skeleton: List<SkeletonData>) : Matrix4x4[] =
         let boneCount = skeleton.Length
-        let worldMatrices = Array.create boneCount Matrix4x4.Identity
-        let finalTransforms = Array.create boneCount Matrix4x4.Identity
+        Array.create boneCount Matrix4x4.Identity
+        //let worldMatrices = Array.create boneCount Matrix4x4.Identity
+        //let finalTransforms = Array.create boneCount Matrix4x4.Identity
 
-        // First, calculate the world matrix for each bone
-        for i = 0 to boneCount - 1 do
-            let bone = skeleton.[i]
-            let parentIndex = bone.BoneParent
-            let localMatrix = new Matrix4x4(
-                bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
-                bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
-                bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
-                bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
-            )
+        //// First, calculate the world matrix for each bone
+        //for i = 0 to boneCount - 1 do
+        //    let bone = skeleton.[i]
+        //    let parentIndex = bone.BoneParent
+        //    let localMatrix = new Matrix4x4(
+        //        bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
+        //        bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
+        //        bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
+        //        bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
+        //    )
+        //    let transposedLocalMatrix = Matrix4x4.Transpose(localMatrix)
         
-            if parentIndex > -1 then
-                worldMatrices.[i] <- localMatrix * worldMatrices.[parentIndex]
-            else
-                worldMatrices.[i] <- localMatrix
+        //    if parentIndex > -1 then
+        //        worldMatrices.[i] <- transposedLocalMatrix * worldMatrices.[parentIndex]
+        //    else
+        //        worldMatrices.[i] <- transposedLocalMatrix
 
-        // Then, calculate the final skinning matrix for each bone
-        for i = 0 to boneCount - 1 do
-            let bone = skeleton.[i]
-            let invBindMatrix = new Matrix4x4(
-                bone.InversePoseMatrix.[0], bone.InversePoseMatrix.[1], bone.InversePoseMatrix.[2], bone.InversePoseMatrix.[3],
-                bone.InversePoseMatrix.[4], bone.InversePoseMatrix.[5], bone.InversePoseMatrix.[6], bone.InversePoseMatrix.[7],
-                bone.InversePoseMatrix.[8], bone.InversePoseMatrix.[9], bone.InversePoseMatrix.[10], bone.InversePoseMatrix.[11],
-                bone.InversePoseMatrix.[12], bone.InversePoseMatrix.[13], bone.InversePoseMatrix.[14], bone.InversePoseMatrix.[15]
-            )
+        //// Then, calculate the final skinning matrix for each bone
+        //for i = 0 to boneCount - 1 do
+        //    let bone = skeleton.[i]
+        //    let invBindMatrix = new Matrix4x4(
+        //        bone.InversePoseMatrix.[0], bone.InversePoseMatrix.[1], bone.InversePoseMatrix.[2], bone.InversePoseMatrix.[3],
+        //        bone.InversePoseMatrix.[4], bone.InversePoseMatrix.[5], bone.InversePoseMatrix.[6], bone.InversePoseMatrix.[7],
+        //        bone.InversePoseMatrix.[8], bone.InversePoseMatrix.[9], bone.InversePoseMatrix.[10], bone.InversePoseMatrix.[11],
+        //        bone.InversePoseMatrix.[12], bone.InversePoseMatrix.[13], bone.InversePoseMatrix.[14], bone.InversePoseMatrix.[15]
+        //    )
+        //    let transposedInvBindMatrix = Matrix4x4.Transpose(invBindMatrix)
 
-            // The final transform sent to the shader is InverseBindPose * WorldTransformOfBone
-            finalTransforms.[i] <- invBindMatrix * worldMatrices.[i]
+        //    // The final transform sent to the shader is InverseBindPose * WorldTransformOfBone
+        //    finalTransforms.[i] <- invBindMatrix * worldMatrices.[i]
 
-        finalTransforms
+        //finalTransforms
 
     member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
         async {
@@ -390,68 +391,148 @@ type VeldridView() as this =
                             
                                 return! racialFallbacks item priorityList resolvedRace
                     }
-                let mutable shapes = new ResizeArray<string>()
-                shapes.Add("eye_shp_a")
-
-                do ModelModifiers.ApplyShapes(ttModel, shapes)
                 do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
                 ModelModifiers.FixUpSkinReferences(ttModel, race)
                 ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
-                let! adjustedModels = applyFlags(ttModelMap) |> Async.AwaitTask
-                ttModelMap <- adjustedModels
-                for model in Map.toSeq adjustedModels do
-                    let materialBuilder = MaterialBuilder.materialBuilder gd.ResourceFactory gd textureLayout adjustedModels[slot].Dye1 adjustedModels[slot].Dye2 adjustedModels[slot].Colors
-                    let! renderModel =
-                        async{
-                            try
-                                let fixedModel = adjustedModels[slot].Model
-                                //for m in fixedModel.MeshGroups do
-                                    //if m.Material <> null && ModelModifiers.IsSkinMaterial(m.Material) then
-                                        //printfn $"Inside rendermodel loop. Skin material found! {m.Material}"
-                                return! ModelLoader.loadRenderModelFromItem gd.ResourceFactory gd tx fixedModel item race materialBuilder |> Async.AwaitTask
-                            with ex ->
-                                return raise ex 
-                        }
-                    match modelMap.TryFind(slot) with
-                    | Some oldModel when not (obj.ReferenceEquals(oldModel, renderModel)) -> disposeQueue.Enqueue((oldModel, 5))
-                    | None -> ()
-                    | _ -> ()
-
-                    modelMap <- modelMap.Add(slot, renderModel)
                 texLayout <- Some textureLayout
-
-                let root = item.GetRoot()
-                let rootComparison = root.Info
-                let testRoot = new XivDependencyRootInfo(PrimaryId = race.GetRaceCodeInt(), PrimaryType = xivModdingFramework.Items.Enums.XivItemType.human, SecondaryId = 1, SecondaryType = xivModdingFramework.Items.Enums.XivItemType.body, Slot = "top")
-                //printfn $"Testing Dependency Root Info construction. {testRoot.ToString()}"
-                //printfn $"Compared to proper: {rootComparison.ToString()}"
-
-                let! sklbPath = Sklb.GetBaseSkeletonFile(root.Info, race) |> Async.AwaitTask
-                let! boneGenericList = Sklb.GetBones(root.Info, race) |> Async.AwaitTask
-                let boneList = boneGenericList |> Seq.toList
-                skeleton <- boneList
-                if slot = EquipmentSlot.Face then
-                    for i = 0 to skeleton.Length - 1 do
-                        let pI = skeleton.[i].BoneParent
-                        let pIndex = Math.Max(0, pI)
-                        printfn $"pI value: {pI}"
-                        printfn $"Bone Name: {skeleton.[i].BoneName} | Parent Name: {skeleton.[pIndex].BoneName}"
-                        let boneName = skeleton.[i].BoneName
-                        if boneName.StartsWith("j_f_mabdn") || boneName.StartsWith("j_f_miken") then
-                            let identityMatrix = [| 1.0f; 0.0f; 0.0f; 0.0f;
-                                                    0.0f; 1.0f; 0.0f; 0.0f;
-                                                    0.0f; 0.0f; 1.0f; 0.0f;
-                                                    0.0f; 0.0f; 0.0f; 1.0f |]
-                            skeleton.[i].PoseMatrix <- identityMatrix
-                let finalTransforms = this.calculateBoneTransforms skeleton
-                gd.UpdateBuffer(boneTransformBuffer.Value, 0u, finalTransforms)
-                boneTransforms <- Array.create skeleton.Length Matrix4x4.Identity
+                do this.RebuildCharacterModel(gd, race)
 
                 
             with ex ->
                 return ()
             
         }
+
+    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace) =
+        async {
+            let activeModels =
+                ttModelMap
+                |> Map.values
+                |> Seq.toList
+            if activeModels.IsEmpty then
+                currentCharacterModel <- None
+                return ()
+            let tx = ModTransaction.BeginReadonlyTransaction()
+
+            let modelPathsList = activeModels |> List.map (fun input -> input.Model.Source)
+            let modelPaths = ResizeArray(modelPathsList)
+            let masterBoneDict = TTModel.ResolveFullBoneHeirarchy(race, modelPaths, (fun isWarning msg -> printfn $"[SKLB] {msg}"), tx)
+            skeleton <- masterBoneDict.Values |> Seq.sortBy (fun bone -> bone.BoneNumber) |> Seq.toList
+
+            let masterBoneIndexLookup =
+                skeleton
+                |> List.indexed
+                |> List.map (fun (i, bone) -> (bone.BoneName, i))
+                |> dict
+
+            let uniqueMaterialPaths =
+                activeModels
+                |> List.collect (fun input -> 
+                    input.Model.Materials
+                    |> Seq.toList
+                )
+                |> Set.ofList
+            let! preparedMaterials = 
+                uniqueMaterialPaths
+                |> Set.toList
+                |> List.map (fun matPath -> async {
+                    let ownerInput = activeModels |> List.find (fun input -> input.Model.Materials.Contains(matPath))
+                    let! mtrl = TTModelLoader.resolveMtrl ownerInput.Model matPath ownerInput.Item tx
+                    let! prepared = MaterialBuilder.materialBuilder gd.ResourceFactory gd texLayout.Value ownerInput.Dye1 ownerInput.Dye2 ownerInput.Colors mtrl ownerInput.Item.Name |> Async.AwaitTask
+                    return (matPath, prepared)
+                })
+                |> Async.Parallel
+            let materialDict = dict preparedMaterials
+
+            let geometryData = System.Collections.Generic.Dictionary<string, (ResizeArray<VertexPositionSkinned> * ResizeArray<uint16>)>()
+            for matPath in uniqueMaterialPaths do
+                geometryData.Add(matPath, (ResizeArray(), ResizeArray()))
+
+            for inputModel in activeModels do
+                let ttModel = inputModel.Model
+                for meshGroup in ttModel.MeshGroups do
+
+                    let boneRemapTable = System.Collections.Generic.Dictionary<int, int>()
+                    for i = 0 to meshGroup.Bones.Count - 1 do
+                        let localBoneName = meshGroup.Bones.[i]
+                        if masterBoneIndexLookup.ContainsKey(localBoneName) then
+                            let masterBoneIndex = masterBoneIndexLookup.[localBoneName]
+                            boneRemapTable.Add(i, masterBoneIndex)
+                    
+                    let materialPath = meshGroup.Material
+                    if materialPath <> null && geometryData.ContainsKey(materialPath) then
+                        let (vertexList, indexList) = geometryData.[materialPath]
+                        let vertexOffset = uint16 vertexList.Count
+                        
+                        for part in meshGroup.Parts do
+                            for vertex in part.Vertices do
+                                let boneIndices = Array.zeroCreate 4
+                                let boneWeights = Array.zeroCreate 4
+
+                                for i = 0 to 3 do
+                                    let localBoneIndex = int vertex.BoneIds.[i]
+                                    if boneRemapTable.ContainsKey(localBoneIndex) then
+                                        boneIndices.[i] <- float32 boneRemapTable.[localBoneIndex]
+                                        boneWeights.[i] <- (float32 vertex.Weights.[i]) / 255.0f
+
+                                vertexList.Add(
+                                    VertexPositionSkinned(
+                                        SharpToNumerics.vec3 vertex.Position,
+                                        SharpToNumerics.vec3 vertex.Normal,
+                                        SharpToNumerics.convertColor vertex.VertexColor,
+                                        SharpToNumerics.vec2 vertex.UV1,
+                                        SharpToNumerics.vec3 vertex.Tangent,
+                                        SharpToNumerics.vec3 vertex.Binormal,
+                                        Vector4(boneIndices.[0], boneIndices.[1], boneIndices.[2], boneIndices.[3]),
+                                        Vector4(boneWeights.[0], boneWeights.[1], boneWeights.[2], boneWeights.[3])
+                                    )
+                                )
+                            for index in part.TriangleIndices do
+                                indexList.Add(vertexOffset + (uint16 index))
+
+            let finalMeshes = ResizeArray<RenderMesh>()
+            let factory = gd.ResourceFactory
+
+            for matPath in geometryData.Keys do
+                let (vertexList, indexList) = geometryData.[matPath]
+
+                if vertexList.Count > 0 && indexList.Count > 0 then
+                    let vertices = vertexList.ToArray()
+                    let indices = indexList.ToArray()
+
+                    let vertexBuffer = factory.CreateBuffer(BufferDescription(
+                        uint32 (vertices.Length * Marshal.SizeOf<VertexPositionSkinned>()),
+                        BufferUsage.VertexBuffer
+                    ))
+                    let indexBuffer = factory.CreateBuffer(BufferDescription(
+                        uint32 (indices.Length * sizeof<uint16>), 
+                        BufferUsage.IndexBuffer
+                    ))
+
+                    gd.UpdateBuffer(vertexBuffer, 0u, vertices)
+                    gd.UpdateBuffer(indexBuffer, 0u, indices)
+
+                    let renderMesh = {
+                        VertexBuffer = vertexBuffer
+                        IndexBuffer = indexBuffer
+                        IndexCount = indices.Length
+                        Material = materialDict.[matPath]
+                        RawModel = null
+                    }
+                    finalMeshes.Add(renderMesh)
+
+            if finalMeshes.Count > 0 then
+                let finalRenderModel = { Meshes = finalMeshes |> List.ofSeq; Original = null }
+                printfn "Model added to render, you should see geometry."
+                currentCharacterModel <- Some finalRenderModel
+            else
+                printfn "No model to add."
+                currentCharacterModel <- None
+
+            let finalTransforms = this.calculateBoneTransforms skeleton
+            gd.UpdateBuffer(boneTransformBuffer.Value, 0u, finalTransforms)
+        }
+        |> Async.StartImmediate
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors) : Async<unit> =
         async {
