@@ -293,12 +293,6 @@ type MainWindow () as this =
         viewerControl.DataContext <- viewModel
         this.DataContext <- viewModel
 
-        //viewModel.FSharpPropertyChanged.Add(fun args ->
-        //    if args.PropertyName = "GloballyFilteredGear" then
-        //        allGearCache <- viewModel.GloballyFilteredGear
-        //        this.UpdateAllSlotListsFromLocalCache()
-        //)
-
         viewerControl.GetObservable(Control.BoundsProperty)
             .Subscribe(fun bounds ->
                 if bounds.Width > 0.0 && bounds.Height > 0.0 then
@@ -321,7 +315,6 @@ type MainWindow () as this =
                     veldridRenderView <- Some render
                     render.AttachInputHandlers(inputOverlay)
                     this.InitializeApplicationAsync(render) |> Async.StartImmediate
-                    viewModel.InitializeDataAsync(render) |> Async.StartImmediate
                 | _ -> ()
         )
     member private this.InitializeComponent() =
@@ -1005,18 +998,9 @@ type MainWindow () as this =
                         reselectIfPopulated feetSlotCombo
 
                         let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
-                            //if combo.SelectedIndex <> null then () else
-                            //    let gear = allGearCache |> List.filter(fun g -> g.Item.SecondaryCategory = category)
-                            //    match gear |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
-                            //    | Some idx -> combo.SelectedItem <- idx
-                            //    | None -> 
-                            //        match gear |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
-                            //        | Some idx -> combo.SelectedItem <- idx
-                            //        | None -> ()
                             match combo.SelectedItem with
                             | :? FilterGear as gear -> ()
                             | _ ->
-                                //let gear = allGearCache |> List.filter(fun g -> g.Item.SecondaryCategory = category)
                                 let list =
                                     combo.Items
                                     |> Seq.cast<FilterGear>
@@ -1163,9 +1147,10 @@ type MainWindow () as this =
                 XivCache.SetGameInfo(info) |> ignore
                 viewModel.WindowHeight <- this.Bounds.Height
 
+                do! viewModel.InitializeDataAsync(render)
+
                 currentTransaction <- ModTransaction.BeginReadonlyTransaction()
                 let! chara = render.GetChara()
-                allGearCache <- viewModel.GloballyFilteredGear
                 allCharaCache <- chara
                 let! dyes = DataHelpers.getDyeSwatches() |> Async.AwaitTask
                 dyeListCache <- dyes

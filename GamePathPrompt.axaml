@@ -3,7 +3,7 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="250"
-		Width="500" Height="200"
+		Width="800" Height="400"
 		x:Class="fs_mdl_viewer.GamePathPromptWindow"
 		Title="Select Final Fantasy XIV Install Location"
 		WindowStartupLocation="CenterOwner"
