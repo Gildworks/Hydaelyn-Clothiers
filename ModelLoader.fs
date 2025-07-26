@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.Runtime.InteropServices
 open System.Threading.Tasks
 open Veldrid
 open xivModdingFramework.Cache
@@ -28,6 +29,8 @@ let loadRenderModelFromItem
     (mtlBuilder : XivMtrl -> string -> Task<PreparedMaterial>)
     : Task<RenderModel> =
     task {
+        //printfn $"Current race: {race}"
+
         let materialMap =
             ttModel.Materials
             |> Seq.distinct
@@ -40,10 +43,14 @@ let loadRenderModelFromItem
                             material.Result.MTRLPath
                         with
                         | _ ->
-                            printfn "Using fallback logic for material."
+                            //if ModelModifiers.IsSkinMaterial(path) then
+                                //printfn $"Skin material hitting default logic. {path}"
                             Mtrl.GetMtrlPath(ttModel.Source, path)
-                    printfn $"Final path: {finalPath}"
+                    //printfn $"Final path: {finalPath}"
+                    //if ModelModifiers.IsSkinMaterial(path) then
+                        //printfn $"Final Material path: {finalPath} | Original path: {path}"
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
+
                     
                     let! prepared = mtlBuilder mtrl item.Name
                     return path, prepared
@@ -76,7 +83,6 @@ let loadRenderModelFromItem
                                 SharpToNumerics.vec3 vtx.Normal,
                                 SharpToNumerics.convertColor vtx.VertexColor,
                                 SharpToNumerics.vec2 vtx.UV1,
-                                SharpToNumerics.vec3 vtx.Normal,
                                 SharpToNumerics.vec3 vtx.Tangent,
                                 SharpToNumerics.vec3 vtx.Binormal,
                                 // --- ADD THE NEW DATA ---

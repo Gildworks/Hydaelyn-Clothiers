@@ -2,12 +2,15 @@ namespace fs_mdl_viewer
 
 open System
 open System.Numerics
+open System.Diagnostics
+open System.Text
 open System.Text.Json
 open System.IO
 
 open Avalonia
 open Avalonia.Controls
 open Avalonia.Controls.Primitives
+open Avalonia.VisualTree
 open Avalonia.Markup.Xaml
 open Avalonia.Input
 open Avalonia.Interactivity
@@ -393,7 +396,7 @@ type MainWindow () as this =
 
         exportButton <- this.FindControl<MenuItem>("ExportCommand")
 
-		bustSlider <- this.FindControl<Slider>("BustSize")
+        bustSlider <- this.FindControl<Slider>("BustSize")
 
         filterOpenButton <- this.FindControl<Button>("FilterOpenButton")
         splitPane <- this.FindControl<SplitView>("FilterPanel")
