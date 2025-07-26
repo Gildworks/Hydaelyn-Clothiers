@@ -417,7 +417,6 @@ type VeldridView() as this =
                             FaceScale = 1.0f
                             MuscleDefinition = 1.0f
                         }
-                    printfn $"Current bust scale: {customizations.BustSize}"
                     do! this.RebuildCharacterModel(gd, race, customizations)
 
                 

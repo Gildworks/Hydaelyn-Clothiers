@@ -254,18 +254,6 @@ type MainWindow () as this =
     let mutable feetDye2Combo: ComboBox = null
     let mutable feetDye2ClearButton: Button = null
 
-    let mutable headSlotSearchBox: TextBox = null
-    let mutable bodySlotSearchBox: TextBox = null
-    let mutable handSlotSearchBox: TextBox = null
-    let mutable legsSlotSearchBox: TextBox = null
-    let mutable feetSlotSearchBox: TextBox = null
-
-    let mutable headSearchClearButton: Button = null
-    let mutable bodySearchClearButton: Button = null
-    let mutable handSearchClearButton: Button = null
-    let mutable legsSearchClearButton: Button = null
-    let mutable feetSearchClearButton: Button = null
-
     let mutable skinColorSwatchesControl: ItemsControl = null
     let mutable hairColorSwatchesControl: ItemsControl = null
     let mutable highlightsColorSwatchesControl: ItemsControl = null
@@ -370,18 +358,6 @@ type MainWindow () as this =
         feetDye1Combo <- this.FindControl<ComboBox>("FeetDye1"); feetDye1ClearButton <- this.FindControl<Button>("FeetDye1Clear")
         feetDye2Combo <- this.FindControl<ComboBox>("FeetDye2"); feetDye2ClearButton <- this.FindControl<Button>("FeetDye2Clear")
 
-        headSlotSearchBox <- this.FindControl<TextBox>("HeadSlotSearch")
-        bodySlotSearchBox <- this.FindControl<TextBox>("BodySlotSearch")
-        handSlotSearchBox <- this.FindControl<TextBox>("HandSlotSearch")
-        legsSlotSearchBox <- this.FindControl<TextBox>("LegsSlotSearch")
-        feetSlotSearchBox <- this.FindControl<TextBox>("FeetSlotSearch")
-
-        headSearchClearButton <- this.FindControl<Button>("HeadSearchClear")
-        bodySearchClearButton <- this.FindControl<Button>("BodySearchClear")
-        handSearchClearButton <- this.FindControl<Button>("HandSearchClear")
-        legsSearchClearButton <- this.FindControl<Button>("LegsSearchClear")
-        feetSearchClearButton <- this.FindControl<Button>("FeetSearchClear")
-
         skinColorSwatchesControl <- this.FindControl<ItemsControl>("SkinColorSwatches")
         hairColorSwatchesControl <- this.FindControl<ItemsControl>("HairColorSwatches")
         highlightsColorSwatchesControl <- this.FindControl<ItemsControl>("HighlightColorSwatches")
@@ -408,23 +384,6 @@ type MainWindow () as this =
         let clanOk = selectedClanNameOpt.IsSome
         submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk
         clearAllButton.IsEnabled <- raceOk && genderOk && clanOk
-
-    member private this.UpdateAllSlotListsFromLocalCache() =
-        let updateSlot (slotList: ListBox) (gearCategory: string) (searchTerm: string) =
-            let filteredList =
-                allGearCache
-                |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
-                |> List.filter (fun m ->
-                    if String.IsNullOrWhiteSpace(searchTerm) then true
-                    else m.Item.Name.ToLower().Contains(searchTerm.ToLower())
-                )
-            slotList.ItemsSource <- filteredList
-
-        updateSlot headSlotCombo "Head" headSlotSearchBox.Text
-        updateSlot bodySlotCombo "Body" bodySlotSearchBox.Text
-        updateSlot handSlotCombo "Hands" handSlotSearchBox.Text
-        updateSlot legsSlotCombo "Legs" legsSlotSearchBox.Text
-        updateSlot feetSlotCombo "Feet" feetSlotSearchBox.Text
 
     member private this.UpdateDyeChannelsForItem(item: IItemModel, itemSlot: EquipmentSlot, tx: ModTransaction) =
         task {
@@ -513,7 +472,6 @@ type MainWindow () as this =
                         | _ ->
                             DataHelpers.vec4ToDXColor renderPalette.[index]
 
-                    printfn $"Selected Color Value: [{selectedColor.R}, {selectedColor.G}, {selectedColor.B}, {selectedColor.A}]"
                     match int palette with
                     | 15 ->
                         modelColors.HairColor <- selectedColor
@@ -932,28 +890,7 @@ type MainWindow () as this =
                 characterCustomizations <- { characterCustomizations with BustSize = finalValue}
                 do! this.OnSubmitCharacter(render)
             } |> Async.StartImmediate
-        )
-
-
-        headSearchClearButton.Click.Add(fun _ ->
-            clearSearch headSlotSearchBox
-        )
-
-        bodySearchClearButton.Click.Add(fun _ ->
-            clearSearch bodySlotSearchBox
-        )
-
-        handSearchClearButton.Click.Add(fun _ ->
-            clearSearch handSlotSearchBox
-        )
-
-        legsSearchClearButton.Click.Add(fun _ ->
-            clearSearch legsSlotSearchBox
-        )
-
-        feetSearchClearButton.Click.Add(fun _ ->
-            clearSearch feetSlotSearchBox
-        )        
+        )     
 
         setupGearSlot (headSlotCombo, headClearButton, headDye1Combo, headDye1ClearButton, headDye2Combo, headDye2ClearButton, EquipmentSlot.Head, "Head")
         setupGearSlot (bodySlotCombo, bodyClearButton, bodyDye1Combo, bodyDye1ClearButton, bodyDye2Combo, bodyDye2ClearButton, EquipmentSlot.Body, "Body")
