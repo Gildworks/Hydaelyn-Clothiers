@@ -77,8 +77,6 @@ type App() =
         let asyncUpdateApp = async {
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
 
-            
-            // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
             do! this.GetReleaseChannelURL()
             let finalURL =
                 if String.IsNullOrWhiteSpace(releaseChannelURL) then
@@ -91,11 +89,11 @@ type App() =
                 else
                     userAccessToken
 
-            //let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
-            //let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
-            //if not (isNull newVer) then
-            //    do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
-            //    mgr.ApplyUpdatesAndRestart(newVer)
+            let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
+            let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
+            if not (isNull newVer) then
+                do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
+                mgr.ApplyUpdatesAndRestart(newVer)
 
             // === End Velopack Automatic Updates Section ===
 
