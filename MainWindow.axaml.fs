@@ -732,30 +732,49 @@ type MainWindow () as this =
                 }
             let headItem = 
                 match headSlotCombo.SelectedItem with
-                | :? FilterGear as gear -> gear
-                | _ -> emptyGear
+                | :? FilterGear as gear -> 
+                    if gear.Item.Name.Contains("SmallClothes") then
+                        None
+                    else
+                        Some gear
+                | _ -> None
             let bodyItem =
                 match bodySlotCombo.SelectedItem with
-                | :? FilterGear as gear -> gear
-                | _ -> emptyGear
+                | :? FilterGear as gear -> 
+                    if gear.Item.Name.Contains("SmallClothes") then
+                        None
+                    else
+                        Some gear
+                | _ -> None
             let handItem =
                 match handSlotCombo.SelectedItem with
-                | :? FilterGear as gear -> gear
-                | _ -> emptyGear
+                | :? FilterGear as gear -> 
+                    if gear.Item.Name.Contains("SmallClothes") then
+                        None
+                    else
+                        Some gear
+                | _ -> None
             let legsItem =
                 match legsSlotCombo.SelectedItem with
-                | :? FilterGear as gear -> gear
-                | _ -> emptyGear
+                | :? FilterGear as gear -> 
+                    if gear.Item.Name.Contains("SmallClothes") then
+                        None
+                    else
+                        Some gear
+                | _ -> None
             let feetItem =
                 match feetSlotCombo.SelectedItem with
-                | :? FilterGear as gear -> gear
-                | _ -> emptyGear
+                | :? FilterGear as gear -> 
+                    if gear.Item.Name.Contains("SmallClothes") then
+                        None
+                    else
+                        Some gear
+                | _ -> None
 
-            let createListString (item: FilterGear) : string option =
-                if item.CraftingDetails.Length < 1 then
-                    None
-                else
-                    Some $"{item.Item.ExdID},null,1"
+            let createListString (item: FilterGear option) : string option =
+                match item with
+                | Some gear -> Some $"{gear.Item.ExdID}, null, 1"
+                | None -> None
 
             let addString (string: string) =
                 tempList.Add(string)
