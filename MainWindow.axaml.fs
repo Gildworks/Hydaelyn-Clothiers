@@ -826,7 +826,6 @@ type MainWindow () as this =
             async{
                 characterCustomizations <- { characterCustomizations with BustSize = finalValue}
                 do! this.OnSubmitCharacter(render)
-                printfn $"Character Customization set. New value: {finalValue}"
             } |> Async.StartImmediate
         )
 

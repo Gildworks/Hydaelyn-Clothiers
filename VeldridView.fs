@@ -627,8 +627,6 @@ type VeldridView() as this =
                     // Calculate bone transforms with customizations and update GPU buffer
                     let customizedTransforms = this.calculateBoneTransforms skeleton customizations
                     gd.UpdateBuffer(boneTransformBuffer.Value, 0u, customizedTransforms)
-            
-                    printfn $"Unified model created: {finalMeshes.Count} draw calls for {activeModels.Length} original models"
                 else
                     match currentCharacterModel with
                     | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
