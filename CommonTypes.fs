@@ -76,6 +76,14 @@ type TransformsUBO =
         EyePosition: Vector4
     }
 
+type CharacterCustomizations =
+    {
+        Height              : float32
+        BustSize            : float32
+        FaceScale           : float32
+        MuscleDefinition    : float32
+    }
+
 type ViewModelBase() =
     let propertyChanged = Event<PropertyChangedEventHandler, PropertyChangedEventArgs>()
 

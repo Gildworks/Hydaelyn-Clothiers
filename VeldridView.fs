@@ -23,6 +23,7 @@ open xivModdingFramework.Exd.FileTypes
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.Items.Categories
 open xivModdingFramework.General.Enums
+open xivModdingFramework.General
 open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Models.FileTypes
 open xivModdingFramework.Models.DataContainers
@@ -84,9 +85,9 @@ type VeldridView() as this =
   
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
-            let! (slot, item, race, dye1, dye2, colors, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
+            let! (slot, item, race, dye1, dye2, colors, customizations, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
             try
-                do! this.AssignGear(slot, item, race, dye1, dye2, colors, device.Value )
+                do! this.AssignGear(slot, item, race, dye1, dye2, colors, customizations, device.Value )
                 taskCompletionSource.SetResult(())
             with ex ->
                 taskCompletionSource.SetException(ex)
@@ -246,238 +247,312 @@ type VeldridView() as this =
                     disposeQueue.Enqueue((model, framesLeft - 1))
 
     override this.Dispose (gd: GraphicsDevice): unit =
-        pipeline    |> Option.iter (fun p -> p.Dispose())
-        mvpBuffer   |> Option.iter (fun b -> b.Dispose())
-        mvpSet      |> Option.iter (fun s -> s.Dispose())
-        mvpLayout   |> Option.iter (fun l -> l.Dispose())
+        pipeline                |> Option.iter (fun p -> p.Dispose())
+        mvpBuffer               |> Option.iter (fun b -> b.Dispose())
+        mvpSet                  |> Option.iter (fun s -> s.Dispose())
+        mvpLayout               |> Option.iter (fun l -> l.Dispose())
+        boneTransformBuffer     |> Option.iter (fun b -> b.Dispose())
+        boneTransformSet        |> Option.iter (fun s -> s.Dispose())
+        boneTransformLayout     |> Option.iter (fun l -> l.Dispose())
+
+        match currentCharacterModel with
+        | Some model -> this.DisposeRenderModel(model)
+        | None -> ()
+
         base.Dispose(gd: GraphicsDevice)
 
-    member this.calculateBoneTransforms (skeleton: List<SkeletonData>) : Matrix4x4[] =
+    member this.calculateBoneTransforms (skeleton: List<SkeletonData>) (customizations: CharacterCustomizations) : Matrix4x4[] =
         let boneCount = skeleton.Length
-        Array.create boneCount Matrix4x4.Identity
-        //let worldMatrices = Array.create boneCount Matrix4x4.Identity
-        //let finalTransforms = Array.create boneCount Matrix4x4.Identity
+        if boneCount = 0 then
+            [| |]
+        else
+            let worldMatrices = Array.create boneCount Matrix4x4.Identity
+            let finalTransforms = Array.create boneCount Matrix4x4.Identity
+            let bustScale = this.handleBustScaling(customizations.BustSize)
 
-        //// First, calculate the world matrix for each bone
-        //for i = 0 to boneCount - 1 do
-        //    let bone = skeleton.[i]
-        //    let parentIndex = bone.BoneParent
-        //    let localMatrix = new Matrix4x4(
-        //        bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
-        //        bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
-        //        bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
-        //        bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
-        //    )
-        //    let transposedLocalMatrix = Matrix4x4.Transpose(localMatrix)
+            // Build world matrices WITHOUT custom scaling first
+            for i = 0 to boneCount - 1 do
+                let bone = skeleton.[i]
+                let parentIndex = bone.BoneParent
         
-        //    if parentIndex > -1 then
-        //        worldMatrices.[i] <- transposedLocalMatrix * worldMatrices.[parentIndex]
-        //    else
-        //        worldMatrices.[i] <- transposedLocalMatrix
+                let localMatrixOriginal = new Matrix4x4(
+                    bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
+                    bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
+                    bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
+                    bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
+                )
+                let localMatrix = Matrix4x4.Transpose(localMatrixOriginal)
+    
+                if parentIndex > -1 then
+                    worldMatrices.[i] <- localMatrix * worldMatrices.[parentIndex]
+                else
+                    worldMatrices.[i] <- localMatrix
 
-        //// Then, calculate the final skinning matrix for each bone
-        //for i = 0 to boneCount - 1 do
-        //    let bone = skeleton.[i]
-        //    let invBindMatrix = new Matrix4x4(
-        //        bone.InversePoseMatrix.[0], bone.InversePoseMatrix.[1], bone.InversePoseMatrix.[2], bone.InversePoseMatrix.[3],
-        //        bone.InversePoseMatrix.[4], bone.InversePoseMatrix.[5], bone.InversePoseMatrix.[6], bone.InversePoseMatrix.[7],
-        //        bone.InversePoseMatrix.[8], bone.InversePoseMatrix.[9], bone.InversePoseMatrix.[10], bone.InversePoseMatrix.[11],
-        //        bone.InversePoseMatrix.[12], bone.InversePoseMatrix.[13], bone.InversePoseMatrix.[14], bone.InversePoseMatrix.[15]
-        //    )
-        //    let transposedInvBindMatrix = Matrix4x4.Transpose(invBindMatrix)
+            // Apply custom scaling in the final skinning matrix calculation
+            for i = 0 to boneCount - 1 do
+                let bone = skeleton.[i]
+                let invBindMatrixOriginal = new Matrix4x4(
+                    bone.InversePoseMatrix.[0], bone.InversePoseMatrix.[1], bone.InversePoseMatrix.[2], bone.InversePoseMatrix.[3],
+                    bone.InversePoseMatrix.[4], bone.InversePoseMatrix.[5], bone.InversePoseMatrix.[6], bone.InversePoseMatrix.[7],
+                    bone.InversePoseMatrix.[8], bone.InversePoseMatrix.[9], bone.InversePoseMatrix.[10], bone.InversePoseMatrix.[11],
+                    bone.InversePoseMatrix.[12], bone.InversePoseMatrix.[13], bone.InversePoseMatrix.[14], bone.InversePoseMatrix.[15]
+                )
+                let invBindMatrix = Matrix4x4.Transpose(invBindMatrixOriginal)
+        
+                let mutable skinningMatrix = worldMatrices.[i] * invBindMatrixOriginal
+            
+                finalTransforms.[i] <- Matrix4x4.Transpose(skinningMatrix)
 
-        //    // The final transform sent to the shader is InverseBindPose * WorldTransformOfBone
-        //    finalTransforms.[i] <- invBindMatrix * worldMatrices.[i]
+            finalTransforms
 
-        //finalTransforms
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gd: GraphicsDevice) : Async<unit> =
+        try
+            async {
+                let tx = ModTransaction.BeginReadonlyTransaction()
+                let eqp = new Eqp()       
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, gd: GraphicsDevice) : Async<unit> =
-        async {
-            let tx = ModTransaction.BeginReadonlyTransaction()
-            let eqp = new Eqp()       
+                let textureLayout =
+                    gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(
+                        ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Normal", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Specular", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Emissive", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Alpha", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Roughness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Metalness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
+                    ))
 
-            let textureLayout =
-                gd.ResourceFactory.CreateResourceLayout(ResourceLayoutDescription(
-                    ResourceLayoutElementDescription("tex_Diffuse", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Normal", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Specular", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Emissive", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Alpha", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Roughness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Metalness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
-                ))
+                try
+                    let! ttModel =
+                        let loadModel (item: IItemModel) (race: XivRace) =
+                            task {
+                                let! model = Mdl.GetTTModel(item, race)
+                                let _ = model.Source
+                                return model
+                            }
 
-            try
-                let! ttModel =
-                    let loadModel (item: IItemModel) (race: XivRace) =
-                        task {
-                            let! model = Mdl.GetTTModel(item, race)
-                            let _ = model.Source
-                            return model
-                        }
+                        async {    
+                            match slot with
+                            | EquipmentSlot.Face
+                            | EquipmentSlot.Hair
+                            | EquipmentSlot.Tail
+                            | EquipmentSlot.Ear ->
+                                let category, prefix, suffix  =
+                                    match slot with
+                                    | EquipmentSlot.Face -> "face", "f", "fac"
+                                    | EquipmentSlot.Hair -> "hair", "h", "hir"
+                                    | EquipmentSlot.Ear -> "zear", "z", "zer"
+                                    | EquipmentSlot.Tail -> "tail", "t", "til"
+                                    | _ -> "error", "error", "error"
+                                let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
+                                try
+                                    return! loadModel item race |> Async.AwaitTask
+                                with ex ->
+                                    return raise ex
+                            | _ ->
+                                let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot, races: XivRace list) : Async<XivRace> =
+                                    let rec tryResolveRace (slot: string) (races: XivRace list) (originalRace: XivRace) (eqdp: Collections.Generic.Dictionary<XivRace, xivModdingFramework.Models.DataContainers.EquipmentDeformationParameter>) : Async<XivRace> =
+                                        async {
+                                            match races with
+                                            | [] -> 
+                                                return originalRace
+                                            | race::rest ->                                        
+                                                match eqdp.TryGetValue(race) with
+                                                | true, param when param.HasModel -> 
+                                                    return race
+                                                | _ -> 
+                                                    return! tryResolveRace slot rest originalRace eqdp
+                                        }
 
-                    async {    
-                        match slot with
-                        | EquipmentSlot.Face
-                        | EquipmentSlot.Hair
-                        | EquipmentSlot.Tail
-                        | EquipmentSlot.Ear ->
-                            let category, prefix, suffix  =
-                                match slot with
-                                | EquipmentSlot.Face -> "face", "f", "fac"
-                                | EquipmentSlot.Hair -> "hair", "h", "hir"
-                                | EquipmentSlot.Ear -> "zear", "z", "zer"
-                                | EquipmentSlot.Tail -> "tail", "t", "til"
-                                | _ -> "error", "error", "error"
-                            let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
-                            try
-                                return! loadModel item race |> Async.AwaitTask
-                            with ex ->
-                                return raise ex
-                        | _ ->
-                            let rec resolveModelRace (item: IItemModel, race: XivRace, slot: EquipmentSlot, races: XivRace list) : Async<XivRace> =
-                                let rec tryResolveRace (slot: string) (races: XivRace list) (originalRace: XivRace) (eqdp: Collections.Generic.Dictionary<XivRace, xivModdingFramework.Models.DataContainers.EquipmentDeformationParameter>) : Async<XivRace> =
+                                    let searchSlot = 
+                                        match slot with
+                                        | EquipmentSlot.Body -> "top"
+                                        | EquipmentSlot.Head -> "met"
+                                        | EquipmentSlot.Hands -> "glv"
+                                        | EquipmentSlot.Legs -> "dwn"
+                                        | EquipmentSlot.Feet -> "sho"
+                                        | _ -> ""
+                            
+                            
+                                    async {
+                                        let! eqdp = eqp.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
+                                        return! tryResolveRace searchSlot races race eqdp
+                                    }
+                        
+                                let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
+                                let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
+                        
+                        
+
+                                let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
                                     async {
                                         match races with
-                                        | [] -> 
-                                            return originalRace
-                                        | race::rest ->                                        
-                                            match eqdp.TryGetValue(race) with
-                                            | true, param when param.HasModel -> 
-                                                return race
-                                            | _ -> 
-                                                return! tryResolveRace slot rest originalRace eqdp
+                                        | [] ->
+                                            return raise (exn "Failed to load any model. Rage quitting.")
+                                        | race::rest ->
+                                            try
+                                                return! loadModel item race |> Async.AwaitTask
+                                            with ex ->
+                                                return! racialFallbacks item rest race
                                     }
 
-                                let searchSlot = 
-                                    match slot with
-                                    | EquipmentSlot.Body -> "top"
-                                    | EquipmentSlot.Head -> "met"
-                                    | EquipmentSlot.Hands -> "glv"
-                                    | EquipmentSlot.Legs -> "dwn"
-                                    | EquipmentSlot.Feet -> "sho"
-                                    | _ -> ""
+                        
+                                try
+                                    return! loadModel item race |> Async.AwaitTask
+                                with _ ->
                             
-                            
-                                async {
-                                    let! eqdp = eqp.GetEquipmentDeformationParameters(item.ModelInfo.SecondaryID, searchSlot, false, false, false, tx) |> Async.AwaitTask
-                                    return! tryResolveRace searchSlot races race eqdp
-                                }
-                        
-                            let priorityList = XivRaces.GetModelPriorityList(race) |> Seq.toList
-                            let! resolvedRace = resolveModelRace(item, race, slot, priorityList)
-                        
-                        
-
-                            let rec racialFallbacks (item: IItemModel) (races: XivRace list) (targetRace: XivRace): Async<TTModel> =
-                                async {
-                                    match races with
-                                    | [] ->
-                                        return raise (exn "Failed to load any model. Rage quitting.")
-                                    | race::rest ->
-                                        try
-                                            return! loadModel item race |> Async.AwaitTask
-                                        with ex ->
-                                            return! racialFallbacks item rest race
-                                }
-
-                        
-                            try
-                                return! loadModel item race |> Async.AwaitTask
-                            with _ ->
-                            
-                                return! racialFallbacks item priorityList resolvedRace
-                    }
-                do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
-                ModelModifiers.FixUpSkinReferences(ttModel, race)
-                ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
-                texLayout <- Some textureLayout
-                do this.RebuildCharacterModel(gd, race)
+                                    return! racialFallbacks item priorityList resolvedRace
+                        }
+                    do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
+                    ModelModifiers.FixUpSkinReferences(ttModel, race)
+                    ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
+                    texLayout <- Some textureLayout
+                    let nullCustomizations =
+                        {
+                            Height = 800.0f
+                            BustSize = 0.0f
+                            FaceScale = 1.0f
+                            MuscleDefinition = 1.0f
+                        }
+                    printfn $"Current bust scale: {customizations.BustSize}"
+                    do! this.RebuildCharacterModel(gd, race, customizations)
 
                 
-            with ex ->
-                return ()
+                with ex ->
+                    raise ex
             
-        }
+            }
+        with ex ->
+            printfn $"AssignGear failed: {ex.Message}"
+            printfn $"Stack trace: {ex.StackTrace}"
+            reraise()
 
-    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace) =
-        async {
-            let activeModels =
-                ttModelMap
-                |> Map.values
-                |> Seq.toList
-            if activeModels.IsEmpty then
-                currentCharacterModel <- None
-                return ()
-            let tx = ModTransaction.BeginReadonlyTransaction()
-
-            let modelPathsList = activeModels |> List.map (fun input -> input.Model.Source)
-            let modelPaths = ResizeArray(modelPathsList)
-            let masterBoneDict = TTModel.ResolveFullBoneHeirarchy(race, modelPaths, (fun isWarning msg -> printfn $"[SKLB] {msg}"), tx)
-            skeleton <- masterBoneDict.Values |> Seq.sortBy (fun bone -> bone.BoneNumber) |> Seq.toList
-
-            let masterBoneIndexLookup =
-                skeleton
-                |> List.indexed
-                |> List.map (fun (i, bone) -> (bone.BoneName, i))
-                |> dict
-
-            let uniqueMaterialPaths =
-                activeModels
-                |> List.collect (fun input -> 
-                    input.Model.Materials
+    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, customizations: CharacterCustomizations) =
+        try
+            async {
+                let activeModels =
+                    ttModelMap
+                    |> Map.values
                     |> Seq.toList
-                )
-                |> Set.ofList
-            let! preparedMaterials = 
-                uniqueMaterialPaths
-                |> Set.toList
-                |> List.map (fun matPath -> async {
-                    let ownerInput = activeModels |> List.find (fun input -> input.Model.Materials.Contains(matPath))
-                    let! mtrl = TTModelLoader.resolveMtrl ownerInput.Model matPath ownerInput.Item tx
-                    let! prepared = MaterialBuilder.materialBuilder gd.ResourceFactory gd texLayout.Value ownerInput.Dye1 ownerInput.Dye2 ownerInput.Colors mtrl ownerInput.Item.Name |> Async.AwaitTask
-                    return (matPath, prepared)
-                })
-                |> Async.Parallel
-            let materialDict = dict preparedMaterials
+                if activeModels.IsEmpty then
+                    match currentCharacterModel with
+                    | Some oldModel ->
+                        disposeQueue.Enqueue((oldModel, 5))
+                    | None -> ()
+                    currentCharacterModel <- None
+                    return ()
+            
+                let tx = ModTransaction.BeginReadonlyTransaction()
 
-            let geometryData = System.Collections.Generic.Dictionary<string, (ResizeArray<VertexPositionSkinned> * ResizeArray<uint16>)>()
-            for matPath in uniqueMaterialPaths do
-                geometryData.Add(matPath, (ResizeArray(), ResizeArray()))
+                let modelPathsList = activeModels |> List.map (fun input -> input.Model.Source)
+                let modelPaths = ResizeArray(modelPathsList)
+                let masterBoneDict = TTModel.ResolveFullBoneHeirarchy(race, modelPaths, (fun isWarning msg -> printfn $"[SKLB] {msg}"), tx)
+                skeleton <- masterBoneDict.Values |> Seq.sortBy (fun bone -> bone.BoneNumber) |> Seq.toList
 
-            for inputModel in activeModels do
-                let ttModel = inputModel.Model
-                for meshGroup in ttModel.MeshGroups do
+                let masterBoneIndexLookup =
+                    skeleton
+                    |> List.indexed
+                    |> List.map (fun (i, bone) -> (bone.BoneName, i))
+                    |> dict
 
-                    let boneRemapTable = System.Collections.Generic.Dictionary<int, int>()
-                    for i = 0 to meshGroup.Bones.Count - 1 do
-                        let localBoneName = meshGroup.Bones.[i]
-                        if masterBoneIndexLookup.ContainsKey(localBoneName) then
-                            let masterBoneIndex = masterBoneIndexLookup.[localBoneName]
-                            boneRemapTable.Add(i, masterBoneIndex)
-                    
-                    let materialPath = meshGroup.Material
-                    if materialPath <> null && geometryData.ContainsKey(materialPath) then
+                // Build unified geometry with proper bone index mapping
+                let geometryData = System.Collections.Generic.Dictionary<string, ResizeArray<VertexPositionSkinned> * ResizeArray<uint16>>()
+
+                // Build material dictionary
+                let uniqueMaterialPaths =
+                    activeModels
+                    |> List.collect (fun input ->
+                        input.Model.Materials
+                        |> Seq.toList
+                    )
+                    |> Set.ofList
+                let! preparedMaterials =
+                    uniqueMaterialPaths
+                    |> Set.toList
+                    |> List.map (fun matPath -> async {
+                        let ownerInput = activeModels |> List.find (fun input -> input.Model.Materials.Contains(matPath))
+                        let! mtrl = TTModelLoader.resolveMtrl ownerInput.Model matPath ownerInput.Item tx
+                        let! prepared = MaterialBuilder.materialBuilder gd.ResourceFactory gd texLayout.Value ownerInput.Dye1 ownerInput.Dye2 ownerInput.Colors mtrl ownerInput.Item.Name |> Async.AwaitTask
+                        return (matPath, prepared)
+                    })
+                    |> Async.Parallel
+                let materialDict = dict preparedMaterials
+        
+                for input in activeModels do
+                    for mesh in input.Model.MeshGroups do
+                        let materialPath = mesh.Material
+                
+                        if not (geometryData.ContainsKey(materialPath)) then
+                            geometryData.[materialPath] <- (ResizeArray<VertexPositionSkinned>(), ResizeArray<uint16>())
+                
                         let (vertexList, indexList) = geometryData.[materialPath]
-                        let vertexOffset = uint16 vertexList.Count
-                        
-                        for part in meshGroup.Parts do
+                
+                        for part in mesh.Parts do
+                            let vertexOffset = vertexList.Count
+                            let mutable averageX = 0.0f
+                            let mutable averageY = 0.0f
+                            let mutable averageZ = 0.0f
+                            let mutable averageTotal = float32 part.Vertices.Count
                             for vertex in part.Vertices do
-                                let boneIndices = Array.zeroCreate 4
-                                let boneWeights = Array.zeroCreate 4
+                                averageX <- averageX + vertex.Position.X
+                                averageY <- averageY + vertex.Position.Y
+                                averageZ <- averageZ + vertex.Position.Z
 
+                            let centerX = averageX / averageTotal
+                            let centerY = averageY / averageTotal
+                            let centerZ = averageZ / averageTotal
+
+                            for vertex in part.Vertices do
+                                let mutable scaledPosition = vertex.Position
+
+                                let bustInfluence =
+                                    [0..7]
+                                    |> List.sumBy (fun i ->
+                                        let localBoneIndex = int vertex.BoneIds.[i]
+                                        if localBoneIndex < mesh.Bones.Count then
+                                            let boneName = mesh.Bones.[localBoneIndex]
+                                            if boneName.Contains("j_mune") then
+                                                (float32 vertex.Weights.[i] / 255.0f)
+                                            else 0.0f
+                                        else 0.0f
+                                    )
+                                if bustInfluence > 0.0f then
+                                    let bustScale = this.handleBustScaling(customizations.BustSize)
+                                    let centerPoint = SharpDX.Vector3(centerX, centerY, centerZ)
+
+                                    let offsetFromCenter = scaledPosition - centerPoint
+                                    
+                                    let effectiveScale = SharpDX.Vector3(
+                                        1.0f + (bustScale.X - 1.0f) * bustInfluence,
+                                        1.0f + (bustScale.Y - 1.0f) * bustInfluence,
+                                        1.0f + (bustScale.Z - 1.0f) * bustInfluence
+                                    )
+
+                                    let scaledOffset = SharpDX.Vector3(
+                                        offsetFromCenter.X * effectiveScale.X,
+                                        offsetFromCenter.Y * effectiveScale.Y,
+                                        offsetFromCenter.Z * effectiveScale.Z
+                                    )
+                                    scaledPosition <- centerPoint + scaledOffset
+
+                                let mutable boneIndices = Array.create 4 0.0f
+                                let mutable boneWeights = Array.create 4 0.0f
+
+                                // Map mesh-local bone indices to global skeleton indices
                                 for i = 0 to 3 do
                                     let localBoneIndex = int vertex.BoneIds.[i]
-                                    if boneRemapTable.ContainsKey(localBoneIndex) then
-                                        boneIndices.[i] <- float32 boneRemapTable.[localBoneIndex]
-                                        boneWeights.[i] <- (float32 vertex.Weights.[i]) / 255.0f
+                                    if localBoneIndex < mesh.Bones.Count then
+                                        let boneName = mesh.Bones.[localBoneIndex]
+                                        if masterBoneIndexLookup.ContainsKey(boneName) then
+                                            boneIndices.[i] <- float32 masterBoneIndexLookup.[boneName]
+                                            boneWeights.[i] <- (float32 vertex.Weights.[i]) / 255.0f
 
                                 vertexList.Add(
                                     VertexPositionSkinned(
-                                        SharpToNumerics.vec3 vertex.Position,
+                                        SharpToNumerics.vec3 scaledPosition,
                                         SharpToNumerics.vec3 vertex.Normal,
                                         SharpToNumerics.convertColor vertex.VertexColor,
                                         SharpToNumerics.vec2 vertex.UV1,
@@ -488,56 +563,70 @@ type VeldridView() as this =
                                     )
                                 )
                             for index in part.TriangleIndices do
-                                indexList.Add(vertexOffset + (uint16 index))
+                                let test = uint16 (vertexOffset + index)
+                                indexList.Add(test)
 
-            let finalMeshes = ResizeArray<RenderMesh>()
-            let factory = gd.ResourceFactory
+                // Create unified render meshes (single draw call per material type)
+                let finalMeshes = ResizeArray<RenderMesh>()
+                let factory = gd.ResourceFactory
 
-            for matPath in geometryData.Keys do
-                let (vertexList, indexList) = geometryData.[matPath]
+                for matPath in geometryData.Keys do
+                    let (vertexList, indexList) = geometryData.[matPath]
 
-                if vertexList.Count > 0 && indexList.Count > 0 then
-                    let vertices = vertexList.ToArray()
-                    let indices = indexList.ToArray()
+                    if vertexList.Count > 0 && indexList.Count > 0 then
+                        let vertices = vertexList.ToArray()
+                        let indices = indexList.ToArray()
 
-                    let vertexBuffer = factory.CreateBuffer(BufferDescription(
-                        uint32 (vertices.Length * Marshal.SizeOf<VertexPositionSkinned>()),
-                        BufferUsage.VertexBuffer
-                    ))
-                    let indexBuffer = factory.CreateBuffer(BufferDescription(
-                        uint32 (indices.Length * sizeof<uint16>), 
-                        BufferUsage.IndexBuffer
-                    ))
+                        let vertexBuffer = factory.CreateBuffer(BufferDescription(
+                            uint32 (vertices.Length * Marshal.SizeOf<VertexPositionSkinned>()),
+                            BufferUsage.VertexBuffer
+                        ))
+                        let indexBuffer = factory.CreateBuffer(BufferDescription(
+                            uint32 (indices.Length * sizeof<uint16>), 
+                            BufferUsage.IndexBuffer
+                        ))
 
-                    gd.UpdateBuffer(vertexBuffer, 0u, vertices)
-                    gd.UpdateBuffer(indexBuffer, 0u, indices)
+                        gd.UpdateBuffer(vertexBuffer, 0u, vertices)
+                        gd.UpdateBuffer(indexBuffer, 0u, indices)
 
-                    let renderMesh = {
-                        VertexBuffer = vertexBuffer
-                        IndexBuffer = indexBuffer
-                        IndexCount = indices.Length
-                        Material = materialDict.[matPath]
-                        RawModel = null
-                    }
-                    finalMeshes.Add(renderMesh)
+                        let renderMesh = {
+                            VertexBuffer = vertexBuffer
+                            IndexBuffer = indexBuffer
+                            IndexCount = indices.Length
+                            Material = materialDict.[matPath]
+                            RawModel = null
+                        }
+                        finalMeshes.Add(renderMesh)
 
-            if finalMeshes.Count > 0 then
-                let finalRenderModel = { Meshes = finalMeshes |> List.ofSeq; Original = null }
-                printfn "Model added to render, you should see geometry."
-                currentCharacterModel <- Some finalRenderModel
-            else
-                printfn "No model to add."
-                currentCharacterModel <- None
+                if finalMeshes.Count > 0 then
+                    match currentCharacterModel with
+                    | Some oldModel ->
+                        disposeQueue.Enqueue((oldModel, 5))
+                    | None -> ()
 
-            let finalTransforms = this.calculateBoneTransforms skeleton
-            gd.UpdateBuffer(boneTransformBuffer.Value, 0u, finalTransforms)
-        }
-        |> Async.StartImmediate
+                    let finalRenderModel = { Meshes = finalMeshes |> List.ofSeq; Original = null }
+                    currentCharacterModel <- Some finalRenderModel
+            
+                    // Calculate bone transforms with customizations and update GPU buffer
+                    let customizedTransforms = this.calculateBoneTransforms skeleton customizations
+                    gd.UpdateBuffer(boneTransformBuffer.Value, 0u, customizedTransforms)
+            
+                    printfn $"Unified model created: {finalMeshes.Count} draw calls for {activeModels.Length} original models"
+                else
+                    match currentCharacterModel with
+                    | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
+                    | None -> ()
+                    currentCharacterModel <- None
+            }
+        with ex ->
+            printfn $"RebuildCharacterModel failed: {ex.Message}"
+            printfn $"Stack trace: {ex.StackTrace}"
+            reraise()
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors) : Async<unit> =
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations) : Async<unit> =
         async {
           let tcs = TaskCompletionSource<unit>()
-          do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, mailboxAckReply, tcs))
+          do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, customizations, mailboxAckReply, tcs))
 
           do! Async.AwaitTask(tcs.Task)
         }
@@ -799,9 +888,33 @@ type VeldridView() as this =
             return charaList |> List.ofSeq
         }
 
+    member this.DisposeRenderModel(renderModel: RenderModel) : unit =
+        try
+            for mesh in renderModel.Meshes do
+                try
+                    mesh.VertexBuffer.Dispose()
+                with ex -> printfn $"Failed to dispose vertex buffer {ex.Message}"
+                try
+                    mesh.IndexBuffer.Dispose()
+                with ex -> printfn $"Failed to dispose index buffer: {ex.Message}"
+                try
+                    mesh.Material.Dispose()
+                with ex -> printfn $"Failed to dispose material: {ex.Message}"
+        with ex ->
+            printfn $"Error disposing render model: {ex.Message}"
+
     member this.ClearGearSlot(slot: EquipmentSlot) =
         modelMap <- modelMap.Remove(slot)
         ttModelMap <- ttModelMap.Remove(slot)
+
+    member this.handleBustScaling(inputPercent: float32) : Vector3 =
+        let clampedPercent = Math.Clamp(inputPercent, 0.0f, 300.0f)
+
+        let scaleX = (0.92f + (inputPercent * 0.0016f))
+        let scaleY = (0.816f + (inputPercent * 0.00368f))
+        let scaleZ = (0.8f + (inputPercent * 0.004f))
+
+        Vector3(scaleX, scaleY, scaleZ)
 
     member this.CreateEmptyPipeline (gd: GraphicsDevice) (outputDesc: OutputDescription) =
         let factory = gd.ResourceFactory

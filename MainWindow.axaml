@@ -698,6 +698,14 @@
 							</ItemsControl>
 						</Expander>
 					</StackPanel>
+					<StackPanel>
+						<TextBlock Text="Character Customizations" HorizontalAlignment="Stretch" Margin="19" />
+						<StackPanel>
+							<TextBlock Text="Bust Size" HorizontalAlignment="Center"/>
+							<Slider Orientation="Vertical" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" x:Name="BustSize" Height="250" HorizontalAlignment="Center" Value="50"/>
+							<TextBlock Text="{Binding #BustSize.Value}" HorizontalAlignment="Center"/>
+						</StackPanel>
+					</StackPanel>
 				</StackPanel>
 			</ScrollViewer>
 		</Grid>

@@ -13,6 +13,7 @@ open Avalonia.Input
 open Avalonia.Interactivity
 open Avalonia.Media
 open Avalonia.Threading
+open Avalonia.VisualTree
 
 open AvaloniaRender.Veldrid
 open xivModdingFramework.General.Enums
@@ -183,6 +184,13 @@ type MainWindow () as this =
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
     let mutable selectedClanNameOpt: string option = Some "Midlander"
     let mutable selectedGenderNameOpt: string option = Some "Male"
+    let mutable characterCustomizations: CharacterCustomizations =
+        {
+            Height = 100.0f
+            BustSize = 50.0f
+            FaceScale = 1.0f
+            MuscleDefinition = 1.0f
+        }
 
     let mutable modelColors: CustomModelColors = ModelTexture.GetCustomColors()
     let mutable selectedSwatchBorders: System.Collections.Generic.Dictionary<paletteOptions, Border option> = System.Collections.Generic.Dictionary()
@@ -277,6 +285,8 @@ type MainWindow () as this =
     let mutable lipRadioDarkControl: RadioButton = null
     let mutable lipRadioLightControl: RadioButton = null
     let mutable lipRadioNoneControl: RadioButton = null
+
+    let mutable bustSlider: Slider = null
 
     let mutable filterOpenButton: Button = null
     let mutable splitPane: SplitView = null
@@ -379,6 +389,8 @@ type MainWindow () as this =
         lipRadioDarkControl <- this.FindControl<RadioButton>("DarkLip")
         lipRadioLightControl <- this.FindControl<RadioButton>("LightLip")
         lipRadioNoneControl <- this.FindControl<RadioButton>("NoneLip")
+
+        bustSlider <- this.FindControl<Slider>("BustSize")
 
         filterOpenButton <- this.FindControl<Button>("FilterOpenButton")
         splitPane <- this.FindControl<SplitView>("FilterPanel")
@@ -794,6 +806,30 @@ type MainWindow () as this =
         let clearSearch (searchBox: TextBox) =
             searchBox.Text <- String.Empty
 
+        let handleSliderChange (slider: Slider) (onReleased: float32 -> unit) =
+            let thumb =
+                slider.GetVisualDescendants()
+                |> Seq.tryPick (fun v ->
+                    match v with
+                    | :? Thumb as t -> Some t
+                    | _ -> None
+                )
+            match thumb with
+            | Some t ->
+                t.DragCompleted.Add(fun _ ->
+                    let finalValue = float32 slider.Value
+                    onReleased finalValue
+                )
+            | None -> ()
+
+        handleSliderChange bustSlider (fun finalValue ->
+            async{
+                characterCustomizations <- { characterCustomizations with BustSize = finalValue}
+                do! this.OnSubmitCharacter(render)
+                printfn $"Character Customization set. New value: {finalValue}"
+            } |> Async.StartImmediate
+        )
+
         headSlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
 
         bodySlotSearchBox.TextChanged.Add(fun _ -> this.UpdateAllSlotListsFromLocalCache())
@@ -921,7 +957,7 @@ type MainWindow () as this =
                             
                                 match itemToAssign with
                                 | Some item ->
-                                    allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors) :: allModelUpdateTasks
+                                    allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
                                 | None -> ()
 
                         do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
@@ -1027,7 +1063,7 @@ type MainWindow () as this =
         async {
             this.IncrementBusyCounter()
             try
-                do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors)
+                do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations)
             finally
                 this.DecrementBusyCounter()
         }
