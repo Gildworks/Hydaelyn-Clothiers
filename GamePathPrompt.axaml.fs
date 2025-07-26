@@ -43,8 +43,8 @@ type GamePathPromptWindow() as this =
             if topLevel <> null then
                 let! folders =
                     topLevel.StorageProvider.OpenFolderPickerAsync(FolderPickerOpenOptions(
-                            Title = "Select FFXIV Game Folder",
-                            AllowMultiple = false
+                        Title = "Select FFXIV Game Folder",
+                        AllowMultiple = false
                         ))
                     |> Async.AwaitTask
                 if folders.Count > 0 then
@@ -61,9 +61,14 @@ type GamePathPromptWindow() as this =
 
     member private this.ValidatePath(path: string) : bool =
         if not (String.IsNullOrWhiteSpace(path)) && Directory.Exists(path) && Directory.Exists(Path.Combine(path, "game", "sqpack")) then
-            this.ShowError("")
-            confirmButton.IsEnabled <- true
-            true
+            if path.Contains("Program Files") || path.Contains("(x86)") then
+                this.ShowError("Your game may be installed to a system directory. If you cannot create a character, try running Hydaelyn Clothiers as an Administrator.")
+                confirmButton.IsEnabled <- false
+                false
+            else
+                this.ShowError("")
+                confirmButton.IsEnabled <- true
+                true
         else
             let errorMsg =
                 if String.IsNullOrWhiteSpace(path) then "Path cannot be empty."

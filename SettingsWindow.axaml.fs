@@ -1,80 +1,85 @@
 ﻿namespace fs_mdl_viewer
 
 open System
-open System.Diagnostics
 open System.IO
-open System.Net.Http
-open System.Text.Json
-open System.Web
-
 
 open Avalonia.Controls
 open Avalonia.Markup.Xaml
 open Avalonia.Platform.Storage
 
-open Shared
-
 type SettingsWindow() as this =
     inherit Window()
+
+    let mutable pathTextBox                 : TextBox           = null
+    let mutable errorTextBlock              : TextBlock         = null
+    let mutable confirmButton               : Button            = null
 
     do
         AvaloniaXamlLoader.Load(this)
 
-    
+        pathTextBox <- this.FindControl<TextBox>("PathTextBox")
+        errorTextBlock <- this.FindControl<TextBlock>("ErrorTextBlock")
+        confirmButton <- this.FindControl<Button>("ConfirmButton")
+        let browseButton = this.FindControl<Button>("BrowseButton")
+        let cancelButton = this.FindControl<Button>("CancelButton")
 
-    member private this.WaitForCallback() =
+        confirmButton.IsEnabled <- false
+
+        browseButton.Click.Add(fun _ -> this.OnBrowseClicked() |> Async.StartImmediate)
+        confirmButton.Click.Add(fun _ -> this.OnConfirmClicked())
+        cancelButton.Click.Add(fun _ ->
+            this.selectedPathOpt <- None
+            this.Close()
+        )
+
+    member val selectedPathOpt: string option = None with get, set
+
+    member private this.OnBrowseClicked() =
         async {
-            use listener = new System.Net.HttpListener()
-            listener.Prefixes.Add("http://localhost:8080/")
-            listener.Start()
-
-            let! context = listener.GetContextAsync() |> Async.AwaitTask
-            let query = context.Request.Url.Query
-
-            let queryParams = HttpUtility.ParseQueryString(query)
-            let code = queryParams.["code"]
-
-            let response = context.Response
-            let responseString = "<html><body><h1>Authorization successful! You can close this window.</h1></body></html>"
-            let buffer = System.Text.Encoding.UTF8.GetBytes(responseString)
-            response.ContentLength64 <- int64 buffer.Length
-            use output = response.OutputStream
-            output.Write(buffer, 0, buffer.Length)
-
-            listener.Stop()
-            return code
+            let topLevel = TopLevel.GetTopLevel(this)
+            if topLevel <> null then
+                let! folders =
+                    topLevel.StorageProvider.OpenFolderPickerAsync(FolderPickerOpenOptions(
+                        Title = "Select FFXIV Game Folder",
+                        AllowMultiple = false
+                        ))
+                    |> Async.AwaitTask
+                if folders.Count > 0 then
+                    let folderPath = folders[0].TryGetLocalPath()
+                    match folderPath with
+                    | path ->
+                        pathTextBox.Text <- path
+                        this.ValidatePath(path) |> ignore
+                else ()
+            else
+                this.ShowError("Could not open folder dialog")
         }
 
-    member private this.ExchangeCodeForToken(code: string, clientId: string) =
-        async {
-            use client = new HttpClient()
+    member private this.ValidatePath(path: string) : bool =
+        if not (String.IsNullOrWhiteSpace(path)) && Directory.Exists(path) && Directory.Exists(Path.Combine(path, "game", "sqpack")) then 
+            this.ShowError("")
+            confirmButton.IsEnabled <- true
+            true
+        else
+            let errorMsg =
+                match path with
+                | emptyPath when String.IsNullOrWhiteSpace(path) ->
+                    "Path cannot be empty"
+                | nonexistentFolder when not (Directory.Exists(path)) ->
+                    "Could not find the selected folder, please try again."
+                | invalidFolder when not (Directory.Exists(Path.Combine(path, "game", "sqpack"))) ->
+                    "Invalid game folder. Please ensure the selected dirctory contains the subdirectories/folders 'game' and 'boot'. If the selected folder is correct, try running in Administrator Mode"
+                | _ -> "Unknown error, please try again."
+            this.ShowError(errorMsg)
+            confirmButton.IsEnabled <- false
+            false
 
-            let tokenUrl = "https://www.patreon.com/api/oauth2/token"
-            let content = new FormUrlEncodedContent([
-                (Collections.Generic.KeyValuePair("grant_type", "authorization_code"))
-                (Collections.Generic.KeyValuePair("code", code))
-                (Collections.Generic.KeyValuePair("redirect_uri", "http://localhost:8080/callback"))
-                (Collections.Generic.KeyValuePair("client_id", clientId))
-                (Collections.Generic.KeyValuePair("client_secret", "your_client_secret"))
-            ])
+    member private this.OnConfirmClicked() =
+        let currentPath = pathTextBox.Text
+        if this.ValidatePath(currentPath) then
+            this.selectedPathOpt <- Some currentPath
+            this.Close(true)
 
-            let! response = client.PostAsync(tokenUrl, content) |> Async.AwaitTask
-            let! json = response.Content.ReadAsStringAsync() |> Async.AwaitTask
-
-            let tokenData = JsonSerializer.Deserialize<{| access_token: string |}>(json)
-            return tokenData.access_token
-        }
-
-    member private this.GetPatreonId(accessToken: string) =
-        async {
-            use client = new HttpClient()
-            client.DefaultRequestHeaders.Authorization <-
-                System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken)
-
-            let! response = client.GetAsync("https://www.patreon.com/api/oauth2/v2/identity") |> Async.AwaitTask
-            let! json = response.Content.ReadAsStringAsync() |> Async.AwaitTask
-
-            let userData = JsonSerializer.Deserialize<{| data: {| id: string |} |}>(json)
-            return userData.data.id
-        }
-        
+    member private this.ShowError(message: string) =
+        errorTextBlock.Text <- message
+        errorTextBlock.IsVisible <- not (String.IsNullOrWhiteSpace(message))

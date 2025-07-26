@@ -7,11 +7,13 @@ open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Items.DataContainers
 open xivModdingFramework.General.Enums
+open xivModdingFramework.Exd.FileTypes
 open System
 open System.ComponentModel
 open System.Numerics
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
+
 open Veldrid
 
 
@@ -41,6 +43,45 @@ type VertexPositionColorUv =
         Normal = normal
         Tangent = tangent
         BiTangent = bitangent
+    }
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type VertexPositionSkinned =
+    val Position        : Vector3
+    val Normal          : Vector3
+    val Color           : Vector4
+    val UV              : Vector2
+    val Tangent         : Vector3
+    val Bitangent       : Vector3
+    val BoneIndices     : Vector4
+    val BoneWeights     : Vector4
+
+    new (pos, norm, col, uv, tan, bitan, boneIndices, boneWeights) =
+        {
+            Position = pos
+            Normal = norm
+            Color = col
+            UV = uv
+            Tangent = tan
+            Bitangent = bitan
+            BoneIndices = boneIndices
+            BoneWeights = boneWeights
+        }
+
+[<Struct>]
+type TransformsUBO =
+    {
+        World: Matrix4x4
+        View: Matrix4x4
+        Projection: Matrix4x4
+        EyePosition: Vector4
+    }
+
+type CharacterCustomizations =
+    {
+        Height              : float32
+        BustSize            : float32
+        FaceScale           : float32
+        MuscleDefinition    : float32
     }
 
 type ViewModelBase() =
@@ -252,10 +293,70 @@ type PipelineKey = {
     OutputDescription           : OutputDescription
 }
 
-type ComboOption = {
-    Display: string
-    Value: string
-}
+type ComboOption = 
+    {
+        Display: string
+        Value: string
+    }
+    override this.ToString () : string =
+        this.Display
+
+type MasterBook =
+    | noBook = 0
+    | crpI = 1 | bsmI = 2 | armI = 3 | gsmI = 4
+    | ltwI = 5 | wvrI = 6 | alcI = 7 | culI = 8
+    | crpGlam = 9 | bsmGlam = 10 | armGlam = 11 | gsmGlam = 12
+    | ltwGlam = 13 | wvrGlam = 14 | alcGlam = 15 | culGlam = 16
+    | crpDemi = 17 | bsmDemi = 18 | armDemi = 19 | gsmDemi = 20
+    | ltwDemi = 21 | wvrDemi = 22 | alcDemi = 23 | crpII = 24
+    | bsmII = 25 | armII = 26 | gsmII = 27 | ltwII = 28
+    | wvrII = 29 | alcII = 30 | culII = 31 | crpIII = 32
+    | bsmIII = 33 | armIII = 34 | gsmIII = 35 | ltwIII = 36
+    | wvrIII = 37 | alcIII = 38 | culIII = 39 | crpIV = 40
+    | bsmIV = 41 | armIV = 42 | gsmIV = 43 | ltwIV = 44
+    | wvrIV = 45 | alcIV = 46 | culIV = 47 | crpV = 48
+    | bsmV = 49 | armV = 50 | gsmV = 51 | ltwV = 52
+    | wvrV = 53 | alcV = 54 | culV = 55 | crpVI = 56
+    | bsmVI = 57 | armVI = 58 | gsmVI = 59 | ltwVI = 60
+    | wvrVI = 61 | alcVI = 62 | culVI = 63 | crpVII = 64
+    | bsmVII = 65 | armVII = 66 | gsmVII = 67 | ltwVII = 68
+    | wvrVII = 69 | alcVII = 70 | culVII = 71 | crpVIII = 72
+    | bsmVIII = 73 | armVIII = 74 | gsmVIII = 75 | ltwVIII = 76
+    | wvrVIII = 77 | alcVIII = 78 | culVIII = 79 | crpIX = 80
+    | bsmIX = 81 | armIX = 82 | gsmIX = 83 | ltwIX = 84
+    | wvrIX = 85 | alcIX = 86 | culIX = 87 | crpX = 88
+    | bsmX = 89 | armX = 90 | gsmX = 91 | ltwX = 92
+    | wvrX = 93 | alcX = 94 | culX = 95 | crpXI = 96
+    | bsmXI = 97 | armXI = 98 | gsmXI = 99 | ltwXI = 100
+    | wvrXI = 101 | alcXI = 102 | culXI = 103 | crpXII = 104
+    | bsmXII = 105 | armXII = 106 | gsmXII = 107 | ltwXII = 108
+    | wvrXII = 109 | alcXII = 110 | culXII = 111
+
+type Job =
+    | GLA | PGL | MRD | LNC | ARC | CNJ | THM
+    | CRP | BSM | ARM | GSM | LTW | WVR | ALC | CUL
+    | MIN | BTN | FSH
+    | PLD | MNK | WAR | DRG | BRD | WHM | BLM
+    | ACN | SMN | SCH | ROG | NIN | MCH | DRK | AST
+    | SAM | RDM | BLU | GNB | DNC | RPR | SGE
+    | VPR | PCT
+    static member ToDisplayName = function
+        | GLA -> "Gladiator" | PGL -> "Pugilist" | MRD -> "Marauder" | LNC -> "Lancer" | ARC -> "Archer" | CNJ -> "Conjurer" | THM -> "Thaumaturge"
+        | CRP -> "Carpenter" | BSM -> "Blacksmith" | ARM -> "Armorer" | GSM -> "Goldsmith" | LTW -> "Leatherworker" | WVR -> "Weaver" | ALC -> "Alchemist" | CUL -> "Culinarian"
+        | MIN -> "Miner" | BTN -> "Botanist" | FSH -> "Fisher"
+        | PLD -> "Paladin" | MNK -> "Monk" | WAR -> "Warrior" | DRG -> "Dragoon" | BRD -> "Bard" | WHM -> "White Mage" | BLM -> "Black Mage"
+        | ACN -> "Arcanist" | SMN -> "Summoner" | SCH -> "Scholar" | ROG -> "Rogue" | NIN -> "Ninja" | MCH -> "Machinist" | DRK -> "Dark Knight" | AST -> "Astrologian"
+        | SAM -> "Samurai" | RDM -> "Red Mage" | BLU -> "Blue Mage" | GNB -> "Gunbreaker" | DNC -> "Dancer" | RPR -> "Reaper" | SGE -> "Sage"
+        | VPR -> "Viper" | PCT -> "Pictomancer"
+
+type MasterBookItem = 
+    {
+        Book                            : MasterBook
+        DisplayName                     : string
+    }
+    with override this.ToString (): string = 
+             this.DisplayName
+    
 
 type CharacterCustomizationOptions = {
     Race                        : XivRace
@@ -266,8 +367,14 @@ type CharacterCustomizationOptions = {
     AvailableEarParts           : XivCharacter list
 }
 
+type CrafterProfile = {
+    CrafterLevels: Map<string, int>
+    MasterBooks: Map<string, bool>
+}
+
 type Config = {
     GamePath: string
+    CrafterProfile: CrafterProfile option
     PatreonID: string option
 }
 
@@ -284,5 +391,185 @@ type swatchOption = {
     Index                       : int
 }
 
-type uiItemModel =
-    inherit IItemModel
+type EquipRestriction =
+    | None = 0
+    | Unknown = 1
+    | AllMale = 2
+    | AllFemale = 3
+    | HyurMale = 4
+    | HyurFemale = 5
+    | ElezenMale = 6
+    | ElezenFemale = 7
+    | LalafellMale = 8
+    | LalafellFemale = 9
+    | MiqoteMale = 10
+    | MiqoteFemale = 11
+    | RoegadynMale = 12
+    | RoegadynFemale = 13
+    | AuRaMale = 14
+    | AuRaFemale = 15
+    | HrothgarMale = 16
+    | VieraFemale = 17
+    | VieraMale = 18
+    | HrothgarFemale = 19
+
+type ClassJobEquip = {
+    GLA: bool
+    PGL: bool
+    MRD: bool
+    LNC: bool
+    ARC: bool
+    CNJ: bool
+    THM: bool
+    CRP: bool
+    BSM: bool
+    ARM: bool
+    GSM: bool
+    LTW: bool
+    WVR: bool
+    ALC: bool
+    CUL: bool
+    MIN: bool
+    BTN: bool
+    FSH: bool
+    PLD: bool
+    MNK: bool
+    WAR: bool
+    DRG: bool
+    BRD: bool
+    WHM: bool
+    BLM: bool
+    ACN: bool
+    SMN: bool
+    SCH: bool
+    ROG: bool
+    NIN: bool
+    MCH: bool
+    DRK: bool
+    AST: bool
+    SAM: bool
+    RDM: bool
+    BLU: bool
+    GNB: bool
+    DNC: bool
+    RPR: bool
+    SGE: bool
+    VPR: bool
+    PCT: bool
+}
+    with
+        static member AllJobs = {
+            GLA = true
+            PGL = true
+            MRD = true
+            LNC = true
+            ARC = true
+            CNJ = true
+            THM = true
+            CRP = true
+            BSM = true
+            ARM = true
+            GSM = true
+            LTW = true
+            WVR = true
+            ALC = true
+            CUL = true
+            MIN = true
+            BTN = true
+            FSH = true
+            PLD = true
+            MNK = true
+            WAR = true
+            DRG = true
+            BRD = true
+            WHM = true
+            BLM = true
+            ACN = true
+            SMN = true
+            SCH = true
+            ROG = true
+            NIN = true
+            MCH = true
+            DRK = true
+            AST = true
+            SAM = true
+            RDM = true
+            BLU = true
+            GNB = true
+            DNC = true
+            RPR = true
+            SGE = true
+            VPR = true
+            PCT = true
+        }
+        static member NoJobs = {
+            GLA = false
+            PGL = false
+            MRD = false
+            LNC = false
+            ARC = false
+            CNJ = false
+            THM = false
+            CRP = false
+            BSM = false
+            ARM = false
+            GSM = false
+            LTW = false
+            WVR = false
+            ALC = false
+            CUL = false
+            MIN = false
+            BTN = false
+            FSH = false
+            PLD = false
+            MNK = false
+            WAR = false
+            DRG = false
+            BRD = false
+            WHM = false
+            BLM = false
+            ACN = false
+            SMN = false
+            SCH = false
+            ROG = false
+            NIN = false
+            MCH = false
+            DRK = false
+            AST = false
+            SAM = false
+            RDM = false
+            BLU = false
+            GNB = false
+            DNC = false
+            RPR = false
+            SGE = false
+            VPR = false
+            PCT = false
+        }
+
+type CraftingInfo =
+    {
+        Job                         : string
+        RecipeLevel                 : int
+        RecipeStars                 : int
+        MasterBook                  : MasterBookItem
+    }
+
+type CrafterInfo =
+    {
+        Levels                      : System.Collections.Generic.Dictionary<int, string>
+        RecipeBooks                 : int list
+    }
+
+type FilterGear = 
+    {
+        Item                        : XivGear
+        ExdRow                      : Ex.ExdRow
+        ItemLevel                   : int
+        EquipLevel                  : int
+        EquipRestriction            : EquipRestriction
+        EquippableBy                : Set<Job>
+        CraftingDetails             : CraftingInfo list
+    }
+    override this.ToString (): string = 
+        this.Item.Name

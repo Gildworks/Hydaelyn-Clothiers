@@ -12,11 +12,11 @@ open Shared
 
 //================================================ TO DO ================================================\\
 //    ✓ Load all flags for every mesh into list (custom flag type for list probably needed)              \\
-//    - Assess flags for overrides/priorities, discarding unused/unneeded                                \\
-//    - Create methods for each task defining behavior (which part(s) to hide, if present)               \\
+//    ✓ Assess flags for overrides/priorities, discarding unused/unneeded                                \\
+//    ✓ Create methods for each task defining behavior (which part(s) to hide, if present)               \\
 //    ✓ Create a helper task that takes a list of flags and applies the logic to them                    \\
 //    ✓ Output the modified models to either a new map or the current one, if possible                   \\
-//    - Start testing!                                                                                   \\
+//    ✓ Start testing!                                                                                   \\
 //=======================================================================================================\\
 
 
@@ -60,6 +60,8 @@ let filterFlagConflicts (flags: Map<EquipmentParameterFlag, bool>): Task<Map<Equ
             | EquipmentParameterFlag.BodyShowHand, false ->
                 finalFlags <- finalFlags.Remove EquipmentParameterFlag.HandHideElbow
                 finalFlags <- finalFlags.Remove EquipmentParameterFlag.HandHideForearm
+            | EquipmentParameterFlag.LegHideHalfBoot, true ->
+                finalFlags <- finalFlags.Remove EquipmentParameterFlag.FootHideKnee
                 
             | _ -> ()
 
@@ -120,7 +122,9 @@ let removeMeshParts (flags: Map<EquipmentParameterFlag, bool>) (model: TTModel) 
                 | "MidGlove" -> 
                     do ModelModifiers.ApplyShapes(model, List<string>(["shp_ude"]), false)
                     removeParts model "atr_hij"
-                | "LongGlove" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_kat"]), false)
+                | "LongGlove" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_kat"]), false)
+                    removeParts model "atr_hij"
                 | _ -> ()
             | EquipmentParameterFlag.FootHideKnee, true ->
                 match shoeType() with

@@ -3,6 +3,8 @@ namespace fs_mdl_viewer
 open Avalonia
 open Avalonia.Controls.ApplicationLifetimes
 open Avalonia.Markup.Xaml
+open Avalonia.Svg
+open Avalonia.Svg.Skia
 
 open System
 open System.IO
@@ -19,11 +21,14 @@ type App() =
 
     let configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hydaelyn Clothiers", "config.json")
 
-    let mutable releaseChannelURL: string = String.Empty
-    let mutable userAccessToken: string = String.Empty
+    let mutable releaseChannelURL: string = ""
+    let mutable userAccessToken: string = ""
 
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
+
+    member this.Shutdown() =
+        this.Shutdown()
 
     member this.loadConfig() : Config option =
         if File.Exists(configPath) then
@@ -47,7 +52,7 @@ type App() =
 
                     if response.IsSuccessStatusCode then
                         let! json = response.Content.ReadAsStringAsync() |> Async.AwaitTask
-                        let result = JsonSerializer.Deserialize<{| releaseURL: string; accessToken: string|}>(json)
+                        let result = JsonSerializer.Deserialize<{| releaseURL: string; accessToken: string |}>(json)
 
                         if String.IsNullOrWhiteSpace(result.accessToken) then
                             return "", ""
@@ -70,6 +75,7 @@ type App() =
 
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {
+            // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
 
             
             // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
@@ -100,6 +106,5 @@ type App() =
             | _ -> ()
         }
         Async.StartImmediate asyncUpdateApp
-        
 
         base.OnFrameworkInitializationCompleted()

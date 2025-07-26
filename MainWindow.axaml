@@ -3,12 +3,38 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:fs_mdl_viewer"           xmlns:avRender="using:AvaloniaRender.Veldrid" mc:Ignorable="d"
+		xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="fs_mdl_viewer.MainWindow"
 		xmlns:local="clr-namespace:fs_mdl_viewer"
 		xmlns:shared="clr-namespace:Shared"
         Title="Hydaelyn Clothiers"
         d:DataContext="{d:DesignInstance Type=vm:VeldridWindowViewModel, IsDesignTimeCreatable=True}"
 		x:DataType="vm:VeldridWindowViewModel">
+	<Window.Styles>
+		<materialIcons:MaterialIconStyles />
+		<Style Selector="ToggleButton.job-icon-button Image#GreyscaleImage">
+			<Setter Property="IsVisible" Value="True" />			
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button Image#ColorImage">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button:checked Image#GreyscaleImage">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button:checked Image#ColorImage">
+			<Setter Property="IsVisible" Value="True" />
+		</Style>
+		<Style Selector="ToggleButton.job-icon-button">
+			<Style Selector="^:checked /template/ ContentPresenter#PART_ContentPresenter">
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="BorderBrush" Value="Transparent" />
+			</Style>
+			<Style Selector="^:pressed /template/ ContentPresenter#PART_ContentPresenter">
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="BorderBrush" Value="Transparent" />
+			</Style>
+		</Style>
+	</Window.Styles>
 	<DockPanel>
 		<Menu DockPanel.Dock="Top">
 			<MenuItem Header="_File">
@@ -16,32 +42,304 @@
 				<MenuItem Header="_Save Glamour" />
 				<MenuItem Header="Save Current _As Default" />
 				<Separator />
+				<MenuItem Header="Export to TeamCraft (Web)" x:Name="ExportCommand" />
+				<Separator />
 				<MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
 			</MenuItem>
 			<MenuItem Header="_Edit">
 				<MenuItem Header="Settings" Command="{Binding OpenSettingsCommand}"/>
 			</MenuItem>
 		</Menu>
-		<Grid ColumnDefinitions="*, 5, 3*, 5, *">
+		<SplitView x:Name="FilterPanel"
+			   IsPaneOpen="False"
+			   DisplayMode="CompactInline"
+			   OpenPaneLength="500"
+			   CompactPaneLength="50">
+		<SplitView.Pane>
+			<ScrollViewer Name="FilterScroller">
+				<StackPanel Background="{DynamicResource ThemeControlLowBrush}">
+				
+				<Button x:Name="FilterOpenButton"
+						Content="{materialIcons:MaterialIconExt Kind=Tune, Size=30}"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Top"
+						Width="50" Height="50"
+						Padding="0"/>
+				<Panel Margin="0,0,50,0" ClipToBounds="True">
+					<StackPanel x:Name="SlidingContentPanel" Margin="10">
+						<StackPanel.RenderTransform>
+							<TranslateTransform X="0" />
+						</StackPanel.RenderTransform>
+						<StackPanel.Transitions>
+							<Transitions>
+								<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+							</Transitions>
+						</StackPanel.Transitions>
+						<CheckBox x:Name="EquipRestrict" Content="Enforce Equip Restrictions" IsChecked="{Binding EquipRestrict, Mode=TwoWay}"/>
+						<Separator Margin="0,10,0,0"/>
+						<TextBlock FontWeight="Black" FontSize="18" Margin="0,10,0,0" TextAlignment="Center">Class/Job Filters</TextBlock>
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Tanks</TextBlock>
+						<ItemsControl ItemsSource="{Binding Tanks}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}" 
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Healers</TextBlock>
+						<ItemsControl ItemsSource="{Binding Healers}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Ranged DPS</TextBlock>
+						<ItemsControl ItemsSource="{Binding RangedDPS}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Melee DPS</TextBlock>
+						<ItemsControl ItemsSource="{Binding MeleeDPS}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Magic DPS</TextBlock>
+						<ItemsControl ItemsSource="{Binding MagicDPS}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Crafters</TextBlock>
+						<ItemsControl ItemsSource="{Binding Crafters}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<TextBlock FontWeight="Bold" Margin="0,10,0,0">Gatherers</TextBlock>
+						<ItemsControl ItemsSource="{Binding Gatherers}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ToggleButton Classes="job-icon-button"
+													ToolTip.Tip="{Binding JobName}"
+													IsChecked="{Binding IsSelected, Mode=TwoWay}"
+													Padding="0"
+													Margin="2"
+													Background="Transparent"
+													BorderBrush="Transparent"
+													BorderThickness="0">
+										<Grid Width="50" Height="50">
+											<Image Name="GreyscaleImage"
+													Source="{Binding GreyscaleIcon}"
+													Stretch="UniformToFill" />
+											<Image Name="ColorImage"
+													Source="{Binding ColorIcon}"
+													Stretch="UniformToFill" />
+										</Grid>
+									</ToggleButton>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+
+						<Separator Margin="0,20,0,0"/>
+						<TextBlock FontWeight="Black" FontSize="18" Margin="0,10,0,20" TextAlignment="Center">Level Requirements</TextBlock>
+						<Grid ColumnDefinitions="*, *" ClipToBounds="True">
+							<StackPanel Grid.Column="0" Margin="0,0,10,0">
+								<TextBlock>Character Level</TextBlock>
+								<NumericUpDown Name="CharLevel" Value="{Binding CharacterLevel, Mode=TwoWay}" Minimum="1" Maximum="100" Increment="1" />
+							</StackPanel>
+							<StackPanel Grid.Column="1">
+								<TextBlock>Item Level</TextBlock>
+								<NumericUpDown Name="ItemLevel" Value="{Binding ItemLevel, Mode=TwoWay}" Increment="1" />
+							</StackPanel>
+						</Grid>
+
+						<Separator Margin="0,20,0,0"/>
+						<TextBlock FontWeight="Black" FontSize="18" Margin="0,10,0,20" TextAlignment="Center">Crafting Requirements</TextBlock>
+						<CheckBox Content="Only Show Items That Can Be Crafted" IsChecked="{Binding CraftedOnly, Mode=TwoWay}"/>
+						<CheckBox Content="Apply Crafter Profile" IsChecked="{Binding UseProfile, Mode=TwoWay}" />
+						
+					</StackPanel>
+				</Panel>
+			</StackPanel>
+			</ScrollViewer>
+		</SplitView.Pane>
+
+
+		<Grid ColumnDefinitions="*, 5, 2*, 5, *">
 			<ScrollViewer Grid.Column="0">
 				<StackPanel>
 					<StackPanel>
 						<TextBlock Text="Character Builder" HorizontalAlignment="Stretch" Margin="19" />
-						<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedRace}">
+						<ComboBox x:Name="RaceSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding SelectedRace, Mode=TwoWay}" ItemsSource="{Binding Race}">
 							<ComboBox.ItemTemplate>
 								<DataTemplate x:DataType="shared:ComboOption">
 									<TextBlock Text="{Binding Display}" />
 								</DataTemplate>
 							</ComboBox.ItemTemplate>
 						</ComboBox>
-						<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding Path=SelectedTribe}">
+						<ComboBox x:Name="ClanSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding SelectedTribe, Mode=TwoWay}" ItemsSource="{Binding AvailableTribes}">
 							<ComboBox.ItemTemplate>
 								<DataTemplate x:DataType="shared:ComboOption">
 									<TextBlock Text="{Binding Display}" />
 								</DataTemplate>
 							</ComboBox.ItemTemplate>
 						</ComboBox>
-						<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" />
+						<ComboBox x:Name="GenderSelector" HorizontalAlignment="Stretch" Margin="10,10,50,10" SelectedItem="{Binding SelectedGender, Mode=TwoWay}" ItemsSource="{Binding Gender}" />
 						<Grid ColumnDefinitions="*, *" HorizontalAlignment="Stretch">
 							<Button x:Name="ClearAll" HorizontalAlignment="Center" Grid.Column="0" Padding="10">Clear All</Button>
 							<Button x:Name="SubmitCharacter" HorizontalAlignment="Center" Grid.Column="1" Padding="10">Create Base Character</Button>
@@ -56,21 +354,31 @@
 								Head
 							</Expander.Header>
 							<StackPanel>
-								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="HeadSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="Auto, *">
+									<TextBox x:Name="HeadSlotSearch" 
+											 HorizontalAlignment="Stretch"
+											 Text="{Binding HeadSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" Grid.Row="0" />
 									<Button x:Name="HeadSearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
 											Grid.Column="1"
 											Grid.Row="0"
 											Background="Transparent"
-											>
-										✕
-									</Button>
-									<Button x:Name="HeadClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-									<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-										<ListBox x:Name="HeadSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-									</ScrollViewer>
+											>✕</Button>
+									<Button x:Name="HeadClear" 
+											HorizontalAlignment="Stretch" 
+											HorizontalContentAlignment="Center" 
+											Grid.Column="2" Grid.Row="0">Remove</Button>
+									<ListBox x:Name="HeadSlot" 
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding HeadGear, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0" 
+											 Grid.ColumnSpan="2" 
+											 Grid.Row="1" 
+											 AutoScrollToSelectedItem="False" />
 								</Grid>
 								<TextBlock Text="Dye Slots" />
 								<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -81,7 +389,7 @@
 								</Grid>
 							</StackPanel>
 						</Expander>
-					
+
 
 						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
 							<Expander.Header>
@@ -89,7 +397,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="BodySlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+									<TextBox x:Name="BodySlotSearch"
+											 Text="{Binding BodySearch, Mode=TwoWay}"
+											 HorizontalAlignment="Stretch" 
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" 
+											 Grid.Row="0" />
 									<Button x:Name="BodySearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
@@ -99,10 +412,15 @@
 											>
 										✕
 									</Button>
-									<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-									<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-										<ListBox x:Name="BodySlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-									</ScrollViewer>
+									<Button x:Name="BodyClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
+									<ListBox x:Name="BodySlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding BodyGear, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
 								</Grid>
 								<TextBlock Text="Dye Slots" />
 								<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -120,7 +438,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*,*">
-									<TextBox x:Name="HandSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0"/>
+									<TextBox x:Name="HandSlotSearch" 
+											 HorizontalAlignment="Stretch"
+											 Text="{Binding HandSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" 
+											 Grid.Row="0"/>
 									<Button x:Name="HandSearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
@@ -130,10 +453,15 @@
 											>
 										✕
 									</Button>
-									<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-									<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-										<ListBox x:Name="HandSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-									</ScrollViewer>
+									<Button x:Name="HandClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
+									<ListBox x:Name="HandSlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding HandGear, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
 								</Grid>
 								<TextBlock Text="Dye Slots" />
 								<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -151,7 +479,12 @@
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="LegsSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Column="0" Grid.Row="0" />
+									<TextBox x:Name="LegsSlotSearch" 
+											 HorizontalAlignment="Stretch"
+												 Text="{Binding LegsSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10" 
+											 Grid.Column="0" 
+											 Grid.Row="0" />
 									<Button x:Name="LegsSearchClear"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
@@ -159,12 +492,17 @@
 											Grid.Row="0"
 											Background="Transparent"
 											>
-											✕
+										✕
 									</Button>
-									<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Clear</Button>
-									<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-										<ListBox x:Name="LegsSlot" HorizontalAlignment="Stretch" Margin="10, 10, 0, 10" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" />
-									</ScrollViewer>
+									<Button x:Name="LegClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
+									<ListBox x:Name="LegsSlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding LegGear, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
 								</Grid>
 								<TextBlock Text="Dye Slots" />
 								<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -176,28 +514,38 @@
 							</StackPanel>
 						</Expander>
 
-						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch">
+						<Expander VerticalAlignment="Top" HorizontalAlignment="Stretch" >
 							<Expander.Header>
 								Feet
 							</Expander.Header>
 							<StackPanel>
 								<Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="*, *">
-									<TextBox x:Name="FeetSlotSearch" HorizontalAlignment="Stretch" Margin="10,10,0,10" Grid.Row="0" />
-									<Button x:Name="FeetSearchClear" 
-											HorizontalAlignment="Stretch" 
-											HorizontalContentAlignment="Center" 
-											Grid.Column="1" 
+									<TextBox x:Name="FeetSlotSearch" 
+											 HorizontalAlignment="Stretch"
+											 Text="{Binding FeetSearch, Mode=TwoWay}"
+											 Margin="10,10,0,10"
+											 Grid.Column="0"
+											 Grid.Row="0" />
+									<Button x:Name="FeetSearchClear"
+											HorizontalAlignment="Stretch"
+											HorizontalContentAlignment="Center"
+											Grid.Column="1"
 											Grid.Row="0"
 											Background="Transparent"
 											Foreground="{DynamicResource ThemeForegroundBrush}"
 											BorderBrush="Transparent"
 											>
-												✕
-											</Button>
+										✕
+									</Button>
 									<Button x:Name="FeetClear" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Grid.Column="2" Grid.Row="0">Remove</Button>
-									<ScrollViewer Height="125" HorizontalAlignment="Stretch" AllowAutoHide="False" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1">
-										<ListBox x:Name="FeetSlot" HorizontalAlignment="Stretch"/>
-									</ScrollViewer>
+									<ListBox x:Name="FeetSlot"
+											 HorizontalAlignment="Stretch"
+											 MaxHeight="{Binding ListBoxHeight, Mode=TwoWay}"
+											 ItemsSource="{Binding FeetGear, Mode=TwoWay}"
+											 Margin="10, 10, 0, 10" Grid.Column="0"
+											 Grid.ColumnSpan="2"
+											 Grid.Row="1"
+											 AutoScrollToSelectedItem="False" />
 								</Grid>
 								<TextBlock Text="Dye Slots" />
 								<Grid ColumnDefinitions="4*,2*,4*,2*">
@@ -378,8 +726,17 @@
 							</ItemsControl>
 						</Expander>
 					</StackPanel>
+					<StackPanel>
+						<TextBlock Text="Character Customizations" HorizontalAlignment="Stretch" Margin="19" />
+						<StackPanel>
+							<TextBlock Text="Bust Size" HorizontalAlignment="Center"/>
+							<Slider Orientation="Vertical" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" x:Name="BustSize" Height="250" HorizontalAlignment="Center" Value="50"/>
+							<TextBlock Text="{Binding #BustSize.Value}" HorizontalAlignment="Center"/>
+						</StackPanel>
+					</StackPanel>
 				</StackPanel>
 			</ScrollViewer>
 		</Grid>
+	</SplitView>
 	</DockPanel>
 </Window>
