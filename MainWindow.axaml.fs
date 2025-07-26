@@ -2,8 +2,6 @@ namespace fs_mdl_viewer
 
 open System
 open System.Numerics
-open System.Diagnostics
-open System.Text
 open System.Text.Json
 open System.IO
 
@@ -142,13 +140,20 @@ module DataHelpers =
         else
             float32 (Math.Pow(float (srgb + 0.055f) / 1.055, 2.4))
 
-    let vec4ToDXColor (input: Vector4) : SharpDX.Color =
+    let vec4ToLinearDXColor (input: Vector4) : SharpDX.Color =
         let normalizedSrgb = new Vector4(input.X / 255.0f, input.Y / 255.0f, input.Z / 255.0f, input.W / 255.0f)
         SharpDX.Color(
             srgbToLinear(normalizedSrgb.X),
             srgbToLinear(normalizedSrgb.Y),
             srgbToLinear(normalizedSrgb.Z),
             srgbToLinear(normalizedSrgb.W)
+        )
+    let vec4ToDXColor (input: Vector4) : SharpDX.Color =
+        SharpDX.Color(
+            byte (Math.Clamp(input.X, 0.0f, 255.0f)),
+            byte (Math.Clamp(input.Y, 0.0f, 255.0f)),
+            byte (Math.Clamp(input.Z, 0.0f, 255.0f)),
+            byte (Math.Clamp(input.W, 0.0f, 255.0f))
         )
 
     let getUIColorPalette (race: raceIds) (palette: paletteOptions) =
@@ -178,6 +183,13 @@ type MainWindow () as this =
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
     let mutable selectedClanNameOpt: string option = Some "Midlander"
     let mutable selectedGenderNameOpt: string option = Some "Male"
+    let mutable characterCustomizations: CharacterCustomizations =
+        {
+            Height = 50.0f
+            BustSize = 50.0f
+            FaceScale = 1.0f
+            MuscleDefinition = 1.0f
+        }
 
     let mutable modelColors: CustomModelColors = ModelTexture.GetCustomColors()
     let mutable selectedSwatchBorders: System.Collections.Generic.Dictionary<paletteOptions, Border option> = System.Collections.Generic.Dictionary()
@@ -272,6 +284,8 @@ type MainWindow () as this =
     let mutable lipRadioDarkControl: RadioButton = null
     let mutable lipRadioLightControl: RadioButton = null
     let mutable lipRadioNoneControl: RadioButton = null
+
+    let mutable bustSlider: Slider = null
 
     let mutable filterOpenButton: Button = null
     let mutable splitPane: SplitView = null
@@ -379,11 +393,11 @@ type MainWindow () as this =
 
         exportButton <- this.FindControl<MenuItem>("ExportCommand")
 
+		bustSlider <- this.FindControl<Slider>("BustSize")
+
         filterOpenButton <- this.FindControl<Button>("FilterOpenButton")
         splitPane <- this.FindControl<SplitView>("FilterPanel")
         filterScroller <- this.FindControl<ScrollViewer>("FilterScroller")
-
-
 
     member private this.UpdateSubmitButtonState() =
         let raceOk = selectedRaceNameOpt.IsSome
@@ -489,11 +503,19 @@ type MainWindow () as this =
                 try
                     
                     let! renderPalette = DataHelpers.getColorPalette modelColorId palette |> Async.AwaitTask
-                    let selectedColor = DataHelpers.vec4ToDXColor renderPalette.[index]
+                    let selectedColor = //DataHelpers.vec4ToLinearDXColor renderPalette.[index]
+                        match int palette with
+                        | 0 | 4 | 14 | 15 ->
+                            DataHelpers.vec4ToLinearDXColor renderPalette.[index]
+                        | _ ->
+                            DataHelpers.vec4ToDXColor renderPalette.[index]
+
                     printfn $"Selected Color Value: [{selectedColor.R}, {selectedColor.G}, {selectedColor.B}, {selectedColor.A}]"
                     match int palette with
                     | 15 ->
                         modelColors.HairColor <- selectedColor
+                        if not (highlightEnableControl.IsChecked.GetValueOrDefault(false)) then
+                            modelColors.HairHighlightColor <- Nullable selectedColor
                     | 0 ->
                         modelColors.HairHighlightColor <- Nullable selectedColor
                     | 1 ->
@@ -664,7 +686,10 @@ type MainWindow () as this =
                 elif lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
                     this.PaletteSwatchPointerPressed sender args paletteOptions.UILipLight render
                 else
-                    modelColors.LipColor <- SharpDX.Color(0uy)
+                    modelColors.LipColor <- xivModdingFramework.Models.ModelTextures.ModelTexture.GetCustomColors().LipColor
+                    async {
+                        do! this.OnSubmitCharacter(render)
+                    } |> Async.StartImmediate
             ),
             RoutingStrategies.Bubble
         )
@@ -681,6 +706,10 @@ type MainWindow () as this =
                 highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
             | _ -> 
                 highlightsColorSwatchesControl.ItemsSource <- []
+                modelColors.HairHighlightColor <- Nullable modelColors.HairColor
+                async {
+                    do! this.OnSubmitCharacter(render)
+                } |> Async.StartImmediate
         )
 
         lipRadioDarkControl.IsCheckedChanged.Add(fun _ ->
@@ -701,8 +730,14 @@ type MainWindow () as this =
             match lipRadioNoneControl.IsChecked.GetValueOrDefault(false) with
             | true ->
                 lipColorSwatchesControl.IsEnabled <- false
-                modelColors.LipColor <- SharpDX.Color(0uy)
-                do this.OnSubmitCharacter(render) |> ignore
+                let noneColor = xivModdingFramework.Models.ModelTextures.ModelTexture.GetCustomColors().LipColor
+                if modelColors.LipColor = noneColor then
+                    ()
+                else
+                    modelColors.LipColor <- noneColor
+                    async {
+                        do! this.OnSubmitCharacter(render)
+                    } |> Async.StartImmediate
             | _ ->
                 lipColorSwatchesControl.IsEnabled <- true                
         )
@@ -836,17 +871,17 @@ type MainWindow () as this =
             dye2Combo: ComboBox, dye2ClearButton: Button,
             eqSlot: EquipmentSlot, gearCategory: string) =
 
-            //let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
-            //slotCombo.ItemsSource <- getGearList()
+            let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
+            slotCombo.ItemsSource <- getGearList()
 
             slotCombo.SelectionChanged.Add(fun _ ->
                 if slotCombo.SelectedItem <> null then
                     let selectedItem = slotCombo.SelectedItem :?> FilterGear
                     do this.HandleGearSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
             )
-            //clearButton.Click.Add(fun _ ->
-                //this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
-            //)
+            clearButton.Click.Add(fun _ ->
+                this.ClearGearSlot(slotCombo, eqSlot, getGearList(), dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)
+            )
             dye1ClearButton.Click.Add(fun _ ->
                 if slotCombo.SelectedItem <> null then
                     let selectedItem = slotCombo.SelectedItem :?> FilterGear
@@ -872,6 +907,30 @@ type MainWindow () as this =
 
         let clearSearch (searchBox: TextBox) =
             searchBox.Text <- String.Empty
+
+        let handleSliderChange (slider: Slider) (onReleased: float32 -> unit) =
+            let thumb =
+                slider.GetVisualDescendants()
+                |> Seq.tryPick (fun v ->
+                    match v with
+                    | :? Thumb as t -> Some t
+                    | _ -> None
+                )
+            match thumb with
+            | Some t ->
+                t.DragCompleted.Add(fun _ ->
+                    let finalValue = float32 slider.Value
+                    onReleased finalValue
+                )
+            | None -> ()
+
+        handleSliderChange bustSlider (fun finalValue ->
+            async{
+                characterCustomizations <- { characterCustomizations with BustSize = finalValue}
+                do! this.OnSubmitCharacter(render)
+            } |> Async.StartImmediate
+        )
+
 
         headSearchClearButton.Click.Add(fun _ ->
             clearSearch headSlotSearchBox
@@ -990,7 +1049,7 @@ type MainWindow () as this =
                             
                                 match itemToAssign with
                                 | Some item ->
-                                    allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors) :: allModelUpdateTasks
+                                    allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
                                 | None -> ()
 
                         do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
@@ -1110,7 +1169,7 @@ type MainWindow () as this =
         async {
             this.IncrementBusyCounter()
             try
-                do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors)
+                do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations)
             finally
                 this.DecrementBusyCounter()
         }

@@ -44,6 +44,28 @@ type VertexPositionColorUv =
         Tangent = tangent
         BiTangent = bitangent
     }
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type VertexPositionSkinned =
+    val Position        : Vector3
+    val Normal          : Vector3
+    val Color           : Vector4
+    val UV              : Vector2
+    val Tangent         : Vector3
+    val Bitangent       : Vector3
+    val BoneIndices     : Vector4
+    val BoneWeights     : Vector4
+
+    new (pos, norm, col, uv, tan, bitan, boneIndices, boneWeights) =
+        {
+            Position = pos
+            Normal = norm
+            Color = col
+            UV = uv
+            Tangent = tan
+            Bitangent = bitan
+            BoneIndices = boneIndices
+            BoneWeights = boneWeights
+        }
 
 [<Struct>]
 type TransformsUBO =
@@ -52,6 +74,14 @@ type TransformsUBO =
         View: Matrix4x4
         Projection: Matrix4x4
         EyePosition: Vector4
+    }
+
+type CharacterCustomizations =
+    {
+        Height              : float32
+        BustSize            : float32
+        FaceScale           : float32
+        MuscleDefinition    : float32
     }
 
 type ViewModelBase() =

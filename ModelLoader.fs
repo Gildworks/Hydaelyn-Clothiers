@@ -40,11 +40,9 @@ let loadRenderModelFromItem
                             material.Result.MTRLPath
                         with
                         | _ ->
-                            if ModelModifiers.IsSkinMaterial(path) then
-                                printfn $"Skin material hitting fallback logic. {path}"
+                            printfn "Using fallback logic for material."
                             Mtrl.GetMtrlPath(ttModel.Source, path)
-                    if ModelModifiers.IsSkinMaterial(path) then
-                        printfn $"Final skin path: {finalPath}"
+                    printfn $"Final path: {finalPath}"
                     let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
                     
                     let! prepared = mtlBuilder mtrl item.Name
@@ -72,19 +70,26 @@ let loadRenderModelFromItem
                     let convertedVerts =
                         part.Vertices
                         |> Seq.map (fun vtx ->
-                            VertexPositionColorUv(
+                            // --- CONVERT TO THE NEW STRUCT ---
+                            VertexPositionSkinned(
                                 SharpToNumerics.vec3 vtx.Position,
+                                SharpToNumerics.vec3 vtx.Normal,
                                 SharpToNumerics.convertColor vtx.VertexColor,
                                 SharpToNumerics.vec2 vtx.UV1,
                                 SharpToNumerics.vec3 vtx.Normal,
                                 SharpToNumerics.vec3 vtx.Tangent,
-                                SharpToNumerics.vec3 vtx.Binormal
+                                SharpToNumerics.vec3 vtx.Binormal,
+                                // --- ADD THE NEW DATA ---
+                                // Convert byte[4] to a Vector4 for the shader
+                                System.Numerics.Vector4(float32 vtx.BoneIds.[0], float32 vtx.BoneIds.[1], float32 vtx.BoneIds.[2], float32 vtx.BoneIds.[3]),
+                                // Convert byte weights (0-255) to float weights (0.0-1.0)
+                                System.Numerics.Vector4(float32 vtx.Weights.[0] / 255.0f, float32 vtx.Weights.[1] / 255.0f, float32 vtx.Weights.[2] / 255.0f, float32 vtx.Weights.[3] / 255.0f)
                             )
                         )
                         |> Seq.toArray
                     let indices = part.TriangleIndices |> Seq.map uint16 |> Array.ofSeq
 
-                    let vertexBuffer = factory.CreateBuffer(BufferDescription(uint32 (verts.Length * sizeof<float32> * sizeof<VertexPositionColorUv>), BufferUsage.VertexBuffer))
+                    let vertexBuffer = factory.CreateBuffer(BufferDescription(uint32 (convertedVerts.Length * Marshal.SizeOf<VertexPositionSkinned>()), BufferUsage.VertexBuffer))
                     let indexBuffer = factory.CreateBuffer(BufferDescription(uint32 (indices.Length * sizeof<uint16>), BufferUsage.IndexBuffer))
                     gd.UpdateBuffer(vertexBuffer, 0u, convertedVerts)
                     gd.UpdateBuffer(indexBuffer, 0u, indices)
@@ -105,92 +110,6 @@ let loadRenderModelFromItem
                 )
             )
         
-        return {
-            Meshes = renderMeshes
-            Original = ttModel
-        }
-
-    }
-
-let loadRenderModelFromPart
-    (factory    : ResourceFactory)
-    (gd         : GraphicsDevice)
-    (tx         : ModTransaction)
-    (path       : string)
-    (race       : XivRace)
-    (mtlBuilder : XivMtrl -> Task<PreparedMaterial>)
-    : Task<RenderModel> =
-    task {
-        let! ttModel = Mdl.GetTTModel(path)
-
-        let materialMap =
-            ttModel.Materials
-            |> Seq.distinct
-            |> Seq.map (fun path -> task {
-                try            
-                    let finalPath =
-                        try
-                            let material = Mtrl.GetXivMtrl(path, true, tx)
-                            material.Result.MTRLPath
-                        with
-                        | _ ->
-                            Mtrl.GetMtrlPath(ttModel.Source, path)
-                    let! mtrl = Mtrl.GetXivMtrl(finalPath, true, tx)
-                    let! prepared = mtlBuilder mtrl
-                    return path, prepared
-                with ex ->
-                    let! finalPath = Mtrl.GetXivMtrl(path, true, tx)
-                    return raise ex
-            })
-            |> Task.WhenAll
-        let! materialAssoc =
-            try
-                materialMap
-            with ex ->
-                raise ex
-        let materialDict = materialAssoc |> dict
-
-        let renderMeshes =
-            ttModel.MeshGroups
-            |> List.ofSeq
-            |> List.collect ( fun group ->
-                group.Parts
-                |> List.ofSeq
-                |> List.map (fun part ->
-                    let verts = part.Vertices |> Array.ofSeq
-                    let convertedVerts =
-                        part.Vertices
-                        |> Seq.map (fun vtx ->
-                            VertexPositionColorUv(
-                                SharpToNumerics.vec3 vtx.Position,
-                                SharpToNumerics.convertColor vtx.VertexColor,
-                                SharpToNumerics.vec2 vtx.UV1,
-                                SharpToNumerics.vec3 vtx.Normal,
-                                SharpToNumerics.vec3 vtx.Tangent,
-                                SharpToNumerics.vec3 vtx.Binormal
-                            )
-                        )
-                        |> Seq.toArray
-                    let indices = part.TriangleIndices |> Seq.map uint16 |> Array.ofSeq
-
-                    let vertexBuffer = factory.CreateBuffer(BufferDescription(uint32 (verts.Length * sizeof<float32> * 12), BufferUsage.VertexBuffer))
-                    let indexBuffer = factory.CreateBuffer(BufferDescription(uint32 (indices.Length * sizeof<uint16>), BufferUsage.IndexBuffer))
-                    gd.UpdateBuffer(vertexBuffer, 0u, convertedVerts)
-                    gd.UpdateBuffer(indexBuffer, 0u, indices)
-                    let material =
-                        let keyList = materialDict.Keys |> Seq.map (fun k -> $"'{k}'") |> String.concat ", "
-                        match materialDict.TryGetValue(group.Material) with
-                        | true, mat -> mat
-                        | _ -> failwith $"Material {group.Material} not found."
-                    {
-                        VertexBuffer = vertexBuffer
-                        IndexBuffer = indexBuffer
-                        IndexCount = indices.Length
-                        Material = material
-                        RawModel = ttModel
-                    }
-                )
-            )
         return {
             Meshes = renderMeshes
             Original = ttModel

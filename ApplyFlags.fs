@@ -60,6 +60,8 @@ let filterFlagConflicts (flags: Map<EquipmentParameterFlag, bool>): Task<Map<Equ
             | EquipmentParameterFlag.BodyShowHand, false ->
                 finalFlags <- finalFlags.Remove EquipmentParameterFlag.HandHideElbow
                 finalFlags <- finalFlags.Remove EquipmentParameterFlag.HandHideForearm
+            | EquipmentParameterFlag.LegHideHalfBoot, true ->
+                finalFlags <- finalFlags.Remove EquipmentParameterFlag.FootHideKnee
                 
             | _ -> ()
 
@@ -120,7 +122,9 @@ let removeMeshParts (flags: Map<EquipmentParameterFlag, bool>) (model: TTModel) 
                 | "MidGlove" -> 
                     do ModelModifiers.ApplyShapes(model, List<string>(["shp_ude"]), false)
                     removeParts model "atr_hij"
-                | "LongGlove" -> do ModelModifiers.ApplyShapes(model, List<string>(["shp_kat"]), false)
+                | "LongGlove" -> 
+                    do ModelModifiers.ApplyShapes(model, List<string>(["shp_kat"]), false)
+                    removeParts model "atr_hij"
                 | _ -> ()
             | EquipmentParameterFlag.FootHideKnee, true ->
                 match shoeType() with
