@@ -433,10 +433,15 @@ type VeldridView() as this =
     member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, customizations: CharacterCustomizations) =
         try
             async {
-                let activeModels =
-                    ttModelMap
-                    |> Map.values
-                    |> Seq.toList
+                let! activeModels =
+                    async {
+                        let! flaggedModels = applyFlags ttModelMap |> Async.AwaitTask
+                    return 
+                        flaggedModels
+                        |> Map.values
+                        |> Seq.toList
+                    }
+                    
                 if activeModels.IsEmpty then
                     match currentCharacterModel with
                     | Some oldModel ->
@@ -480,6 +485,7 @@ type VeldridView() as this =
                     })
                     |> Async.Parallel
                 let materialDict = dict preparedMaterials
+
         
                 for input in activeModels do
                     let mutable totalVertices = 0.0f
