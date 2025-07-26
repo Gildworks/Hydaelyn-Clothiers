@@ -482,29 +482,32 @@ type VeldridView() as this =
                 let materialDict = dict preparedMaterials
         
                 for input in activeModels do
-                    for mesh in input.Model.MeshGroups do
-                        let materialPath = mesh.Material
-                
-                        if not (geometryData.ContainsKey(materialPath)) then
-                            geometryData.[materialPath] <- (ResizeArray<VertexPositionSkinned>(), ResizeArray<uint16>())
-                
-                        let (vertexList, indexList) = geometryData.[materialPath]
-                
+                    let mutable totalVertices = 0.0f
+                    let mutable averageX = 0.0f
+                    let mutable averageY = 0.0f
+                    let mutable averageZ = 0.0f
+
+                    for mesh in input.Model.MeshGroups do                
                         for part in mesh.Parts do
-                            let vertexOffset = vertexList.Count
-                            let mutable averageX = 0.0f
-                            let mutable averageY = 0.0f
-                            let mutable averageZ = 0.0f
-                            let mutable averageTotal = float32 part.Vertices.Count
                             for vertex in part.Vertices do
                                 averageX <- averageX + vertex.Position.X
                                 averageY <- averageY + vertex.Position.Y
                                 averageZ <- averageZ + vertex.Position.Z
+                                totalVertices <- totalVertices + 1.0f
 
-                            let centerX = averageX / averageTotal
-                            let centerY = averageY / averageTotal
-                            let centerZ = averageZ / averageTotal
+                    let centerX = averageX / totalVertices
+                    let centerY = averageY / totalVertices
+                    let centerZ = averageZ / totalVertices
 
+                    for mesh in input.Model.MeshGroups do
+                        let materialPath = mesh.Material
+                        if not (geometryData.ContainsKey(materialPath)) then
+                            geometryData.[materialPath] <- (ResizeArray<VertexPositionSkinned>(), ResizeArray<uint16>())
+                
+                        let (vertexList, indexList) = geometryData.[materialPath]
+
+                        for part in mesh.Parts do
+                            let vertexOffset = vertexList.Count
                             for vertex in part.Vertices do
                                 let mutable scaledPosition = vertex.Position
 
@@ -519,6 +522,7 @@ type VeldridView() as this =
                                             else 0.0f
                                         else 0.0f
                                     )
+                                
                                 if bustInfluence > 0.0f then
                                     let bustScale = this.handleBustScaling(customizations.BustSize)
                                     let centerPoint = SharpDX.Vector3(centerX, centerY, centerZ)
@@ -537,6 +541,13 @@ type VeldridView() as this =
                                         offsetFromCenter.Z * effectiveScale.Z
                                     )
                                     scaledPosition <- centerPoint + scaledOffset
+
+                                let heightScale = this.handleBustScaling(customizations.Height)
+                                scaledPosition <- SharpDX.Vector3(
+                                    scaledPosition.X * heightScale.Y,
+                                    scaledPosition.Y * heightScale.Y,
+                                    scaledPosition.Z * heightScale.Y
+                                )
 
                                 let mutable boneIndices = Array.create 4 0.0f
                                 let mutable boneWeights = Array.create 4 0.0f

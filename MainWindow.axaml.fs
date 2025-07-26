@@ -186,7 +186,7 @@ type MainWindow () as this =
     let mutable selectedGenderNameOpt: string option = Some "Male"
     let mutable characterCustomizations: CharacterCustomizations =
         {
-            Height = 100.0f
+            Height = 50.0f
             BustSize = 50.0f
             FaceScale = 1.0f
             MuscleDefinition = 1.0f
