@@ -535,8 +535,8 @@ type VeldridView() as this =
                                     let offsetFromCenter = scaledPosition - centerPoint
                                     
                                     let effectiveScale = SharpDX.Vector3(
-                                        1.0f + (bustScale.X - 1.0f) * bustInfluence,
-                                        1.0f + (bustScale.Y - 1.0f) * bustInfluence,
+                                        1.0f + (bustScale.Z - 1.0f) * bustInfluence,
+                                        1.0f + (bustScale.Z - 1.0f) * bustInfluence,
                                         1.0f + (bustScale.Z - 1.0f) * bustInfluence
                                     )
 

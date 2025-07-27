@@ -361,6 +361,7 @@
 											 Margin="10,10,0,10" 
 											 Grid.Column="0" Grid.Row="0" />
 									<Button x:Name="HeadSearchClear"
+											Command="{Binding ClearHeadSearch}"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
 											Grid.Column="1"
@@ -404,6 +405,7 @@
 											 Grid.Column="0" 
 											 Grid.Row="0" />
 									<Button x:Name="BodySearchClear"
+											Command="{Binding ClearBodySearch}"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
 											Grid.Column="1"
@@ -445,6 +447,7 @@
 											 Grid.Column="0" 
 											 Grid.Row="0"/>
 									<Button x:Name="HandSearchClear"
+											Command="{Binding ClearHandSearch}"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
 											Grid.Column="1"
@@ -486,6 +489,7 @@
 											 Grid.Column="0" 
 											 Grid.Row="0" />
 									<Button x:Name="LegsSearchClear"
+											Command="{Binding ClearLegsSearch}"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
 											Grid.Column="1"
@@ -527,6 +531,7 @@
 											 Grid.Column="0"
 											 Grid.Row="0" />
 									<Button x:Name="FeetSearchClear"
+											Command="{Binding ClearFeetSearch}"
 											HorizontalAlignment="Stretch"
 											HorizontalContentAlignment="Center"
 											Grid.Column="1"

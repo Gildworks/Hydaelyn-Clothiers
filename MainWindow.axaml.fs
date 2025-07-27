@@ -102,6 +102,15 @@ module DataHelpers =
 
             let colorDataBytes = allBytes |> Seq.take metadataStartOffset
 
+            let numberOfBlocks =
+                let colorList =
+                    colorDataBytes
+                    |> Seq.toList
+                let totalRacialBytes = (colorList.Length - sharedOffset) / blockSize
+                totalRacialBytes
+
+            printfn $"Total racial color blocks: {numberOfBlocks}"
+
             let colors =
                 if (colorDataBytes |> Seq.length) >= (paletteStartIndex + paletteLength) * 4 && paletteLength > 0 then
                     colorDataBytes
@@ -858,9 +867,7 @@ type MainWindow () as this =
                     if dye2Combo.SelectedIndex >= 0 then
                         this.HandleDyeSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye2Combo, render)
             )
-
-        let clearSearch (searchBox: TextBox) =
-            searchBox.Text <- String.Empty
+    
 
         let handleSliderChange (slider: Slider) (onReleased: float32 -> unit) =
             let thumb =

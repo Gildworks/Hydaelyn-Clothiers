@@ -33,8 +33,8 @@ const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(10.5, 10.8, -10.6)); // Your
                                                                   // const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(vec3(0.3, 0.7, -0.5));
 
 
-const vec3 LIGHT_COLOR = vec3(1.0, 1.0, 0.95);
-const vec3 AMBIENT_LIGHT_COLOR = vec3(0.15, 0.15, 0.20); // Slightly increased ambient
+const vec3 LIGHT_COLOR = vec3(1.0, 0.947, 0.888);
+const vec3 AMBIENT_LIGHT_COLOR = vec3(0.154, 0.203, 0.33); // Slightly increased ambient
 const float SPECULAR_INTENSITY = 0.1;
 const float SHININESS = 16.0;
 const float GAMMA_INV = 1.0/2.2;
@@ -104,7 +104,7 @@ void main() {
 
     // 'wrap' is a parameter you can tune (e.g., 0.2 is a good start)
     // It controls how far the light "wraps" around the object.
-    float sss_wrap = 0.2; 
+    float sss_wrap = .5; 
     float NdotL_wrapped = dot(N, L) + sss_wrap;
     float light_intensity = max(0.0, NdotL_wrapped) / (1.0 + sss_wrap);
     light_intensity = pow(light_intensity, 2.0); // Squaring it makes the falloff look nicer

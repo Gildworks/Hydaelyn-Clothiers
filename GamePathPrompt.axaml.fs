@@ -63,8 +63,8 @@ type GamePathPromptWindow() as this =
         if not (String.IsNullOrWhiteSpace(path)) && Directory.Exists(path) && Directory.Exists(Path.Combine(path, "game", "sqpack")) then
             if path.Contains("Program Files") || path.Contains("(x86)") then
                 this.ShowError("Your game may be installed to a system directory. If you cannot create a character, try running Hydaelyn Clothiers as an Administrator.")
-                confirmButton.IsEnabled <- false
-                false
+                confirmButton.IsEnabled <- true
+                true
             else
                 this.ShowError("")
                 confirmButton.IsEnabled <- true

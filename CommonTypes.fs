@@ -138,7 +138,7 @@ type raceIds =
     | Viera_Rava_Male = 28
     | Viera_Rava_Female = 29
     | Viera_Veena_Male = 30
-    | Viere_Veena_Female = 31
+    | Viera_Veena_Female = 31
 
 type paletteOptions =
     | RenderHighlights = 0

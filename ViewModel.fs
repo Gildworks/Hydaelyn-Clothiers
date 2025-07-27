@@ -774,6 +774,31 @@ type VeldridWindowViewModel() as this =
             allGearCache <- loadedGear
             this.ApplyGlobalFilters()
         }
+    
+    member this.ClearHeadSearch =
+        SimpleCommand(fun () ->
+            this.HeadSearch <- String.Empty
+        )
+
+    member this.ClearBodySearch =
+        SimpleCommand(fun () ->
+            this.BodySearch <- String.Empty
+        )
+
+    member this.ClearHandSearch =
+        SimpleCommand(fun () ->
+            this.HandSearch <- String.Empty
+        )
+
+    member this.ClearLegsSearch =
+        SimpleCommand(fun () ->
+            this.LegsSearch <- String.Empty
+        )
+
+    member this.ClearFeetSearch =
+        SimpleCommand(fun () ->
+            this.FeetSearch <- String.Empty
+        )
 
     member this.OpenSettingsCommand =
         SimpleCommand(fun () ->
