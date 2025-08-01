@@ -6,6 +6,8 @@ open System.Numerics
 open System.Threading.Tasks
 open System.Runtime.InteropServices
 
+open Serilog
+
 open Avalonia
 open Avalonia.Controls
 open Avalonia.Input
@@ -228,8 +230,7 @@ type VeldridView() as this =
                         cmdList.SetIndexBuffer(mesh.IndexBuffer, IndexFormat.UInt16)
                         cmdList.DrawIndexed(uint32 mesh.IndexCount, 1u, 0u, 0, 0u)
                     with ex ->
-                        printfn $"Draw call failed: {ex.Message}"
-                        printfn $"Error stack trace: {ex.StackTrace}"
+                        Log.Error(ex, "Frame render failed.")
                         reraise()
 
             cmdList.End()
@@ -391,7 +392,8 @@ type VeldridView() as this =
                                     async {
                                         match races with
                                         | [] ->
-                                            return raise (exn "Failed to load any model. Rage quitting.")
+                                            Log.Fatal("Failed to load any model for item {ItemName} across all racial fallbacks", item.Name)
+                                            return raise (exn "Failed to load any model after all fallback attempts")
                                         | race::rest ->
                                             try
                                                 return! loadModel item race |> Async.AwaitTask
@@ -402,8 +404,7 @@ type VeldridView() as this =
                         
                                 try
                                     return! loadModel item race |> Async.AwaitTask
-                                with _ ->
-                            
+                                with _ ->                            
                                     return! racialFallbacks item priorityList resolvedRace
                         }
                     do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
@@ -421,12 +422,12 @@ type VeldridView() as this =
 
                 
                 with ex ->
+                    Log.Error("Failed to load TTModel for item {ItemName}: {message}", item.Name, ex.Message)
                     raise ex
             
             }
         with ex ->
-            printfn $"AssignGear failed: {ex.Message}"
-            printfn $"Stack trace: {ex.StackTrace}"
+            Log.Error(ex, "AssignGear failed for slot {Slot} with item {ItemName}", slot, item.Name)
             reraise()
 
     member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, customizations: CharacterCustomizations) =
@@ -633,8 +634,7 @@ type VeldridView() as this =
                     currentCharacterModel <- None
             }
         with ex ->
-            printfn $"RebuildCharacterModel failed: {ex.Message}"
-            printfn $"Stack trace: {ex.StackTrace}"
+            Log.Error("Failed to build skeletal model: {Message}", ex.Message)
             reraise()
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations) : Async<unit> =

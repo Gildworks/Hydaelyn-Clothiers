@@ -6,6 +6,8 @@ open Avalonia.Markup.Xaml
 open Avalonia.Svg
 open Avalonia.Svg.Skia
 
+open Serilog
+
 open System
 open System.IO
 open System.Net.Http
@@ -23,6 +25,19 @@ type App() =
 
     let mutable releaseChannelURL: string = ""
     let mutable userAccessToken: string = ""
+
+    let logger =
+        LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.File(
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                "Hydaelyn Clothiers", "logs", "hc-.log"),
+                rollingInterval = RollingInterval.Day,
+                retainedFileCountLimit = 7,
+                shared = true)
+            .Enrich.WithProperty("Application", "Hydaelyn Clothiers")
+            .CreateLogger()
 
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
@@ -74,28 +89,30 @@ type App() =
             
 
     override this.OnFrameworkInitializationCompleted() =
+        Log.Logger <- logger
         let asyncUpdateApp = async {
-            // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
+            try
+                // === Velopack Automatic Updates Section ===
+                do! this.GetReleaseChannelURL()
+                let finalURL =
+                    if String.IsNullOrWhiteSpace(releaseChannelURL) then
+                        "https://github.com/Gildworks/Hydaelyn-Clothiers"
+                    else
+                        releaseChannelURL
+                let accToken =
+                    if String.IsNullOrWhiteSpace(userAccessToken) then
+                        String.Empty
+                    else
+                        userAccessToken
 
-            do! this.GetReleaseChannelURL()
-            let finalURL =
-                if String.IsNullOrWhiteSpace(releaseChannelURL) then
-                    "https://github.com/Gildworks/Hydaelyn-Clothiers"
-                else
-                    releaseChannelURL
-            let accToken =
-                if String.IsNullOrWhiteSpace(userAccessToken) then
-                    String.Empty
-                else
-                    userAccessToken
-
-            let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
-            let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
-            if not (isNull newVer) then
-                do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
-                mgr.ApplyUpdatesAndRestart(newVer)
-
-            // === End Velopack Automatic Updates Section ===
+                let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
+                let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
+                if not (isNull newVer) then
+                    do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
+                    mgr.ApplyUpdatesAndRestart(newVer)
+                // === End Velopack Automatic Updates Section ===
+            with ex ->
+                Log.Warning("Failed to check for updates: {message}", ex.Message)
 
             match this.ApplicationLifetime with
             | :? IClassicDesktopStyleApplicationLifetime as desktop ->
