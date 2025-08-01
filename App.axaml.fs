@@ -6,6 +6,8 @@ open Avalonia.Markup.Xaml
 open Avalonia.Svg
 open Avalonia.Svg.Skia
 
+open Serilog
+
 open System
 open System.IO
 open System.Net.Http
@@ -23,6 +25,19 @@ type App() =
 
     let mutable releaseChannelURL: string = ""
     let mutable userAccessToken: string = ""
+
+    let logger =
+        LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.File(
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                "Hydaelyn Clothiers", "logs", "hc-.log"),
+                rollingInterval = RollingInterval.Day,
+                retainedFileCountLimit = 7,
+                shared = true)
+            .Enrich.WithProperty("Application", "Hydaelyn Clothiers")
+            .CreateLogger()
 
     override this.Initialize() =
         AvaloniaXamlLoader.Load(this)
@@ -74,6 +89,7 @@ type App() =
             
 
     override this.OnFrameworkInitializationCompleted() =
+        Log.Logger <- logger
         let asyncUpdateApp = async {
             try
                 // === Velopack Automatic Updates Section ===
