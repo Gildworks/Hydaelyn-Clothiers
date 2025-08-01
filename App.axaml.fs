@@ -75,27 +75,28 @@ type App() =
 
     override this.OnFrameworkInitializationCompleted() =
         let asyncUpdateApp = async {
-            // === Velopack Automatic Updates Section - Comment while in development, uncomment for release ===
+            try
+                // === Velopack Automatic Updates Section ===
+                do! this.GetReleaseChannelURL()
+                let finalURL =
+                    if String.IsNullOrWhiteSpace(releaseChannelURL) then
+                        "https://github.com/Gildworks/Hydaelyn-Clothiers"
+                    else
+                        releaseChannelURL
+                let accToken =
+                    if String.IsNullOrWhiteSpace(userAccessToken) then
+                        String.Empty
+                    else
+                        userAccessToken
 
-            do! this.GetReleaseChannelURL()
-            let finalURL =
-                if String.IsNullOrWhiteSpace(releaseChannelURL) then
-                    "https://github.com/Gildworks/Hydaelyn-Clothiers"
-                else
-                    releaseChannelURL
-            let accToken =
-                if String.IsNullOrWhiteSpace(userAccessToken) then
-                    String.Empty
-                else
-                    userAccessToken
-
-            let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
-            let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
-            if not (isNull newVer) then
-                do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
-                mgr.ApplyUpdatesAndRestart(newVer)
-
-            // === End Velopack Automatic Updates Section ===
+                let mgr = UpdateManager(new GithubSource(finalURL, accToken, true))
+                let! newVer = mgr.CheckForUpdatesAsync() |> Async.AwaitTask
+                if not (isNull newVer) then
+                    do! mgr.DownloadUpdatesAsync(newVer) |> Async.AwaitTask
+                    mgr.ApplyUpdatesAndRestart(newVer)
+                // === End Velopack Automatic Updates Section ===
+            with ex ->
+                printfn $"Failed to check for updates: {ex.Message}"
 
             match this.ApplicationLifetime with
             | :? IClassicDesktopStyleApplicationLifetime as desktop ->
