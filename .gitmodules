@@ -1,6 +1,6 @@
 [submodule "lib/xivModdingFramework"]
 	path = lib/xivModdingFramework
-	url = https://github.com/TexTools/xivModdingFramework.git
+	url = https://github.com/shandonb/xivModdingFramework.git
 [submodule "lib/AvaloniaRender"]
 	path = lib/AvaloniaRender
 	url = https://github.com/KillzXGaming/AvaloniaRender.git
