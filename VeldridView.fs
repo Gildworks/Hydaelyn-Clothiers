@@ -404,8 +404,7 @@ type VeldridView() as this =
                         
                                 try
                                     return! loadModel item race |> Async.AwaitTask
-                                with _ ->
-                            
+                                with _ ->                            
                                     return! racialFallbacks item priorityList resolvedRace
                         }
                     do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
@@ -423,6 +422,7 @@ type VeldridView() as this =
 
                 
                 with ex ->
+                    Log.Error("Failed to load TTModel for item {ItemName}: {message}", item.Name, ex.Message)
                     raise ex
             
             }
@@ -634,8 +634,7 @@ type VeldridView() as this =
                     currentCharacterModel <- None
             }
         with ex ->
-            printfn $"RebuildCharacterModel failed: {ex.Message}"
-            printfn $"Stack trace: {ex.StackTrace}"
+            Log.Error("Failed to build skeletal model: {Message}", ex.Message)
             reraise()
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations) : Async<unit> =

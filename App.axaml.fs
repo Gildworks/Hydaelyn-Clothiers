@@ -112,7 +112,7 @@ type App() =
                     mgr.ApplyUpdatesAndRestart(newVer)
                 // === End Velopack Automatic Updates Section ===
             with ex ->
-                printfn $"Failed to check for updates: {ex.Message}"
+                Log.Warning("Failed to check for updates: {message}", ex.Message)
 
             match this.ApplicationLifetime with
             | :? IClassicDesktopStyleApplicationLifetime as desktop ->
