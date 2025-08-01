@@ -972,12 +972,15 @@ type MainWindow () as this =
                             let faceList =
                                 match userLanguage with
                                 | XivLanguage.German ->
-                                    match getParts "Gesicht" with
+                                    match getParts "Face" with
                                     | Some charaList ->
                                         charaList
                                     | None -> 
-                                        printfn "No face models found"
-                                        List<XivCharacter>.Empty
+                                        match getParts "Gesicht" with
+                                        | Some charaList -> charaList
+                                        | None ->
+                                            printfn "No face models found"
+                                            List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Face" with
                                     | Some charaList -> charaList
@@ -986,9 +989,13 @@ type MainWindow () as this =
                             let hairList =
                                 match userLanguage with
                                 | XivLanguage.German ->
-                                    match getParts "Haar" with
+                                    match getParts "Hair" with
                                     | Some charaList -> charaList
-                                    | None -> List<XivCharacter>.Empty
+                                    | None -> 
+                                        match getParts "Haar" with
+                                        | Some charaList -> charaList
+                                        | None ->
+                                            List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Hair" with
                                     | Some charaList -> charaList
@@ -1008,9 +1015,13 @@ type MainWindow () as this =
                             let tailList =
                                 match userLanguage with
                                 | XivLanguage.German ->
-                                    match getParts "Schwanz" with
+                                    match getParts "Tail" with
                                     | Some charaList -> charaList
-                                    | None -> List<XivCharacter>.Empty
+                                    | None -> 
+                                        match getParts "Schwanz" with
+                                        | Some charaList -> charaList
+                                        | None ->
+                                            List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Tail" with
                                     | Some charaList -> charaList
