@@ -12,6 +12,8 @@ open System.Text.Json
 open System.Web
 open System.Runtime.CompilerServices
 
+open Serilog
+
 open ReactiveUI
 
 open Avalonia
@@ -169,7 +171,7 @@ type SettingsViewModel ()  =
     member val CRPBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Carpenter")
+            book.DisplayName.Contains("Carpenter") || book.DisplayName.Contains("Zimmerer")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -177,7 +179,7 @@ type SettingsViewModel ()  =
     member val BSMBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Blacksmith")
+            book.DisplayName.Contains("Blacksmith") || book.DisplayName.Contains("Grobschmied")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -185,7 +187,7 @@ type SettingsViewModel ()  =
     member val ARMBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Armorer")
+            book.DisplayName.Contains("Armorer") || book.DisplayName.Contains("Plattner")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -193,7 +195,7 @@ type SettingsViewModel ()  =
     member val GSMBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Goldsmith")
+            book.DisplayName.Contains("Goldsmith") || book.DisplayName.Contains("Goldschmied")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -201,7 +203,7 @@ type SettingsViewModel ()  =
     member val LTWBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Leatherworker")
+            book.DisplayName.Contains("Leatherworker") || book.DisplayName.Contains("Gerber")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -209,7 +211,7 @@ type SettingsViewModel ()  =
     member val WVRBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Weaver")
+            book.DisplayName.Contains("Weaver") || book.DisplayName.Contains("Weber")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -225,7 +227,7 @@ type SettingsViewModel ()  =
     member val CULBooks =
         bookList
         |> Array.filter (fun book ->
-            book.DisplayName.Contains("Culinarian")
+            book.DisplayName.Contains("Culinarian") || book.DisplayName.Contains("Gourmet")
         )
         |> Array.map createBookVm
         |> fun vms -> AvaloniaList<BookViewModel>(vms)
@@ -309,7 +311,7 @@ type SettingsViewModel ()  =
         match this.loadConfig() with
         | Some config ->
             let newConfig =
-                { GamePath = config.GamePath; CrafterProfile=config.CrafterProfile; PatreonID = Some patreonId }
+                { GamePath = config.GamePath; CrafterProfile=config.CrafterProfile; PatreonID = Some patreonId; GameLanguage = config.GameLanguage }
             this.saveConfig(newConfig)
         | _ -> ()
 
@@ -348,7 +350,7 @@ type SettingsViewModel ()  =
         match this.loadConfig() with
         | Some config ->
             let newConfig =
-                { GamePath = config.GamePath; CrafterProfile = Some crafterProfile; PatreonID = config.PatreonID }
+                { GamePath = config.GamePath; CrafterProfile = Some crafterProfile; PatreonID = config.PatreonID; GameLanguage = config.GameLanguage }
             this.saveConfig(newConfig)
         | None -> ()
     
@@ -357,6 +359,18 @@ type SettingsViewModel ()  =
 
 type VeldridWindowViewModel() as this =
     inherit ViewModelBase()
+
+    let raceOptions = [
+            { Display = "Hyur"; Value = "Hyur"}; { Display = "Elezen"; Value = "Elezen"};
+            { Display = "Lalafell"; Value = "Lalafell"}; { Display = "Miqo'te"; Value = "Miqote"};
+            { Display = "Roegadyn"; Value = "Roegadyn"}; { Display = "Au Ra"; Value = "AuRa"};
+            { Display = "Hrothgar"; Value = "Hrothgar"}; { Display = "Viera"; Value = "Viera"}
+        ]
+
+    let genderOptions = [
+            { Display = "Male"; Value = "Male" };
+            { Display = "Female"; Value = "Female" }
+        ]
 
     let hyurTribes = [{ Display = "Highlander"; Value="Highlander"}; { Display = "Midlander"; Value="Midlander"}]
     let elezenTribes = [{ Display = "Wildwood"; Value="Wildwood"}; { Display = "Duskwight"; Value="Duskwight"}]
@@ -377,9 +391,9 @@ type VeldridWindowViewModel() as this =
     let mutable _globallyFilteredGear: FilterGear list = List.empty
 
 
-    let mutable selectedRace = { Display = "Hyur"; Value="Hyur" }
+    let mutable selectedRace = List.head raceOptions
     let mutable selectedTribe = { Display = "Midlander"; Value= "Midlander" }
-    let mutable selectedGender = { Display = "Male"; Value = "Male" }
+    let mutable selectedGender = List.head genderOptions
     let mutable _availableTribes = ObservableCollection<ComboOption>(hyurTribes)
 
     let mutable _restrictEquip = false
@@ -470,19 +484,9 @@ type VeldridWindowViewModel() as this =
         and set(value) =
             this.SetValue(&_itemLevel, value)
 
-    member val Race =
-        [
-            { Display = "Hyur"; Value = "Hyur"}; { Display = "Elezen"; Value = "Elezen"};
-            { Display = "Lalafell"; Value = "Lalafell"}; { Display = "Miqo'te"; Value = "Miqote"};
-            { Display = "Roegadyn"; Value = "Roegadyn"}; { Display = "Au Ra"; Value = "AuRa"};
-            { Display = "Hrothgar"; Value = "Hrothgar"}; { Display = "Viera"; Value = "Viera"}
-        ]
-
-    member val Gender =
-        [
-            { Display = "Male"; Value = "Male" };
-            { Display = "Female"; Value = "Female" }
-        ]
+    member val Race = raceOptions
+    member val Gender = genderOptions
+        
 
     member val Tanks =
         [Job.GLA; Job.PLD; Job.MRD; Job.WAR; Job.DRK; Job.GNB]
@@ -545,7 +549,7 @@ type VeldridWindowViewModel() as this =
             )
             |> List.filter (fun item ->
                 if not _restrictEquip then true else
-                    match selectedRace.Value with
+                    match this.SelectedRace.Value with
                     | "Hyur" ->
                         match int item.EquipRestriction with
                         | 0 | 1 | 2 | 3
@@ -770,9 +774,12 @@ type VeldridWindowViewModel() as this =
 
     member this.InitializeDataAsync(render: VeldridView) =
         async {
-            let! loadedGear = render.GetEquipment()
-            allGearCache <- loadedGear
-            this.ApplyGlobalFilters()
+            try
+                let! loadedGear = render.GetEquipment() |> Async.StartAsTask |> Async.AwaitTask
+                allGearCache <- loadedGear
+                this.ApplyGlobalFilters()
+            with ex ->
+                Log.Fatal("Could not populate equipment list! {Message}", ex.Message)
         }
     
     member this.ClearHeadSearch =

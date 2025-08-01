@@ -7,6 +7,8 @@ open System.Text
 open System.Text.Json
 open System.IO
 
+open Serilog
+
 open Avalonia
 open Avalonia.Controls
 open Avalonia.Controls.Primitives
@@ -202,7 +204,7 @@ type MainWindow () as this =
             FaceScale = 1.0f
             MuscleDefinition = 1.0f
         }
-
+    let mutable userLanguage: XivLanguage = XivLanguage.English
     let mutable modelColors: CustomModelColors = ModelTexture.GetCustomColors()
     let mutable selectedSwatchBorders: System.Collections.Generic.Dictionary<paletteOptions, Border option> = System.Collections.Generic.Dictionary()
     let mutable modelColorId: raceIds = raceIds.AuRa_Xaela_Female
@@ -835,7 +837,6 @@ type MainWindow () as this =
             eqSlot: EquipmentSlot, gearCategory: string) =
 
             let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
-            slotCombo.ItemsSource <- getGearList()
 
             slotCombo.SelectionChanged.Add(fun _ ->
                 if slotCombo.SelectedItem <> null then
@@ -937,140 +938,202 @@ type MainWindow () as this =
         async {
             this.IncrementBusyCounter()
             try
-                let raceStr =
-                    match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
-                    | Some r, Some c, Some g when r = "Hyur" -> Some $"{r}_{c}_{g}"
-                    | Some r, _, Some g when r <> "Hyur" -> Some $"{r}_{g}"
-                    | _ -> None
+                try
+                    let raceStr =
+                        match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
+                        | Some r, Some c, Some g when r = "Hyur" -> Some $"{r}_{c}_{g}"
+                        | Some r, _, Some g when r <> "Hyur" -> Some $"{r}_{g}"
+                        | _ -> None
 
-                let idStr = 
-                    match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
-                    | Some r, Some c, Some g -> $"{r}_{c}_{g}"
-                    | _ -> ""
-                match Enum.TryParse<raceIds>(idStr) with
-                | true, parsedRace -> modelColorId <- parsedRace
-                | _ ->
-                    ()                    
+                    let idStr = 
+                        match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
+                        | Some r, Some c, Some g -> $"{r}_{c}_{g}"
+                        | _ -> ""
+                    match Enum.TryParse<raceIds>(idStr) with
+                    | true, parsedRace -> modelColorId <- parsedRace
+                    | _ ->
+                        ()                    
 
-                match raceStr with
-                | Some validRaceStr ->
-                    match Enum.TryParse<XivRace>(validRaceStr) with
-                    | true, parsedXivRace ->
-                        currentCharacterRace <- parsedXivRace
-                        render.clearCharacter()
+                    match raceStr with
+                    | Some validRaceStr ->
+                        match Enum.TryParse<XivRace>(validRaceStr) with
+                        | true, parsedXivRace ->
+                            currentCharacterRace <- parsedXivRace
+                            render.clearCharacter()
 
-                        let getParts cat = DataHelpers.getCustomizableParts parsedXivRace cat allCharaCache currentCharacterRace
-                        currentFaceList <- getParts "Face"
-                        currentHairList <- getParts "Hair"
-                        currentEarList <- getParts "Ear"
-                        currentTailList <- getParts "Tail"
+                            let getParts (cat: string) : XivCharacter list option =
+                                let partsList =
+                                    try
+                                        Some (DataHelpers.getCustomizableParts parsedXivRace cat allCharaCache currentCharacterRace)
+                                    with ex ->
+                                        None
+                                partsList
 
-                        let populateSelector (selector: ComboBox) (parts: XivCharacter list) defaultToFirst =
-                            selector.ItemsSource <- parts |> List.map (fun p -> p.Name)
-                            selector.IsEnabled <- not (List.isEmpty parts)
-                            if defaultToFirst && not (List.isEmpty parts) && selector.SelectedIndex < 0 then
-                                selector.SelectedIndex <- 0
+                            let faceList =
+                                match userLanguage with
+                                | XivLanguage.German ->
+                                    match getParts "Gesicht" with
+                                    | Some charaList ->
+                                        charaList
+                                    | None -> 
+                                        printfn "No face models found"
+                                        List<XivCharacter>.Empty
+                                | _ ->
+                                    match getParts "Face" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
 
-                        populateSelector faceSelector currentFaceList true
-                        populateSelector hairSelector currentHairList true
-                        populateSelector earSelector currentEarList true
-                        populateSelector tailSelector currentTailList true
+                            let hairList =
+                                match userLanguage with
+                                | XivLanguage.German ->
+                                    match getParts "Haar" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
+                                | _ ->
+                                    match getParts "Hair" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
 
-                        let mutable allModelUpdateTasks: Async<unit> list = []
+                            let earList =
+                                match userLanguage with
+                                | XivLanguage.German ->
+                                    match getParts "Ear" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
+                                | _ ->
+                                    match getParts "Ear" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
 
-                        let assignSelectedOrDefault (parts: XivCharacter list) (slot: EquipmentSlot) (selector: ComboBox) =
-                            if selector.IsEnabled then
-                                let idx = selector.SelectedIndex
-                                let itemToAssign =
-                                    if idx >= 0 && idx < List.length parts then
-                                        Some parts[idx]
-                                    else
-                                        List.tryHead parts
+                            let tailList =
+                                match userLanguage with
+                                | XivLanguage.German ->
+                                    match getParts "Schwanz" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
+                                | _ ->
+                                    match getParts "Tail" with
+                                    | Some charaList -> charaList
+                                    | None -> List<XivCharacter>.Empty
+                                    
+                            currentFaceList <- faceList
+                            currentHairList <- hairList
+                            currentEarList <- earList
+                            currentTailList <- tailList
+
+                            let populateSelector (selector: ComboBox) (parts: XivCharacter list) defaultToFirst =
+                                selector.ItemsSource <- parts |> List.map (fun p -> p.Name)
+                                selector.IsEnabled <- not (List.isEmpty parts)
+                                if defaultToFirst && not (List.isEmpty parts) && selector.SelectedIndex < 0 then
+                                    selector.SelectedIndex <- 0
+
+                            try
+                                populateSelector faceSelector currentFaceList true
+                                printfn $"Face Selector items source length: {currentFaceList.Length}"
+                            with ex -> 
+                                Log.Error("Could not populate face selector: {Message}", ex.Message)
+                            populateSelector hairSelector currentHairList true
+                            populateSelector earSelector currentEarList true
+                            populateSelector tailSelector currentTailList true
+
+                            let mutable allModelUpdateTasks: Async<unit> list = []
+
+                            let assignSelectedOrDefault (parts: XivCharacter list) (slot: EquipmentSlot) (selector: ComboBox) =
+                                if selector.IsEnabled then
+                                    let idx = selector.SelectedIndex
+                                    let itemToAssign =
+                                        if idx >= 0 && idx < List.length parts then
+                                            Some parts[idx]
+                                        else
+                                            List.tryHead parts
                             
-                                match itemToAssign with
-                                | Some item ->
-                                    allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
-                                | None -> ()
-
-                        do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
-                        do assignSelectedOrDefault currentHairList EquipmentSlot.Hair hairSelector
-                        if currentEarList |> List.isEmpty |> not then do assignSelectedOrDefault currentEarList EquipmentSlot.Ear earSelector
-                        if currentTailList |> List.isEmpty |> not then do assignSelectedOrDefault currentTailList EquipmentSlot.Tail tailSelector
-
-                        let reselectIfPopulated (combo: ListBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
-                        reselectIfPopulated headSlotCombo
-                        reselectIfPopulated bodySlotCombo
-                        reselectIfPopulated handSlotCombo
-                        reselectIfPopulated legsSlotCombo
-                        reselectIfPopulated feetSlotCombo
-
-                        let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
-                            match combo.SelectedItem with
-                            | :? FilterGear as gear -> ()
-                            | _ ->
-                                let list =
-                                    combo.Items
-                                    |> Seq.cast<FilterGear>
-                                    |> Seq.toList
-                                match list |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
-                                | Some idx -> combo.SelectedItem <- idx
-                                | None ->
-                                    match list |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
-                                    | Some idx -> combo.SelectedItem <- idx
+                                    match itemToAssign with
+                                    | Some item ->
+                                        printfn $"item to assign: {item.Name}"
+                                        allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
                                     | None -> ()
 
-                        setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
-                        setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
-                        setDefaultGear (legsSlotCombo, "Legs", "SmallClothes")
-                        setDefaultGear (feetSlotCombo, "Feet", "SmallClothes")
+                            do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
+                            do assignSelectedOrDefault currentHairList EquipmentSlot.Hair hairSelector
+                            if currentEarList |> List.isEmpty |> not then do assignSelectedOrDefault currentEarList EquipmentSlot.Ear earSelector
+                            if currentTailList |> List.isEmpty |> not then do assignSelectedOrDefault currentTailList EquipmentSlot.Tail tailSelector
 
-                        if not (List.isEmpty allModelUpdateTasks) then
-                            do! Async.Parallel(allModelUpdateTasks) |> Async.Ignore
+                            let reselectIfPopulated (combo: ListBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
+                            reselectIfPopulated headSlotCombo
+                            reselectIfPopulated bodySlotCombo
+                            reselectIfPopulated handSlotCombo
+                            reselectIfPopulated legsSlotCombo
+                            reselectIfPopulated feetSlotCombo
+
+                            let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
+                                match combo.SelectedItem with
+                                | :? FilterGear as gear -> ()
+                                | _ ->
+                                    let list =
+                                        combo.Items
+                                        |> Seq.cast<FilterGear>
+                                        |> Seq.toList
+                                    match list |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
+                                    | Some idx -> combo.SelectedItem <- idx
+                                    | None ->
+                                        match list |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
+                                        | Some idx -> combo.SelectedItem <- idx
+                                        | None -> ()
+
+                            setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
+                            setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
+                            setDefaultGear (legsSlotCombo, "Legs", "SmallClothes")
+                            setDefaultGear (feetSlotCombo, "Feet", "SmallClothes")
+
+                            if not (List.isEmpty allModelUpdateTasks) then
+                                do! Async.Parallel(allModelUpdateTasks) |> Async.Ignore
 
                     
                     
-                        let! getUiEyePalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIEyeColor |> Async.AwaitTask
-                        let! getUiLipDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipDark |> Async.AwaitTask
-                        let! getUiLipLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipLight |> Async.AwaitTask
-                        let! getUiTattoo = DataHelpers.getUIColorPalette modelColorId paletteOptions.UITattoo |> Async.AwaitTask
-                        let! getUiFaceDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
-                        let! getUiFaceLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
-                        let! getUiSkinPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
-                        let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.RenderHair |> Async.AwaitTask
-                        let! getUiHighlightPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
+                            let! getUiEyePalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIEyeColor |> Async.AwaitTask
+                            let! getUiLipDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipDark |> Async.AwaitTask
+                            let! getUiLipLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipLight |> Async.AwaitTask
+                            let! getUiTattoo = DataHelpers.getUIColorPalette modelColorId paletteOptions.UITattoo |> Async.AwaitTask
+                            let! getUiFaceDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
+                            let! getUiFaceLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
+                            let! getUiSkinPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
+                            let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.RenderHair |> Async.AwaitTask
+                            let! getUiHighlightPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
 
-                        uiEyePalette <- getUiEyePalette
-                        uiLipDark <- getUiLipDark
-                        uiLipLight <- getUiLipLight
-                        uiTattoo <- getUiTattoo
-                        uiFaceDark <- getUiFaceDark
-                        uiFaceLight <- getUiFaceLight
-                        uiSkinPalette <- getUiSkinPalette
-                        uiHairPalette <- getUiHairPalette
-                        uiHighlightPalette <- getUiHighlightPalette
+                            uiEyePalette <- getUiEyePalette
+                            uiLipDark <- getUiLipDark
+                            uiLipLight <- getUiLipLight
+                            uiTattoo <- getUiTattoo
+                            uiFaceDark <- getUiFaceDark
+                            uiFaceLight <- getUiFaceLight
+                            uiSkinPalette <- getUiSkinPalette
+                            uiHairPalette <- getUiHairPalette
+                            uiHighlightPalette <- getUiHighlightPalette
 
-                        if skinColorSwatchesControl <> null then
-                            skinColorSwatchesControl.ItemsSource <- uiSkinPalette
-                        if hairColorSwatchesControl <> null then
-                            hairColorSwatchesControl.ItemsSource <- uiHairPalette
-                        if highlightEnableControl <> null && highlightEnableControl.IsChecked.GetValueOrDefault(false) && highlightsColorSwatchesControl <> null then
-                            highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
-                        if eyeColorSwatchesControl <> null then
-                            eyeColorSwatchesControl.ItemsSource <- uiEyePalette
-                        if lipColorSwatchesControl <> null then
-                            if lipRadioDarkControl <> null && lipRadioDarkControl.IsChecked.GetValueOrDefault(false) then
-                                lipColorSwatchesControl.ItemsSource <- uiLipDark
-                            elif lipRadioLightControl <> null && lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
-                                lipColorSwatchesControl.ItemsSource <- uiLipLight
-                            else
-                                lipColorSwatchesControl.ItemsSource <- []
-                        if tattooColorSwatchesControl <> null then
-                            tattooColorSwatchesControl.ItemsSource <- uiTattoo
+                            if skinColorSwatchesControl <> null then
+                                skinColorSwatchesControl.ItemsSource <- uiSkinPalette
+                            if hairColorSwatchesControl <> null then
+                                hairColorSwatchesControl.ItemsSource <- uiHairPalette
+                            if highlightEnableControl <> null && highlightEnableControl.IsChecked.GetValueOrDefault(false) && highlightsColorSwatchesControl <> null then
+                                highlightsColorSwatchesControl.ItemsSource <- uiHighlightPalette
+                            if eyeColorSwatchesControl <> null then
+                                eyeColorSwatchesControl.ItemsSource <- uiEyePalette
+                            if lipColorSwatchesControl <> null then
+                                if lipRadioDarkControl <> null && lipRadioDarkControl.IsChecked.GetValueOrDefault(false) then
+                                    lipColorSwatchesControl.ItemsSource <- uiLipDark
+                                elif lipRadioLightControl <> null && lipRadioLightControl.IsChecked.GetValueOrDefault(false) then
+                                    lipColorSwatchesControl.ItemsSource <- uiLipLight
+                                else
+                                    lipColorSwatchesControl.ItemsSource <- []
+                            if tattooColorSwatchesControl <> null then
+                                tattooColorSwatchesControl.ItemsSource <- uiTattoo
 
-                    | false, _ -> ()
-                | None -> ()
-            finally
-                this.DecrementBusyCounter()
+                        | false, _ -> ()
+                    | None -> ()
+                finally
+                    this.DecrementBusyCounter()
+            with ex ->
+                Log.Error("Could not submit character! {MEssage}", ex.Message)
         }
     member private this.SetLoadingState (isLoading: bool) =
         Dispatcher.UIThread.Post(fun () ->
@@ -1134,11 +1197,11 @@ type MainWindow () as this =
                 setupSucceeded <- true
             | _ ->
                 let promptWindow = GamePathPromptWindow()
-                let! pathFromDialog = promptWindow.ShowDialog<string option>(this) |> Async.AwaitTask
+                let! pathFromDialog = promptWindow.ShowDialog<ConfigData option>(this) |> Async.AwaitTask
                 match pathFromDialog with
                 | Some validPath ->
-                    gamePathFromConfigOrPrompt <- Path.Combine(validPath, "game", "sqpack", "ffxiv")
-                    saveConfig { GamePath = Path.Combine(validPath, "game", "sqpack", "ffxiv"); CrafterProfile = None; PatreonID = None }
+                    gamePathFromConfigOrPrompt <- Path.Combine(validPath.GamePath, "game", "sqpack", "ffxiv")
+                    saveConfig { GamePath = Path.Combine(validPath.GamePath, "game", "sqpack", "ffxiv"); CrafterProfile = None; PatreonID = None; GameLanguage = Some validPath.Language }
                     setupSucceeded <- true
                 | None ->
                     setupSucceeded <- false
@@ -1150,7 +1213,20 @@ type MainWindow () as this =
             try
 
                 let gameDataRootPath = gamePathFromConfigOrPrompt
-                let info = xivModdingFramework.GameInfo(DirectoryInfo(gameDataRootPath), XivLanguage.English)
+                let language =
+                    match loadConfig() with
+                    | Some config ->
+                        match config.GameLanguage with
+                        | Some "English" -> XivLanguage.English
+                        | Some "German" -> XivLanguage.German
+                        | Some "French" -> XivLanguage.French
+                        | Some "Japanese" -> XivLanguage.Japanese
+                        | Some "Korean" -> XivLanguage.Korean
+                        | Some "Chinese" -> XivLanguage.Chinese
+                        | _ -> XivLanguage.English
+                    | None -> XivLanguage.English
+                userLanguage <- language
+                let info = xivModdingFramework.GameInfo(DirectoryInfo(gameDataRootPath), language)
                 XivCache.SetGameInfo(info) |> ignore
                 viewModel.WindowHeight <- this.Bounds.Height
 

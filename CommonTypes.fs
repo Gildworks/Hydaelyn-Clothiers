@@ -376,6 +376,7 @@ type Config = {
     GamePath: string
     CrafterProfile: CrafterProfile option
     PatreonID: string option
+    GameLanguage: string option
 }
 
 type InputModel = {

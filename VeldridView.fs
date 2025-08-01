@@ -330,8 +330,18 @@ type VeldridView() as this =
                     let! ttModel =
                         let loadModel (item: IItemModel) (race: XivRace) =
                             task {
-                                let! model = Mdl.GetTTModel(item, race)
-                                let _ = model.Source
+                                let! model = 
+                                    try
+                                        Mdl.GetTTModel(item, race)
+                                    with ex ->
+                                        Log.Fatal("Failed to complete GetTTModel for {Item}: {Message}", item.Name, ex.Message)
+                                        raise(ex)
+                                let _ =
+                                    try
+                                        model.Source
+                                    with ex ->
+                                        Log.Error("Could not read model source for {Item}: {Message}", item.Name, ex.Message)
+                                        raise ex
                                 return model
                             }
 
