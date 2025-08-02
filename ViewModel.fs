@@ -779,9 +779,18 @@ type VeldridWindowViewModel() as this =
     member this.InitializeDataAsync(render: VeldridView) =
         async {
             try
+                Log.Information("Initializing data on thread {ThreadID}. This is a UI thread: {IsUI}",
+                    System.Threading.Thread.CurrentThread.ManagedThreadId,
+                    Avalonia.Threading.Dispatcher.UIThread.CheckAccess()
+                )
                 let! loadedGear = render.GetEquipment() |> Async.StartAsTask |> Async.AwaitTask
                 allGearCache <- loadedGear
                 Log.Information("Gear list successfully loaded with {GearItems} total entries.", allGearCache.Length)
+
+                Log.Information("Calling filter logic on thread {ThreadID}. This is also a UI thread: {IsUI}",
+                    System.Threading.Thread.CurrentThread.ManagedThreadId,
+                    Avalonia.Threading.Dispatcher.UIThread.CheckAccess()
+                )
                 this.ApplyGlobalFilters()
             with ex ->
                 Log.Fatal("Could not populate equipment list! {Message}", ex.Message)

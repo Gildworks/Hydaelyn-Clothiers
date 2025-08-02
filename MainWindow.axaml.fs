@@ -325,8 +325,15 @@ type MainWindow () as this =
         this.InitializeComponent()
         this.FindGuiControls()
 
+        Log.Information("Setting DataContext for window on thread {ThreadID}. UI Thread status: {IsUIThread}",
+            System.Threading.Thread.CurrentThread.ManagedThreadId,
+            Avalonia.Threading.Dispatcher.UIThread.CheckAccess()
+        )
+
         viewerControl.DataContext <- viewModel
         this.DataContext <- viewModel
+
+        Log.Information("wWindow DataContext set.")
 
         viewerControl.GetObservable(Control.BoundsProperty)
             .Subscribe(fun bounds ->
@@ -1292,7 +1299,12 @@ type MainWindow () as this =
                 | tx ->
                     tx.Dispose()
                     currentTransaction <- null
+                Log.Information("Application successfully initialized")
+                Log.Information("Checking head gear list for correct initialization. The head gear list exists: {IsNull} | Total item count: {Count}",
+                    not (obj.ReferenceEquals(headSlotCombo.ItemsSource, null)),
+                    if headSlotCombo.ItemsSource <> null then headSlotCombo.ItemsSource |> Seq.cast<obj> |> Seq.length else -1
+                )
 
             with ex ->
-                ()
+                Log.Fatal("Application failed to initialize! {Message}", ex.Message)
         }
