@@ -440,7 +440,7 @@ type VeldridWindowViewModel() as this =
                     if raceOk && genderOk then
                         this.ApplyGlobalFilters()
                 | _ -> ()
-                Log.Information("Property Changed, appropriate logic completed")
+                Log.Information("Property Changed, appropriate logic completed. Head Gear Length: {headLength} | Body Gear Length: {bodyLength} | Hand Gear Length: {handLength} | Legs Gear Length: {legsLength} | Feet Gear Length: {feetLength}", _headGear.Length, _bodyGear.Length, _handGear.Length, _legGear.Length, _feetGear.Length)
             with ex ->
                 Log.Error("Failed to complete Property Changed Logic: {Message}", ex.Message)
         )

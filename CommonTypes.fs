@@ -108,9 +108,9 @@ type ViewModelBase() =
                         field <- value
                         this.RaisePropertyChanged(name)
                 | None -> ()
-            Log.Information("Value set correctly")
+            Log.Information("{Property} value set correctly", propertyName)
         with ex ->
-            Log.Error("Failed to set new value: {Message}", ex.Message)
+            Log.Error("Failed to set new {Property} value: {Message}", propertyName, ex.Message)
 
 type raceIds = 
     | Hyur_Midlander_Male = 0
