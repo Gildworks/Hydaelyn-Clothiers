@@ -33,6 +33,11 @@ open xivModdingFramework.Materials.FileTypes
 
 open Shared
 
+type PaletteList = {
+    PaletteColors: Vector4 list
+    HairLightColor: Vector4 list
+}
+
 module DataHelpers =
 
     let rec findCharacterPart (currentRaceInTree: XivRace) (partId: int) (partCategory: string) (characterItems: XivCharacter list): XivCharacter option =
@@ -130,7 +135,26 @@ module DataHelpers =
                     |> List.ofSeq
                 else
                     List.Empty
-            return colors
+            let hairLightColor =
+                if (colorDataBytes |> Seq.length) >= (paletteStartIndex + paletteLength) * 4 && paletteLength > 0 && palette = paletteOptions.RenderHair then
+                    colorDataBytes
+                    |> Seq.chunkBySize 4
+                    |> Seq.filter (fun chunk -> chunk.Length = 4)
+                    |> Seq.skip paletteStartIndex
+                    |> (fun seq ->
+                        seq
+                        |> Seq.mapi (fun i el -> i, el)
+                        |> Seq.filter (fun (i, _) -> not (i % 2 = 0))
+                        |> Seq.map snd
+                    )
+                    |> Seq.take paletteLength
+                    |> Seq.map (fun chunk ->
+                        Vector4(float32 chunk.[0], float32 chunk.[1], float32 chunk.[2], float32 chunk.[3])
+                    )
+                    |> List.ofSeq
+                else
+                    List.Empty
+            return { PaletteColors = colors; HairLightColor = hairLightColor}
         }
 
     let getCustomizableParts (targetRace: XivRace) (partCategory: string) (characterItems: XivCharacter list) (currentCharacterRaceForHasModel: XivRace) : XivCharacter list =
@@ -174,7 +198,7 @@ module DataHelpers =
         task {
             let! vec4List = getColorPalette race palette |> Async.AwaitTask
             let uiColors =
-                vec4List
+                vec4List.PaletteColors
                 |> List.map (fun v ->
                     let r = byte (Math.Clamp(v.X, 0.0f, 255.0f))
                     let g = byte (Math.Clamp(v.Y, 0.0f, 255.0f))
@@ -472,15 +496,22 @@ type MainWindow () as this =
                     let selectedColor = //DataHelpers.vec4ToLinearDXColor renderPalette.[index]
                         match int palette with
                         | 0 | 4 | 14 | 15 ->
-                            DataHelpers.vec4ToLinearDXColor renderPalette.[index]
+                            DataHelpers.vec4ToLinearDXColor renderPalette.PaletteColors.[index]
                         | _ ->
-                            DataHelpers.vec4ToDXColor renderPalette.[index]
+                            DataHelpers.vec4ToDXColor renderPalette.PaletteColors.[index]
+                    let hairStrandsOriginal =
+                        if renderPalette.HairLightColor.Length > 0 then
+                            DataHelpers.vec4ToLinearDXColor renderPalette.HairLightColor.[index]
+                        else
+                            modelColors.LightColor
+                    let hairStrands = SharpDX.Color(hairStrandsOriginal.R / 255uy, hairStrandsOriginal.G / 255uy, hairStrandsOriginal.B / 255uy, hairStrandsOriginal.A / 255uy)
 
                     match int palette with
                     | 15 ->
                         modelColors.HairColor <- selectedColor
                         if not (highlightEnableControl.IsChecked.GetValueOrDefault(false)) then
                             modelColors.HairHighlightColor <- Nullable selectedColor
+                        modelColors.LightColor <- DataHelpers.vec4ToLinearDXColor renderPalette.HairLightColor.[index]
                     | 0 ->
                         modelColors.HairHighlightColor <- Nullable selectedColor
                     | 1 ->
