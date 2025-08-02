@@ -429,16 +429,20 @@ type VeldridWindowViewModel() as this =
 
     do
         this.FSharpPropertyChanged.Add(fun args ->
-            match args.PropertyName with
-            | "EquipRestrict" | "CharacterLevel" | "ItemLevel" 
-            | "CraftedOnly" | "UseProfile" -> 
-                this.ApplyGlobalFilters()
-            | "SelectedRace" | "SelectedGender" ->
-                let raceOk = not (String.IsNullOrWhiteSpace(selectedRace.Value))
-                let genderOk = not (String.IsNullOrWhiteSpace(selectedGender.Value))
-                if raceOk && genderOk then
+            try
+                match args.PropertyName with
+                | "EquipRestrict" | "CharacterLevel" | "ItemLevel" 
+                | "CraftedOnly" | "UseProfile" -> 
                     this.ApplyGlobalFilters()
-            | _ -> ()
+                | "SelectedRace" | "SelectedGender" ->
+                    let raceOk = not (String.IsNullOrWhiteSpace(selectedRace.Value))
+                    let genderOk = not (String.IsNullOrWhiteSpace(selectedGender.Value))
+                    if raceOk && genderOk then
+                        this.ApplyGlobalFilters()
+                | _ -> ()
+                Log.Information("Property Changed, appropriate logic completed")
+            with ex ->
+                Log.Error("Failed to complete Property Changed Logic: {Message}", ex.Message)
         )
 
     member this.getCurrentConfig() =
@@ -777,6 +781,7 @@ type VeldridWindowViewModel() as this =
             try
                 let! loadedGear = render.GetEquipment() |> Async.StartAsTask |> Async.AwaitTask
                 allGearCache <- loadedGear
+                Log.Information("Gear list successfully loaded with {GearItems} total entries.", allGearCache.Length)
                 this.ApplyGlobalFilters()
             with ex ->
                 Log.Fatal("Could not populate equipment list! {Message}", ex.Message)

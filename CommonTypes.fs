@@ -14,6 +14,8 @@ open System.Numerics
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
 
+open Serilog
+
 open Veldrid
 
 
@@ -99,12 +101,16 @@ type ViewModelBase() =
         | Some name -> propertyChanged.Trigger(this, PropertyChangedEventArgs(name))
         | None -> ()
     member this.SetValue<'T>(field: byref<'T>, value: 'T, [<CallerMemberName>]?propertyName: string) =
-        match propertyName with
-            | Some name ->
-                if not (System.Object.Equals(field, value)) then
-                    field <- value
-                    this.RaisePropertyChanged(name)
-            | None -> ()
+        try
+            match propertyName with
+                | Some name ->
+                    if not (System.Object.Equals(field, value)) then
+                        field <- value
+                        this.RaisePropertyChanged(name)
+                | None -> ()
+            Log.Information("Value set correctly")
+        with ex ->
+            Log.Error("Failed to set new value: {Message}", ex.Message)
 
 type raceIds = 
     | Hyur_Midlander_Male = 0
