@@ -63,13 +63,19 @@ module DataHelpers =
 
     let hasModel (item: IItemModel) (characterRace: XivRace) =
         try
-            let modelTask = Mdl.GetTTModel(item, characterRace)
+            let modelTask =
+                try
+                    Mdl.GetTTModel(item, characterRace)
+                with ex ->
+                    Log.Warning("Could not find model")
+                    raise ex
             not modelTask.IsFaulted
         with _ ->
             false
 
     let getColorPalette (race: raceIds) (palette: paletteOptions) =
         task {
+            Log.Information("Starting color palette acquisition")
             let cmpPath = "chara/xls/charamake/human.cmp"
             let sharedOffset = 320 * 8
             let blockSize = 160 * 8
@@ -116,8 +122,6 @@ module DataHelpers =
                 let totalRacialBytes = (colorList.Length - sharedOffset) / blockSize
                 totalRacialBytes
 
-            printfn $"Total racial color blocks: {numberOfBlocks}"
-
             let colors =
                 if (colorDataBytes |> Seq.length) >= (paletteStartIndex + paletteLength) * 4 && paletteLength > 0 then
                     colorDataBytes
@@ -154,7 +158,9 @@ module DataHelpers =
                     |> List.ofSeq
                 else
                     List.Empty
+            Log.Information("Color palette acquired")
             return { PaletteColors = colors; HairLightColor = hairLightColor}
+            
         }
 
     let getCustomizableParts (targetRace: XivRace) (partCategory: string) (characterItems: XivCharacter list) (currentCharacterRaceForHasModel: XivRace) : XivCharacter list =
@@ -196,6 +202,7 @@ module DataHelpers =
 
     let getUIColorPalette (race: raceIds) (palette: paletteOptions) =
         task {
+            Log.Information("Getting UI color palette")
             let! vec4List = getColorPalette race palette |> Async.AwaitTask
             let uiColors =
                 vec4List.PaletteColors
@@ -209,6 +216,7 @@ module DataHelpers =
             let avaloniaColors =
                 uiColors
                 |> List.mapi (fun i uiColor -> {Color = uiColor; Index = i})
+            Log.Information("UI Color palette acquired!")
             return avaloniaColors
         }
 
@@ -216,6 +224,8 @@ module DataHelpers =
 type MainWindow () as this =
     inherit Window ()
     let viewModel = new VeldridWindowViewModel()
+
+    let mutable allModelUpdateTasks: Async<unit> list = []
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
@@ -417,37 +427,43 @@ type MainWindow () as this =
         let raceOk = selectedRaceNameOpt.IsSome
         let genderOk = selectedGenderNameOpt.IsSome
         let clanOk = selectedClanNameOpt.IsSome
-        submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk
-        clearAllButton.IsEnabled <- raceOk && genderOk && clanOk
+        let cacheOk = XivCache.CacheWorkerEnabled
+        submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk && cacheOk
+        clearAllButton.IsEnabled <- raceOk && genderOk && clanOk && cacheOk
 
     member private this.UpdateDyeChannelsForItem(item: IItemModel, itemSlot: EquipmentSlot, tx: ModTransaction) =
         task {
-            let mutable dyeChannel1 = false
-            let mutable dyeChannel2 = false
+            Log.Information("Updating dye slots for {item}", item.Name)
+            try
+                let mutable dyeChannel1 = false
+                let mutable dyeChannel2 = false
 
-            let! dyeModel = TTModelLoader.loadTTModel item currentCharacterRace itemSlot
-                            |> Async.AwaitTask
+                let! dyeModel = TTModelLoader.loadTTModel item currentCharacterRace itemSlot
+                                |> Async.AwaitTask
 
-            for matName in dyeModel.Materials do
-                // *** FIXED HERE ***
-                let! material = (TTModelLoader.resolveMtrl dyeModel matName item tx |> Async.StartAsTask)
-                match material.ColorSetDyeData.Length with
-                | len when len >= 128 ->
-                    for i in 0 .. 31 do
-                        let offset = i * 4
-                        let stainId = material.ColorSetDyeData[offset]
-                        let repeat = material.ColorSetDyeData[offset + 3]
-                        if stainId > 0uy then
-                            if repeat < 8uy then dyeChannel1 <- true
-                            else dyeChannel2 <- true
-                | 32 ->
-                    for i in 0 .. 31 do
-                        let flagsOffset = i * 2
-                        let flags = material.ColorSetDyeData[flagsOffset]
-                        if (flags &&& 0x01uy) <> 0uy then dyeChannel1 <- true
-                        if (flags &&& 0x02uy) <> 0uy then dyeChannel2 <- true
-                | _ -> ()
-            return dyeChannel1, dyeChannel2
+                for matName in dyeModel.Materials do
+                    // *** FIXED HERE ***
+                    let! material = (TTModelLoader.resolveMtrl dyeModel matName item tx |> Async.StartAsTask)
+                    match material.ColorSetDyeData.Length with
+                    | len when len >= 128 ->
+                        for i in 0 .. 31 do
+                            let offset = i * 4
+                            let stainId = material.ColorSetDyeData[offset]
+                            let repeat = material.ColorSetDyeData[offset + 3]
+                            if stainId > 0uy then
+                                if repeat < 8uy then dyeChannel1 <- true
+                                else dyeChannel2 <- true
+                    | 32 ->
+                        for i in 0 .. 31 do
+                            let flagsOffset = i * 2
+                            let flags = material.ColorSetDyeData[flagsOffset]
+                            if (flags &&& 0x01uy) <> 0uy then dyeChannel1 <- true
+                            if (flags &&& 0x02uy) <> 0uy then dyeChannel2 <- true
+                    | _ -> ()
+                return dyeChannel1, dyeChannel2
+            with ex ->
+                Log.Error("Failed to update dye channels for {Item}", item.Name)
+                return raise ex
         }
 
     member private this.HandleGearSelectionChanged(
@@ -457,6 +473,7 @@ type MainWindow () as this =
         render: VeldridView) : Async<unit> =
         async {
             this.IncrementBusyCounter()
+            Log.Information("Adding {Gear} to model list", item.Name)
             let helperItem = item :?> XivGear
             try
                 let mutable resetDye = true
@@ -485,20 +502,28 @@ type MainWindow () as this =
                 if resetDye then
                     dye1Combo.SelectedIndex <- -1
                     dye2Combo.SelectedIndex <- -1
-                    do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, -1, -1, modelColors)
+                    try
+                        do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, -1, -1, modelColors)
+                    with ex ->
+                        Log.Error("Failed to handle gear selection changing. {Message}", ex.Message)
+                        raise ex
                 else
                     let dye1ToApply = if currentDye1Index >= 0 then currentDye1Index else -1
                     let dye2ToApply = if currentDye2Index >= 0 then currentDye2Index else -1
-                    do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1ToApply, dye2ToApply, modelColors)
+                    try
+                        do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1ToApply, dye2ToApply, modelColors)
+                    with ex ->
+                        Log.Error("Failed to handle gear selection changing. {Message}", ex.Message)
+                        raise ex
             finally
                 this.DecrementBusyCounter()
         }
 
     member private this.updateModelWithSelectedColor(palette: paletteOptions, index: int, render: VeldridView) =
+        Log.Information("Updating a model with a color")
         Async.StartImmediate(
             async {
-                try
-                    
+                try                    
                     let! renderPalette = DataHelpers.getColorPalette modelColorId palette |> Async.AwaitTask
                     let selectedColor = //DataHelpers.vec4ToLinearDXColor renderPalette.[index]
                         match int palette with
@@ -587,11 +612,19 @@ type MainWindow () as this =
         dye1Combo: ComboBox, dye1ClearButton: Button,
         dye2Combo: ComboBox, dye2ClearButton: Button, render: VeldridView) =
 
-        let smallClothesNamePart =
+        let smallClothesNamePartOriginal =
             match eqSlot with
             | EquipmentSlot.Body -> "Body" | EquipmentSlot.Hands -> "Hands"
             | EquipmentSlot.Legs -> "Legs" | EquipmentSlot.Feet -> "Feet"
             | _ -> null
+
+        let smallClothesNamePart =
+            match smallClothesNamePartOriginal with
+            | "Body" -> "Rumpf"
+            | "Hands" -> "Hände"
+            | "Legs" -> "Beine"
+            | "Feet" -> "Füße"
+            | _ -> "Error"
 
         let emperorsNewNamePart =
             match eqSlot with
@@ -872,8 +905,19 @@ type MainWindow () as this =
             slotCombo: ListBox, clearButton: Button,
             dye1Combo: ComboBox, dye1ClearButton: Button,
             dye2Combo: ComboBox, dye2ClearButton: Button,
-            eqSlot: EquipmentSlot, gearCategory: string) =
+            eqSlot: EquipmentSlot, gearCategoryInput: string) =
 
+            let gearCategory =
+                match userLanguage with
+                | XivLanguage.German ->
+                    match gearCategoryInput with
+                    | "Head" -> "Kopf"
+                    | "Body" -> "Rumpf"
+                    | "Hands" -> "Hände"
+                    | "Legs" -> "Beine"
+                    | "Feet" -> "Füße"
+                    | _ -> "Error"
+                | _ -> gearCategoryInput
             let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
 
             slotCombo.SelectionChanged.Add(fun _ ->
@@ -952,6 +996,7 @@ type MainWindow () as this =
                             )
                     }
                 Async.StartImmediate(operation)
+            Log.Information("Submit logic finished entirely")
         )
 
     member private this.ClearAllSlots(render: VeldridView) =
@@ -977,6 +1022,7 @@ type MainWindow () as this =
             this.IncrementBusyCounter()
             try
                 try
+                    Log.Information("Submit character button pressed, processing...")
                     let raceStr =
                         match selectedRaceNameOpt, selectedClanNameOpt, selectedGenderNameOpt with
                         | Some r, Some c, Some g when r = "Hyur" -> Some $"{r}_{c}_{g}"
@@ -1011,13 +1057,16 @@ type MainWindow () as this =
                                 match userLanguage with
                                 | XivLanguage.German ->
                                     match getParts "Face" with
-                                    | Some charaList ->
+                                    | Some charaList when charaList.Length > 0 ->
+                                        Log.Information("Found faces using Face")
                                         charaList
-                                    | None -> 
+                                    | _ -> 
                                         match getParts "Gesicht" with
-                                        | Some charaList -> charaList
-                                        | None ->
-                                            printfn "No face models found"
+                                        | Some charaList when charaList.Length > 0 -> 
+                                            Log.Information("Found faces using Gesicht")
+                                            charaList
+                                        | _ ->
+                                            Log.Information("No face models found")
                                             List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Face" with
@@ -1028,11 +1077,11 @@ type MainWindow () as this =
                                 match userLanguage with
                                 | XivLanguage.German ->
                                     match getParts "Hair" with
-                                    | Some charaList -> charaList
-                                    | None -> 
+                                    | Some charaList when charaList.Length > 0 -> charaList
+                                    | _ -> 
                                         match getParts "Haar" with
-                                        | Some charaList -> charaList
-                                        | None ->
+                                        | Some charaList when charaList.Length > 0 -> charaList
+                                        | _ ->
                                             List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Hair" with
@@ -1043,8 +1092,8 @@ type MainWindow () as this =
                                 match userLanguage with
                                 | XivLanguage.German ->
                                     match getParts "Ear" with
-                                    | Some charaList -> charaList
-                                    | None -> List<XivCharacter>.Empty
+                                    | Some charaList when charaList.Length > 0 -> charaList
+                                    | _ -> List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Ear" with
                                     | Some charaList -> charaList
@@ -1054,12 +1103,11 @@ type MainWindow () as this =
                                 match userLanguage with
                                 | XivLanguage.German ->
                                     match getParts "Tail" with
-                                    | Some charaList -> charaList
-                                    | None -> 
+                                    | Some charaList when charaList.Length > 0 -> charaList
+                                    | _ -> 
                                         match getParts "Schwanz" with
-                                        | Some charaList -> charaList
-                                        | None ->
-                                            List<XivCharacter>.Empty
+                                        | Some charaList when charaList.Length > 0 -> charaList
+                                        | _ -> List<XivCharacter>.Empty
                                 | _ ->
                                     match getParts "Tail" with
                                     | Some charaList -> charaList
@@ -1081,11 +1129,20 @@ type MainWindow () as this =
                                 printfn $"Face Selector items source length: {currentFaceList.Length}"
                             with ex -> 
                                 Log.Error("Could not populate face selector: {Message}", ex.Message)
-                            populateSelector hairSelector currentHairList true
-                            populateSelector earSelector currentEarList true
-                            populateSelector tailSelector currentTailList true
+                            try
+                                populateSelector hairSelector currentHairList true
+                            with ex ->
+                                Log.Error("Could not populate hair selector: {Message}", ex.Message)
+                            try
+                                populateSelector earSelector currentEarList true
+                            with ex ->
+                                Log.Error("Could not populate ear selector: {Message}", ex.Message)
+                            try
+                                populateSelector tailSelector currentTailList true
+                            with ex ->
+                                Log.Error("Could not populate tail selector: {Message}", ex.Message)
 
-                            let mutable allModelUpdateTasks: Async<unit> list = []
+                            
 
                             let assignSelectedOrDefault (parts: XivCharacter list) (slot: EquipmentSlot) (selector: ComboBox) =
                                 if selector.IsEnabled then
@@ -1099,7 +1156,11 @@ type MainWindow () as this =
                                     match itemToAssign with
                                     | Some item ->
                                         printfn $"item to assign: {item.Name}"
-                                        allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
+                                        try
+                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
+                                            Log.Information("Successfully loaded {Model}!", item.Name)
+                                        with ex ->
+                                            Log.Error("Failed to load {Model}", item.Name)
                                     | None -> ()
 
                             do assignSelectedOrDefault currentFaceList EquipmentSlot.Face faceSelector
@@ -1107,14 +1168,15 @@ type MainWindow () as this =
                             if currentEarList |> List.isEmpty |> not then do assignSelectedOrDefault currentEarList EquipmentSlot.Ear earSelector
                             if currentTailList |> List.isEmpty |> not then do assignSelectedOrDefault currentTailList EquipmentSlot.Tail tailSelector
 
-                            let reselectIfPopulated (combo: ListBox) = if combo.SelectedIndex >=0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
+                            let reselectIfPopulated (combo: ListBox) = if combo.SelectedIndex >= 0 then let s = combo.SelectedIndex in combo.SelectedIndex <- -1; combo.SelectedIndex <- s
                             reselectIfPopulated headSlotCombo
                             reselectIfPopulated bodySlotCombo
                             reselectIfPopulated handSlotCombo
                             reselectIfPopulated legsSlotCombo
-                            reselectIfPopulated feetSlotCombo
+                            reselectIfPopulated feetSlotCombo                           
 
                             let setDefaultGear (combo: ListBox, category: string, nameFilter: string) =
+                                Log.Information("Setting default gear for {Slot}", category)
                                 match combo.SelectedItem with
                                 | :? FilterGear as gear -> ()
                                 | _ ->
@@ -1122,12 +1184,18 @@ type MainWindow () as this =
                                         combo.Items
                                         |> Seq.cast<FilterGear>
                                         |> Seq.toList
-                                    match list |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
-                                    | Some idx -> combo.SelectedItem <- idx
-                                    | None ->
-                                        match list |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
-                                        | Some idx -> combo.SelectedItem <- idx
-                                        | None -> ()
+                                    try
+                                        try
+                                            match list |> List.tryFind(fun g -> g.Item.Name.Contains(nameFilter)) with
+                                            | Some idx -> combo.SelectedItem <- idx
+                                            | None ->
+                                                match list |> List.tryFind(fun g -> g.Item.Name.Contains("Emperor's")) with
+                                                | Some idx -> combo.SelectedItem <- idx
+                                                | None -> ()
+                                        with ex ->
+                                            Log.Error("Could not find default gear for {Slot} slot", category)
+                                    finally
+                                        Log.Information("Successfully set default gear for {Slot} slot", category)
 
                             setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
                             setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
@@ -1137,17 +1205,64 @@ type MainWindow () as this =
                             if not (List.isEmpty allModelUpdateTasks) then
                                 do! Async.Parallel(allModelUpdateTasks) |> Async.Ignore
 
+                            Log.Information("Reach palette loading")
+
                     
                     
-                            let! getUiEyePalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIEyeColor |> Async.AwaitTask
-                            let! getUiLipDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipDark |> Async.AwaitTask
-                            let! getUiLipLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipLight |> Async.AwaitTask
-                            let! getUiTattoo = DataHelpers.getUIColorPalette modelColorId paletteOptions.UITattoo |> Async.AwaitTask
-                            let! getUiFaceDark = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
-                            let! getUiFaceLight = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
-                            let! getUiSkinPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
-                            let! getUiHairPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.RenderHair |> Async.AwaitTask
-                            let! getUiHighlightPalette = DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
+                            let! getUiEyePalette = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UIEyeColor |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiLipDark = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipDark |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiLipLight = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UILipLight |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiTattoo = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UITattoo |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiFaceDark = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceDark |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiFaceLight = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UIFaceLight |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiSkinPalette = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UISkin |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiHairPalette = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.RenderHair |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
+                            let! getUiHighlightPalette = 
+                                try
+                                    DataHelpers.getUIColorPalette modelColorId paletteOptions.UIHighlights |> Async.AwaitTask
+                                with ex ->
+                                    Log.Error("Failed to get color palette")
+                                    raise ex
 
                             uiEyePalette <- getUiEyePalette
                             uiLipDark <- getUiLipDark
@@ -1177,9 +1292,12 @@ type MainWindow () as this =
                             if tattooColorSwatchesControl <> null then
                                 tattooColorSwatchesControl.ItemsSource <- uiTattoo
 
+                            Log.Information("Finished palette loading")
+
                         | false, _ -> ()
                     | None -> ()
                 finally
+                    Log.Information("Completed character submission actions!")
                     this.DecrementBusyCounter()
             with ex ->
                 Log.Error("Could not submit character! {MEssage}", ex.Message)
@@ -1212,8 +1330,14 @@ type MainWindow () as this =
         async {
             this.IncrementBusyCounter()
             try
-                do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations)
+                Log.Information("Attempting to assign {Gear} to {Slot}", item.Name, slot.ToString())
+                try
+                    do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations)
+                with ex ->
+                    Log.Fatal("Assign trigger failed! Model will not load! {Message}", ex.Message)
+                    raise ex
             finally
+                Log.Information("{Gear} assignment to {Slot} successful, moving on ({ModelCount} models remaining)...", item.Name, slot.ToString(), busyOperationCount)
                 this.DecrementBusyCounter()
         }
 
@@ -1276,7 +1400,12 @@ type MainWindow () as this =
                     | None -> XivLanguage.English
                 userLanguage <- language
                 let info = xivModdingFramework.GameInfo(DirectoryInfo(gameDataRootPath), language)
+                Log.Information("XIV Cache information: Rebuilding - {RebuildStatus} | Cache Worker Status - {WorkerStatus} | Is Initialized - {Initialized}", XivCache.IsRebuilding, XivCache.CacheWorkerEnabled, XivCache.Initialized)
+                
+                Log.Information("XIV Cache information, post rebuild: Rebuilding - {RebuildStatus} | Cache Worker Status - {WorkerStatus} | Is Initialized - {Initialized}", XivCache.IsRebuilding, XivCache.CacheWorkerEnabled, XivCache.Initialized)
                 XivCache.SetGameInfo(info) |> ignore
+                //XivCache.RebuildCache(info.GameVersion, XivCache.CacheRebuildReason.LanguageChanged) |> Async.AwaitTask |> ignore
+                Log.Information("XIV Cache information post set: Rebuilding - {RebuildStatus} | Cache Worker Status - {WorkerStatus} | Is Initialized - {Initialized}", XivCache.IsRebuilding, XivCache.CacheWorkerEnabled, XivCache.Initialized)
                 viewModel.WindowHeight <- this.Bounds.Height
 
                 do! viewModel.InitializeDataAsync(render)

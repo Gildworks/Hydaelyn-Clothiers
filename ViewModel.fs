@@ -29,6 +29,7 @@ open AvaloniaRender
 
 open Microsoft.FSharp.Reflection
 
+open xivModdingFramework.Resources
 open xivModdingFramework.Exd.Enums
 open xivModdingFramework.Exd.FileTypes
 
@@ -648,38 +649,38 @@ type VeldridWindowViewModel() as this =
                 levelOk && iLvlOk
             )
         this.GloballyFilteredGear <- filteredList
-        this.HeadGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Head")
-        this.BodyGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Body")
-        this.HandGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands")
-        this.LegGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs")
-        this.FeetGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet")
+        this.HeadGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Head" || m.Item.SecondaryCategory = "Kopf")
+        this.BodyGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Body" || m.Item.SecondaryCategory = "Rumpf")
+        this.HandGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands" || m.Item.SecondaryCategory = "Hände")
+        this.LegGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs" || m.Item.SecondaryCategory = "Beine")
+        this.FeetGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet" || m.Item.SecondaryCategory = "Füße")
 
     member private this.FilterSlotResults(slot: string) =
         match slot with
         | "Head" -> 
             this.HeadGear <- 
                 this.GloballyFilteredGear 
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Head")
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Head" || m.Item.SecondaryCategory = "Kopf")
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_headSearch.ToLowerInvariant()))
         | "Body" -> 
             this.BodyGear <- 
                 this.GloballyFilteredGear 
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Body")
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Body" || m.Item.SecondaryCategory = "Rumpf")
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_bodySearch.ToLowerInvariant()))
         | "Hand" -> 
             this.HandGear <- 
                 this.GloballyFilteredGear
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands")
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands" || m.Item.SecondaryCategory = "Hände")
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_handSearch.ToLowerInvariant()))
         | "Legs" -> 
             this.LegGear <- 
                 this.GloballyFilteredGear
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs")
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs" || m.Item.SecondaryCategory = "Beine")
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_legsSearch.ToLowerInvariant()))
         | "Feet" -> 
             this.FeetGear <- 
                 this.GloballyFilteredGear
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet")
+                |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet" || m.Item.SecondaryCategory = "Füße")
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_feetSearch.ToLowerInvariant()))
         | _ -> ()
 
@@ -786,6 +787,13 @@ type VeldridWindowViewModel() as this =
                 let! loadedGear = render.GetEquipment() |> Async.StartAsTask |> Async.AwaitTask
                 allGearCache <- loadedGear
                 Log.Information("Gear list successfully loaded with {GearItems} total entries.", allGearCache.Length)
+
+                let uniqueCategories =
+                    allGearCache
+                    |> List.map (fun item -> item.Item.SecondaryCategory)
+                    |> List.distinct
+                    |> List.sort
+                Log.Information("All unique Secondary Category values: {Categories}", String.Join(", ", uniqueCategories))
 
                 Log.Information("Calling filter logic on thread {ThreadID}. This is also a UI thread: {IsUI}",
                     System.Threading.Thread.CurrentThread.ManagedThreadId,

@@ -87,12 +87,16 @@ type VeldridView() as this =
   
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
-            let! (slot, item, race, dye1, dye2, colors, customizations, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
+            let! (slot, item: IItemModel, race, dye1, dye2, colors, customizations, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
             try
-                do! this.AssignGear(slot, item, race, dye1, dye2, colors, customizations, device.Value )
-                taskCompletionSource.SetResult(())
-            with ex ->
-                taskCompletionSource.SetException(ex)
+                try
+                    Log.Information("Beginning new model loading action for {Model}", item.Name)
+                    do! this.AssignGear(slot, item, race, dye1, dye2, colors, customizations, device.Value )
+                    taskCompletionSource.SetResult(())
+                with ex ->
+                    taskCompletionSource.SetException(ex)
+            finally
+                Log.Information("Finished loading action for {Model}", item.Name)
             
             _mailboxAckReply.Reply(())
             return! loop ()
@@ -332,10 +336,32 @@ type VeldridView() as this =
                             task {
                                 let! model = 
                                     try
-                                        Mdl.GetTTModel(item, race)
+                                        Log.Information("Attempting to load model for {Item}", item.Name)
+                                        let slotAbbr =
+                                            match slot with
+                                            | EquipmentSlot.Body -> "top"
+                                            | EquipmentSlot.Head -> "met"
+                                            | EquipmentSlot.Hands -> "glv"
+                                            | EquipmentSlot.Legs -> "dwn"
+                                            | EquipmentSlot.Feet -> "sho"
+                                            | _ -> ""
+                                        let raceCode = race.GetRaceCode()
+                                        let mdlPath = $"chara/equipment/e{item.ModelInfo.SecondaryID:D4}/model/c{raceCode}e{item.ModelInfo.SecondaryID:D4}_{slotAbbr}.mdl"
+                                        Log.Information("Model path: {Path}", mdlPath)
+                                        Mdl.GetTTModel(mdlPath, true)
                                     with ex ->
-                                        Log.Fatal("Failed to complete GetTTModel for {Item}: {Message}", item.Name, ex.Message)
-                                        raise(ex)
+                                        Log.Error("Failed to complete GetTTModel for {Item}: {Message}", item.Name, ex.Message)
+                                        //raise(ex)
+                                        try
+                                            try
+                                                Log.Information("Attempting backup attempt at model loading")
+                                                Mdl.GetTTModel(item, race)
+                                            with ex ->
+                                                Log.Information("Attempt at backup model loading failed")
+                                                raise ex
+                                        finally
+                                            Log.Information("Successfully loaded {Item}", item.Name)
+
                                 let _ =
                                     try
                                         model.Source
@@ -360,7 +386,8 @@ type VeldridView() as this =
                                     | _ -> "error", "error", "error"
                                 let mdlPath = $"chara/human/c{item.ModelInfo.PrimaryID:D4}/obj/{category}/{prefix}{item.ModelInfo.SecondaryID:D4}/model/c{item.ModelInfo.PrimaryID:D4}{prefix}{item.ModelInfo.SecondaryID:D4}_{suffix}.mdl"
                                 try
-                                    return! loadModel item race |> Async.AwaitTask
+                                    //return! loadModel item race |> Async.AwaitTask
+                                    return! Mdl.GetTTModel(mdlPath, true) |> Async.AwaitTask
                                 with ex ->
                                     return raise ex
                             | _ ->
@@ -414,7 +441,8 @@ type VeldridView() as this =
                         
                                 try
                                     return! loadModel item race |> Async.AwaitTask
-                                with _ ->                            
+                                with _ ->
+                                    Log.Information("Failed with current settings, trying new race...")
                                     return! racialFallbacks item priorityList resolvedRace
                         }
                     do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
@@ -649,10 +677,17 @@ type VeldridView() as this =
 
     member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations) : Async<unit> =
         async {
-          let tcs = TaskCompletionSource<unit>()
-          do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, customizations, mailboxAckReply, tcs))
-
-          do! Async.AwaitTask(tcs.Task)
+            try
+                Log.Information("Attempting to queue an assign task")
+                try
+                    let tcs = TaskCompletionSource<unit>()
+                    do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, customizations, mailboxAckReply, tcs))
+                    do! Async.AwaitTask(tcs.Task)
+                with ex ->
+                    Log.Error("Failed to complete AssignTrigger for {Item}: {Message}", item.Name, ex.Message)
+                    raise ex
+            finally
+                Log.Information("Succesfully queued assign task")
         }
         
 
