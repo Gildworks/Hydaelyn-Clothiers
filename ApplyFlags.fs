@@ -7,6 +7,7 @@ open xivModdingFramework.Models.DataContainers
 open xivModdingFramework.Models.FileTypes
 open xivModdingFramework.Models.Helpers
 open xivModdingFramework.Items.Interfaces
+open xivModdingFramework.General.Enums
 
 open Shared
 
@@ -212,12 +213,16 @@ let removeSlot (flags: Map<EquipmentParameterFlag, bool>) (models: Map<Equipment
         return visibleModels
     }
 
-let applyFlags (models: Map<EquipmentSlot, InputModel>) : Task<Map<EquipmentSlot, InputModel>> =
+let applyFlags (models: Map<EquipmentSlot, InputModel>) (gameLanguage: XivLanguage) : Task<Map<EquipmentSlot, InputModel>> =
     task {
         for model in models.Values do
             let attributes = model.Model.Attributes
             let flags = model.Model.Flags
-            if model.Item.PrimaryCategory = "Gear" && model.Item.ModelInfo.PrimaryID > 0 then
+            let localizedCategory = 
+                match gameLanguage with
+                | XivLanguage.German -> "Ausrüstung"
+                | _ -> "Gear"
+            if model.Item.PrimaryCategory = localizedCategory && model.Item.ModelInfo.PrimaryID > 0 then
 
                 let eqp = new Eqp()
             

@@ -86,12 +86,13 @@ type VeldridView() as this =
     let mutable firstRender     : bool                          = false
   
     let agent = MailboxProcessor.Start(fun inbox ->
+
         let rec loop () = async {
-            let! (slot, item: IItemModel, race, dye1, dye2, colors, customizations, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
+            let! (slot, item: IItemModel, race, dye1, dye2, colors, customizations, gameLanguage, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
             try
                 try
                     Log.Information("Beginning new model loading action for {Model}", item.Name)
-                    do! this.AssignGear(slot, item, race, dye1, dye2, colors, customizations, device.Value )
+                    do! this.AssignGear(slot, item, race, dye1, dye2, colors, customizations, device.Value, gameLanguage)
                     taskCompletionSource.SetResult(())
                 with ex ->
                     taskCompletionSource.SetException(ex)
@@ -148,56 +149,59 @@ type VeldridView() as this =
         let w = float32 fb.Width
         let h = float32 fb.Height
 
-        if pipeline.IsNone && texLayout.IsSome && not assignModel then
-            let vertexLayout = VertexLayoutDescription(
-                [|
-                    VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
-                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-                    VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-                    VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                    VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-                    // --- ADD THESE NEW LAYOUT ELEMENTS ---
-                    VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
-                    VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+        if pipeline.IsNone && texLayout.IsSome && not assignModel then 
+            try
+                let vertexLayout = VertexLayoutDescription(
+                    [|
+                        VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
+                        VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
+                        VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                        VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+                        VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                        VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                        // --- ADD THESE NEW LAYOUT ELEMENTS ---
+                        VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                        VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
             
-                |]
-            )
-            let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
-            let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
-            let blendState = BlendStateDescription(
-                RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
-                BlendAttachmentDescription(
-                    true,
-                    BlendFactor.SourceAlpha,
-                    BlendFactor.InverseSourceAlpha,
-                    BlendFunction.Add,
-                    BlendFactor.One,
-                    BlendFactor.InverseSourceAlpha,
-                    BlendFunction.Add
+                    |]
                 )
-            )
-            let pipelineDesc = GraphicsPipelineDescription(
-                blendState,
-                DepthStencilStateDescription(
-                    depthTestEnabled = true,
-                    depthWriteEnabled = true,
-                    comparisonKind = ComparisonKind.LessEqual
-                ),
-                RasterizerStateDescription(
-                    cullMode = FaceCullMode.Front,
-                    fillMode = PolygonFillMode.Solid,
-                    frontFace = FrontFace.Clockwise,
-                    depthClipEnabled = true,
-                    scissorTestEnabled = true
-                ),
-                PrimitiveTopology.TriangleList,
-                shaderSet,
-                [| mvpLayout.Value; texLayout.Value; boneTransformLayout.Value |],
-                fb.OutputDescription
-            )
-            let pipe = gd.ResourceFactory.CreateGraphicsPipeline(pipelineDesc)
-            pipeline <- Some pipe
+                let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
+                let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
+                let blendState = BlendStateDescription(
+                    RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
+                    BlendAttachmentDescription(
+                        true,
+                        BlendFactor.SourceAlpha,
+                        BlendFactor.InverseSourceAlpha,
+                        BlendFunction.Add,
+                        BlendFactor.One,
+                        BlendFactor.InverseSourceAlpha,
+                        BlendFunction.Add
+                    )
+                )
+                let pipelineDesc = GraphicsPipelineDescription(
+                    blendState,
+                    DepthStencilStateDescription(
+                        depthTestEnabled = true,
+                        depthWriteEnabled = true,
+                        comparisonKind = ComparisonKind.LessEqual
+                    ),
+                    RasterizerStateDescription(
+                        cullMode = FaceCullMode.Front,
+                        fillMode = PolygonFillMode.Solid,
+                        frontFace = FrontFace.Clockwise,
+                        depthClipEnabled = true,
+                        scissorTestEnabled = true
+                    ),
+                    PrimitiveTopology.TriangleList,
+                    shaderSet,
+                    [| mvpLayout.Value; texLayout.Value; boneTransformLayout.Value |],
+                    fb.OutputDescription
+                )
+                let pipe = gd.ResourceFactory.CreateGraphicsPipeline(pipelineDesc)
+                pipeline <- Some pipe
+            with ex ->
+                Log.Fatal("Could not set standard pipeline. Nothing will render. {Message}", ex.Message)
 
         if w > 0.0f && h > 0.0f then
             let aspect = w / h
@@ -310,8 +314,9 @@ type VeldridView() as this =
 
             finalTransforms
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gd: GraphicsDevice) : Async<unit> =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gd: GraphicsDevice, gameLanguage: XivLanguage) : Async<unit> =
         try
+            Log.Information("Initiating AssignGear logic for {Item}...", item.Name)
             async {
                 let tx = ModTransaction.BeginReadonlyTransaction()
                 let eqp = new Eqp()       
@@ -346,21 +351,21 @@ type VeldridView() as this =
                                             | EquipmentSlot.Feet -> "sho"
                                             | _ -> ""
                                         let raceCode = race.GetRaceCode()
-                                        let mdlPath = $"chara/equipment/e{item.ModelInfo.SecondaryID:D4}/model/c{raceCode}e{item.ModelInfo.SecondaryID:D4}_{slotAbbr}.mdl"
+                                        let mdlPath = 
+                                            if item.ModelInfo.PrimaryID > 0 then
+                                                $"chara/equipment/e{item.ModelInfo.PrimaryID:D4}/model/c{raceCode}e{item.ModelInfo.PrimaryID:D4}_{slotAbbr}.mdl"
+                                            else
+                                                $"chara/equipment/e0279/model/c{raceCode}e0279_{slotAbbr}.mdl"
                                         Log.Information("Model path: {Path}", mdlPath)
-                                        Mdl.GetTTModel(mdlPath, true)
+                                        try
+                                            Mdl.GetTTModel(mdlPath, true)
+                                        with ex ->
+                                            Log.Error("Failed to load model with normal approach, trying backup")
+                                            raise ex
                                     with ex ->
                                         Log.Error("Failed to complete GetTTModel for {Item}: {Message}", item.Name, ex.Message)
-                                        //raise(ex)
-                                        try
-                                            try
-                                                Log.Information("Attempting backup attempt at model loading")
-                                                Mdl.GetTTModel(item, race)
-                                            with ex ->
-                                                Log.Information("Attempt at backup model loading failed")
-                                                raise ex
-                                        finally
-                                            Log.Information("Successfully loaded {Item}", item.Name)
+                                        raise(ex)
+
 
                                 let _ =
                                     try
@@ -448,7 +453,10 @@ type VeldridView() as this =
                     do! ModelModifiers.RaceConvert(ttModel, race) |> Async.AwaitTask
                     ModelModifiers.FixUpSkinReferences(ttModel, race)
                     ttModelMap <- ttModelMap.Add(slot, {Model = ttModel; Item = item; Dye1 = dye1; Dye2 = dye2; Colors = colors})
-                    texLayout <- Some textureLayout
+                    try
+                        texLayout <- Some textureLayout
+                    with ex ->
+                        Log.Error("Failed to set standard texture layout. {Message}", ex.Message)
                     let nullCustomizations =
                         {
                             Height = 800.0f
@@ -456,7 +464,7 @@ type VeldridView() as this =
                             FaceScale = 1.0f
                             MuscleDefinition = 1.0f
                         }
-                    do! this.RebuildCharacterModel(gd, race, customizations)
+                    do! this.RebuildCharacterModel(gd, race, customizations, gameLanguage)
 
                 
                 with ex ->
@@ -468,12 +476,12 @@ type VeldridView() as this =
             Log.Error(ex, "AssignGear failed for slot {Slot} with item {ItemName}", slot, item.Name)
             reraise()
 
-    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, customizations: CharacterCustomizations) =
+    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, customizations: CharacterCustomizations, gameLanguage: XivLanguage) =
         try
             async {
                 let! activeModels =
                     async {
-                        let! flaggedModels = applyFlags ttModelMap |> Async.AwaitTask
+                        let! flaggedModels = applyFlags ttModelMap gameLanguage |> Async.AwaitTask
                     return 
                         flaggedModels
                         |> Map.values
@@ -675,13 +683,13 @@ type VeldridView() as this =
             Log.Error("Failed to build skeletal model: {Message}", ex.Message)
             reraise()
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations) : Async<unit> =
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gameLanguage: XivLanguage) : Async<unit> =
         async {
             try
                 Log.Information("Attempting to queue an assign task")
                 try
                     let tcs = TaskCompletionSource<unit>()
-                    do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, customizations, mailboxAckReply, tcs))
+                    do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, customizations, gameLanguage, mailboxAckReply, tcs))
                     do! Async.AwaitTask(tcs.Task)
                 with ex ->
                     Log.Error("Failed to complete AssignTrigger for {Item}: {Message}", item.Name, ex.Message)

@@ -20,6 +20,8 @@ open Avalonia.Media
 open Avalonia.Threading
 
 open AvaloniaRender.Veldrid
+
+open xivModdingFramework.Helpers
 open xivModdingFramework.General.Enums
 open xivModdingFramework.Cache
 open xivModdingFramework.General.DataContainers
@@ -174,7 +176,9 @@ module DataHelpers =
 
     let getDyeSwatches () =
         task {
+            Log.Information("Attempting to gather dye names")
             let! dyeDict = STM.GetDyeNames()
+            Log.Information("Dye names potentially gathered.")
             return dyeDict |> Seq.map (fun kvp -> kvp.Value) |> Seq.toList
         }
 
@@ -225,7 +229,7 @@ type MainWindow () as this =
     inherit Window ()
     let viewModel = new VeldridWindowViewModel()
 
-    let mutable allModelUpdateTasks: Async<unit> list = []
+    let mutable cacheRebuilding = false
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
@@ -427,43 +431,46 @@ type MainWindow () as this =
         let raceOk = selectedRaceNameOpt.IsSome
         let genderOk = selectedGenderNameOpt.IsSome
         let clanOk = selectedClanNameOpt.IsSome
-        let cacheOk = XivCache.CacheWorkerEnabled
-        submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk && cacheOk
-        clearAllButton.IsEnabled <- raceOk && genderOk && clanOk && cacheOk
+        let cacheOk = not cacheRebuilding
+        submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk
+        clearAllButton.IsEnabled <- raceOk && genderOk && clanOk
 
     member private this.UpdateDyeChannelsForItem(item: IItemModel, itemSlot: EquipmentSlot, tx: ModTransaction) =
         task {
             Log.Information("Updating dye slots for {item}", item.Name)
             try
-                let mutable dyeChannel1 = false
-                let mutable dyeChannel2 = false
+                try
+                    let mutable dyeChannel1 = false
+                    let mutable dyeChannel2 = false
 
-                let! dyeModel = TTModelLoader.loadTTModel item currentCharacterRace itemSlot
-                                |> Async.AwaitTask
+                    let! dyeModel = TTModelLoader.loadTTModel item currentCharacterRace itemSlot
+                                    |> Async.AwaitTask
 
-                for matName in dyeModel.Materials do
-                    // *** FIXED HERE ***
-                    let! material = (TTModelLoader.resolveMtrl dyeModel matName item tx |> Async.StartAsTask)
-                    match material.ColorSetDyeData.Length with
-                    | len when len >= 128 ->
-                        for i in 0 .. 31 do
-                            let offset = i * 4
-                            let stainId = material.ColorSetDyeData[offset]
-                            let repeat = material.ColorSetDyeData[offset + 3]
-                            if stainId > 0uy then
-                                if repeat < 8uy then dyeChannel1 <- true
-                                else dyeChannel2 <- true
-                    | 32 ->
-                        for i in 0 .. 31 do
-                            let flagsOffset = i * 2
-                            let flags = material.ColorSetDyeData[flagsOffset]
-                            if (flags &&& 0x01uy) <> 0uy then dyeChannel1 <- true
-                            if (flags &&& 0x02uy) <> 0uy then dyeChannel2 <- true
-                    | _ -> ()
-                return dyeChannel1, dyeChannel2
-            with ex ->
-                Log.Error("Failed to update dye channels for {Item}", item.Name)
-                return raise ex
+                    for matName in dyeModel.Materials do
+                        // *** FIXED HERE ***
+                        let! material = (TTModelLoader.resolveMtrl dyeModel matName item tx |> Async.StartAsTask)
+                        match material.ColorSetDyeData.Length with
+                        | len when len >= 128 ->
+                            for i in 0 .. 31 do
+                                let offset = i * 4
+                                let stainId = material.ColorSetDyeData[offset]
+                                let repeat = material.ColorSetDyeData[offset + 3]
+                                if stainId > 0uy then
+                                    if repeat < 8uy then dyeChannel1 <- true
+                                    else dyeChannel2 <- true
+                        | 32 ->
+                            for i in 0 .. 31 do
+                                let flagsOffset = i * 2
+                                let flags = material.ColorSetDyeData[flagsOffset]
+                                if (flags &&& 0x01uy) <> 0uy then dyeChannel1 <- true
+                                if (flags &&& 0x02uy) <> 0uy then dyeChannel2 <- true
+                        | _ -> ()
+                    return dyeChannel1, dyeChannel2
+                with ex ->
+                    Log.Error("Failed to update dye channels for {Item}", item.Name)
+                    return raise ex
+            finally
+                Log.Information("Dye channels updated successfully.")
         }
 
     member private this.HandleGearSelectionChanged(
@@ -503,6 +510,7 @@ type MainWindow () as this =
                     dye1Combo.SelectedIndex <- -1
                     dye2Combo.SelectedIndex <- -1
                     try
+                        Log.Information("I'm about to execute the assign trigger logic  for {Item}. resetDye is true", item.Name)
                         do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, -1, -1, modelColors)
                     with ex ->
                         Log.Error("Failed to handle gear selection changing. {Message}", ex.Message)
@@ -511,6 +519,7 @@ type MainWindow () as this =
                     let dye1ToApply = if currentDye1Index >= 0 then currentDye1Index else -1
                     let dye2ToApply = if currentDye2Index >= 0 then currentDye2Index else -1
                     try
+                        Log.Information("I'm about to execute the assign trigger logic  for {Item}.", item.Name)
                         do! this.ExecuteAssignTriggerAsync(render, eqSlot, item, currentCharacterRace, dye1ToApply, dye2ToApply, modelColors)
                     with ex ->
                         Log.Error("Failed to handle gear selection changing. {Message}", ex.Message)
@@ -667,7 +676,11 @@ type MainWindow () as this =
 
         this.SizeChanged.Add(fun _ ->
             viewModel.WindowHeight <- this.Bounds.Height
-        )        
+        )
+
+        XivCache.CacheRebuilding.Add(fun _ ->
+            cacheRebuilding <- not cacheRebuilding
+        )
 
         raceSelector.SelectionChanged.Add(fun _ ->
             match raceSelector.SelectedValue with
@@ -921,6 +934,7 @@ type MainWindow () as this =
             let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)
 
             slotCombo.SelectionChanged.Add(fun _ ->
+                Log.Information("Gear selection has been changed!")
                 if slotCombo.SelectedItem <> null then
                     let selectedItem = slotCombo.SelectedItem :?> FilterGear
                     do this.HandleGearSelectionChanged(selectedItem.Item, eqSlot, dye1Combo, dye1ClearButton, dye2Combo, dye2ClearButton, render)|> Async.StartImmediate |> ignore
@@ -1020,6 +1034,7 @@ type MainWindow () as this =
     member private this.OnSubmitCharacter(render: VeldridView) =
         async {
             this.IncrementBusyCounter()
+            let mutable allModelUpdateTasks: Async<unit> list = []
             try
                 try
                     Log.Information("Submit character button pressed, processing...")
@@ -1157,7 +1172,7 @@ type MainWindow () as this =
                                     | Some item ->
                                         printfn $"item to assign: {item.Name}"
                                         try
-                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
+                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations, userLanguage) :: allModelUpdateTasks
                                             Log.Information("Successfully loaded {Model}!", item.Name)
                                         with ex ->
                                             Log.Error("Failed to load {Model}", item.Name)
@@ -1195,7 +1210,7 @@ type MainWindow () as this =
                                         with ex ->
                                             Log.Error("Could not find default gear for {Slot} slot", category)
                                     finally
-                                        Log.Information("Successfully set default gear for {Slot} slot", category)
+                                        Log.Information("Successfully set default gear for {Slot} slot. Current selected index is {Index}", category, combo.SelectedIndex)
 
                             setDefaultGear (bodySlotCombo, "Body", "SmallClothes")
                             setDefaultGear (handSlotCombo, "Hands", "SmallClothes")
@@ -1299,6 +1314,7 @@ type MainWindow () as this =
                 finally
                     Log.Information("Completed character submission actions!")
                     this.DecrementBusyCounter()
+                    Log.Information("Just checking that we're still alive after decrementing the busy counter. Is the submission list done? It has {partsCount} items in it.", allModelUpdateTasks.Length)
             with ex ->
                 Log.Error("Could not submit character! {MEssage}", ex.Message)
         }
@@ -1323,6 +1339,7 @@ type MainWindow () as this =
             if busyOperationCount = 0 then
                 this.SetLoadingState(false)
         )
+        Log.Information("Successfully decremented busy count")
 
     member private this.ExecuteAssignTriggerAsync
         (render: VeldridView, slot: EquipmentSlot, item: IItemModel,
@@ -1332,7 +1349,7 @@ type MainWindow () as this =
             try
                 Log.Information("Attempting to assign {Gear} to {Slot}", item.Name, slot.ToString())
                 try
-                    do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations)
+                    do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations, userLanguage)
                 with ex ->
                     Log.Fatal("Assign trigger failed! Model will not load! {Message}", ex.Message)
                     raise ex
@@ -1399,13 +1416,15 @@ type MainWindow () as this =
                         | _ -> XivLanguage.English
                     | None -> XivLanguage.English
                 userLanguage <- language
-                let info = xivModdingFramework.GameInfo(DirectoryInfo(gameDataRootPath), language)
-                Log.Information("XIV Cache information: Rebuilding - {RebuildStatus} | Cache Worker Status - {WorkerStatus} | Is Initialized - {Initialized}", XivCache.IsRebuilding, XivCache.CacheWorkerEnabled, XivCache.Initialized)
+
+                let cacheFolder = IOUtil.GetUniqueSubfolder(Path.GetTempPath(), "HC")
+                if Directory.Exists(cacheFolder) then
+                    Directory.Delete(cacheFolder, true)
+                XivCache.FrameworkSettings.TempDirectory <- cacheFolder
+
+                do! XivCache.SetGameInfo(DirectoryInfo(gameDataRootPath), userLanguage, false) |> Async.AwaitTask
+                do! XivCache.RebuildCache(XivCache.CacheVersion) |> Async.AwaitTask
                 
-                Log.Information("XIV Cache information, post rebuild: Rebuilding - {RebuildStatus} | Cache Worker Status - {WorkerStatus} | Is Initialized - {Initialized}", XivCache.IsRebuilding, XivCache.CacheWorkerEnabled, XivCache.Initialized)
-                XivCache.SetGameInfo(info) |> ignore
-                //XivCache.RebuildCache(info.GameVersion, XivCache.CacheRebuildReason.LanguageChanged) |> Async.AwaitTask |> ignore
-                Log.Information("XIV Cache information post set: Rebuilding - {RebuildStatus} | Cache Worker Status - {WorkerStatus} | Is Initialized - {Initialized}", XivCache.IsRebuilding, XivCache.CacheWorkerEnabled, XivCache.Initialized)
                 viewModel.WindowHeight <- this.Bounds.Height
 
                 do! viewModel.InitializeDataAsync(render)

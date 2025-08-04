@@ -5,6 +5,8 @@ open Shared
 open System.Collections.Generic
 open System.Threading.Tasks
 
+open Serilog
+
 open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.General.Enums
 
@@ -23,7 +25,40 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
             let mutable modelRace : XivRace option = None
             let loadModel (item: IItemModel) (race: XivRace) =
                 task {
-                    let! model = Mdl.GetTTModel(item, race)
+                    let! model = 
+                        try
+                            Log.Information("Attempting to load model for {Item}", item.Name)
+                            let slotAbbr =
+                                match slot with
+                                | EquipmentSlot.Body -> "top"
+                                | EquipmentSlot.Head -> "met"
+                                | EquipmentSlot.Hands -> "glv"
+                                | EquipmentSlot.Legs -> "dwn"
+                                | EquipmentSlot.Feet -> "sho"
+                                | _ -> ""
+                            let raceCode = race.GetRaceCode()
+                            let mdlPath = $"chara/equipment/e{item.ModelInfo.PrimaryID:D4}/model/c{raceCode}e{item.ModelInfo.PrimaryID:D4}_{slotAbbr}.mdl"
+                            Log.Information("Model path: {Path}", mdlPath)
+                            Mdl.GetTTModel(mdlPath, true)
+                        with ex ->
+                            Log.Error("Failed to complete GetTTModel for {Item}: {Message}", item.Name, ex.Message)
+                            //raise(ex)
+                            try
+                                try
+                                    Log.Information("Attempting backup attempt at model loading")
+                                    Mdl.GetTTModel(item, race)
+                                with ex ->
+                                    Log.Information("Attempt at backup model loading failed")
+                                    raise ex
+                            finally
+                                Log.Information("Successfully loaded {Item}", item.Name)
+
+                    let _ =
+                        try
+                            model.Source
+                        with ex ->
+                            Log.Error("Could not read model source for {Item}: {Message}", item.Name, ex.Message)
+                            raise ex
                     return model
                 }
 
