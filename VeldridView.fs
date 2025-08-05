@@ -574,6 +574,17 @@ type VeldridView() as this =
                                             else 0.0f
                                         else 0.0f
                                     )
+                                let tailInfluence =
+                                    [0..7]
+                                    |> List.sumBy (fun i ->
+                                        let localBoneIndex = int vertex.BoneIds.[i]
+                                        if localBoneIndex < mesh.Bones.Count then
+                                            let boneName = mesh.Bones.[localBoneIndex]
+                                            if boneName.Contains("n_sippo") then
+                                                (float32 vertex.Weights.[i]) / 255.0f
+                                            else 0.0f
+                                        else 0.0f
+                                    )
                                 
                                 if bustInfluence > 0.0f then
                                     let bustScale = this.handleBustScaling(customizations.BustSize)
