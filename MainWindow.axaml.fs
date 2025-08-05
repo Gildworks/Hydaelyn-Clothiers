@@ -1157,7 +1157,7 @@ type MainWindow () as this =
                                     | Some item ->
                                         printfn $"item to assign: {item.Name}"
                                         try
-                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations) :: allModelUpdateTasks
+                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations, userLanguage) :: allModelUpdateTasks
                                             Log.Information("Successfully loaded {Model}!", item.Name)
                                         with ex ->
                                             Log.Error("Failed to load {Model}", item.Name)
@@ -1332,7 +1332,7 @@ type MainWindow () as this =
             try
                 Log.Information("Attempting to assign {Gear} to {Slot}", item.Name, slot.ToString())
                 try
-                    do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations)
+                    do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations, userLanguage)
                 with ex ->
                     Log.Fatal("Assign trigger failed! Model will not load! {Message}", ex.Message)
                     raise ex
