@@ -52,6 +52,15 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
             orbitAngles <- Vector2(orbitAngles.X + autoOrbitSpeed * deltaTime, orbitAngles.Y)
             this.RecalculateCameraState()
 
+    member this.SetTarget(newTarget: Vector3) =
+        target <- newTarget
+
+    member this.SetPosition(newPosition: Vector3) =
+        position <- newPosition
+
+    member this.GetPosition() = position
+    member this.GetTarget() = target
+
     // Private method to update camera's position and its dynamic "up" vector
     member private this.RecalculateCameraState() =
         let R = distance

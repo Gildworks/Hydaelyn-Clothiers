@@ -50,6 +50,8 @@ type VeldridView() as this =
     let mutable boneTransforms: Matrix4x4[] = Array.empty<Matrix4x4>
     let mutable skeleton: List<SkeletonData> = []
 
+    let mutable visibleRender           : bool                      = false
+
     let mutable boneTransformBuffer     : DeviceBuffer option       = None
     let mutable boneTransformLayout     : ResourceLayout option     = None
     let mutable boneTransformSet        : ResourceSet option        = None
@@ -151,6 +153,7 @@ type VeldridView() as this =
 
         if pipeline.IsNone && texLayout.IsSome && not assignModel then 
             try
+                Log.Information("Setting the standard pipeline.")
                 let vertexLayout = VertexLayoutDescription(
                     [|
                         VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
@@ -230,6 +233,9 @@ type VeldridView() as this =
                 cmdList.SetPipeline(emptyPipeline.Value)
                 cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
             else
+                if not visibleRender then
+                    Log.Information("Adding first model to scene.")
+                    visibleRender <- not visibleRender
                 for mesh in visibleModels.Value.Meshes do
                     try
                         gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
@@ -535,6 +541,12 @@ type VeldridView() as this =
                     |> Async.Parallel
                 let materialDict = dict preparedMaterials
 
+                let mutable minX, maxX = Single.MaxValue, Single.MinValue
+                let mutable minY, maxY = Single.MaxValue, Single.MinValue
+                let mutable minZ, maxZ = Single.MaxValue, Single.MinValue
+
+                let mutable boundsCenter = Vector3.Zero
+                let mutable boundsDimension = 0.0f
         
                 for input in activeModels do
                     let mutable totalVertices = 0.0f
@@ -542,9 +554,17 @@ type VeldridView() as this =
                     let mutable averageY = 0.0f
                     let mutable averageZ = 0.0f
 
+
                     for mesh in input.Model.MeshGroups do                
                         for part in mesh.Parts do
                             for vertex in part.Vertices do
+                                let pos = vertex.Position
+                                minX <- Math.Min(minX, pos.X)
+                                maxX <- Math.Max(maxX, pos.X)
+                                minY <- Math.Min(minY, pos.Y)
+                                maxY <- Math.Max(maxY, pos.Y)
+                                minZ <- Math.Min(minZ, pos.Z)
+                                maxZ <- Math.Max(maxZ, pos.Z)
                                 averageX <- averageX + vertex.Position.X
                                 averageY <- averageY + vertex.Position.Y
                                 averageZ <- averageZ + vertex.Position.Z
@@ -553,6 +573,13 @@ type VeldridView() as this =
                     let centerX = averageX / totalVertices
                     let centerY = averageY / totalVertices
                     let centerZ = averageZ / totalVertices
+
+                    let boundingCenter = Vector3((minX+maxX) * 0.5f, (minY + maxY) * 0.5f, (minZ + maxZ) * 0.5f)
+                    let boundingSize = Vector3(maxX - minX, maxY - minY, maxZ - minZ)
+                    let maxDimension = Math.Max(boundingSize.X, Math.Max(boundingSize.Y, boundingSize.Z))
+
+                    boundsCenter <- boundingCenter
+                    boundsDimension <- maxDimension
 
                     for mesh in input.Model.MeshGroups do
                         let materialPath = mesh.Material
@@ -687,6 +714,7 @@ type VeldridView() as this =
                     // Calculate bone transforms with customizations and update GPU buffer
                     let customizedTransforms = this.calculateBoneTransforms skeleton customizations
                     gd.UpdateBuffer(boneTransformBuffer.Value, 0u, customizedTransforms)
+                    this.CenterCameraOnBounds(boundsCenter, boundsDimension)
                 else
                     match currentCharacterModel with
                     | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
@@ -1042,4 +1070,12 @@ type VeldridView() as this =
             |> Map.remove Tail
             |> Map.remove Ear
 
+    member this.CenterCameraOnBounds(center: Vector3, maxDimension: float32) =
+        let scaledCenter = Vector3(center.X * -2.5f, center.Y * 2.5f, center.Z * 2.5f)
 
+        let distance = maxDimension * 6.0f
+
+        let cameraPos = scaledCenter + Vector3(0.0f, 0.0f, distance)
+
+        camera.SetTarget(scaledCenter)
+        camera.SetPosition(cameraPos)
