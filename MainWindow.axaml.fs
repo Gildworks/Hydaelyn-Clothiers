@@ -225,8 +225,6 @@ type MainWindow () as this =
     inherit Window ()
     let viewModel = new VeldridWindowViewModel()
 
-    let mutable allModelUpdateTasks: Async<unit> list = []
-
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
     let mutable selectedClanNameOpt: string option = Some "Midlander"
@@ -1019,6 +1017,7 @@ type MainWindow () as this =
 
     member private this.OnSubmitCharacter(render: VeldridView) =
         async {
+            let mutable allModelUpdateTasks: Async<unit> list = []
             this.IncrementBusyCounter()
             try
                 try

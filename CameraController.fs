@@ -58,6 +58,9 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
     member this.SetPosition(newPosition: Vector3) =
         position <- newPosition
 
+    member this.SetDistance(newDistance: float32) =
+        distance <- newDistance
+    
     member this.GetPosition() = position
     member this.GetTarget() = target
 

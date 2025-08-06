@@ -1077,5 +1077,7 @@ type VeldridView() as this =
 
         let cameraPos = scaledCenter + Vector3(0.0f, 0.0f, distance)
 
+        
+        camera.SetDistance(distance)
         camera.SetTarget(scaledCenter)
         camera.SetPosition(cameraPos)
