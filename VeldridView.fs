@@ -341,7 +341,8 @@ type VeldridView() as this =
                         ResourceLayoutElementDescription("tex_Metalness", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                         ResourceLayoutElementDescription("tex_Occlusion", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                         ResourceLayoutElementDescription("tex_Subsurface", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                        ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment)
+                        ResourceLayoutElementDescription("SharedSampler", ResourceKind.Sampler, ShaderStages.Fragment),
+                        ResourceLayoutElementDescription("MaterialParams", ResourceKind.UniformBuffer, ShaderStages.Fragment)
                     ))
 
                 try

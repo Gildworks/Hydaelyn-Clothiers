@@ -5,6 +5,9 @@ open System
 open System.IO
 open System.Drawing
 open System.Drawing.Imaging
+
+open Serilog
+
 open Veldrid
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Materials.FileTypes
@@ -23,6 +26,32 @@ let materialBuilder
     (materialFor: string)
     : Task<PreparedMaterial> =
     task {
+        let shaderPackId =
+            match mtrl.ShaderPack with
+            | ShaderHelpers.EShaderPack.Iris
+            | ShaderHelpers.EShaderPack.CharacterReflection
+            | ShaderHelpers.EShaderPack.CharacterOcclusion -> 1
+            | ShaderHelpers.EShaderPack.Skin -> 2
+            | ShaderHelpers.EShaderPack.Hair -> 3
+            | _ -> 0
+
+        let materialParams = [|
+            float32 shaderPackId
+            float32 (int mtrl.MaterialFlags)
+            (match mtrl.ShaderConstants |> Seq.tryFind (fun sc -> sc.ConstantId = 0x29AC0223u) with
+             | Some threshold -> threshold.Values |> Seq.tryHead |> Option.defaultValue 0.0f
+             | None -> 0.0f)
+            16.0f
+        |]
+
+        printfn $"Material shader: {mtrl.ShaderPack.ToString()}"
+
+        let matParamBuffer = factory.CreateBuffer(BufferDescription(
+            uint32(materialParams.Length * sizeof<float32>),
+            BufferUsage.UniformBuffer
+        ))
+        gd.UpdateBuffer(matParamBuffer, 0u, materialParams)
+
         let dyedMat = mtrl.Clone() :?> XivMtrl
         let! stainTemplate = STM.GetStainingTemplateFile(STM.EStainingTemplate.Dawntrail)
         if dyedMat.ColorSetDyeData <> null && dyedMat.ColorSetDyeData.Length = 128 && dyedMat.ColorSetData <> null && dyedMat.ColorSetData.Count >= 1024 then
@@ -116,17 +145,6 @@ let materialBuilder
             let desc = TextureDescription(uint32 width, uint32 height, 1u, 1u, 1u, format, TextureUsage.Sampled, TextureType.Texture2D)
             let tex = factory.CreateTexture(desc)
             gd.UpdateTexture(tex, rgba, 0u, 0u, 0u, uint32 width, uint32 height, 1u, 0u, 0u)
-            //let debugFolder : string option = Some "textureDebug"
-            //match debugFolder with
-            //| Some folder when Directory.Exists(folder) ->
-            //    try
-            //        if materialFor.Contains("Hair") then
-            //            let bitmap = rgbaToBitmap bytes width height
-            //            let filename = getNextFilename folder $"{textureType}" "png"
-            //            bitmap.Save(filename, ImageFormat.Png)
-            //            bitmap.Dispose()
-            //    with
-            //    | ex -> printfn $"Failed to save deug texture: {ex.Message}"
             tex
 
         // --- Dummy fallback texture ---
@@ -223,7 +241,8 @@ let materialBuilder
                     metalnessTex :> BindableResource,
                     occlusionTex :> BindableResource,
                     subsurfaceTex :> BindableResource,
-                    sampler :> BindableResource
+                    sampler :> BindableResource,
+                    matParamBuffer :> BindableResource
                 ))
 
             return {
