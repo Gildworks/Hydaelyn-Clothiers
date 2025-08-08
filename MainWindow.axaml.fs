@@ -228,8 +228,9 @@ module DataHelpers =
 type MainWindow () as this =
     inherit Window ()
     let viewModel = new VeldridWindowViewModel()
-
     let mutable cacheRebuilding = false
+
+    let mutable allModelUpdateTasks: Async<unit> list = []
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
@@ -630,9 +631,9 @@ type MainWindow () as this =
         let smallClothesNamePart =
             match smallClothesNamePartOriginal with
             | "Body" -> "Rumpf"
-            | "Hands" -> "Hände"
+            | "Hands" -> "Hande"
             | "Legs" -> "Beine"
-            | "Feet" -> "Füße"
+            | "Feet" -> "Fusse"
             | _ -> "Error"
 
         let emperorsNewNamePart =
@@ -926,9 +927,9 @@ type MainWindow () as this =
                     match gearCategoryInput with
                     | "Head" -> "Kopf"
                     | "Body" -> "Rumpf"
-                    | "Hands" -> "Hände"
+                    | "Hands" -> "Hande"
                     | "Legs" -> "Beine"
-                    | "Feet" -> "Füße"
+                    | "Feet" -> "Fusse"
                     | _ -> "Error"
                 | _ -> gearCategoryInput
             let getGearList() = allGearCache |> List.filter (fun m -> m.Item.SecondaryCategory = gearCategory)

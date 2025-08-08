@@ -3,4 +3,4 @@
 	url = https://github.com/shandonb/xivModdingFramework.git
 [submodule "lib/AvaloniaRender"]
 	path = lib/AvaloniaRender
-	url = https://github.com/KillzXGaming/AvaloniaRender.git
+	url = https://github.com/shandonb/AvaloniaRender.git
