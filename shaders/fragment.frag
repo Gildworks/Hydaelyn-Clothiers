@@ -16,6 +16,13 @@ layout(set = 1, binding = 2) uniform texture2D tex_SpecularMap;
 layout(set = 1, binding = 3) uniform texture2D tex_EmissiveMap;
 layout(set = 1, binding = 9) uniform sampler SharedSampler;
 
+//layout(set = 1, binding = 10) uniform MaterialParameters {
+//    int u_ShaderPackId;
+//    int u_MaterialFlags;
+//    float u_AlphaThreshold;
+//    float u_SpecularPower;
+//} materialParams;
+
 // Output
 layout(location = 0) out vec4 fsout_Color;
 
@@ -35,9 +42,13 @@ const vec3 LIGHT_VECTOR_TO_SOURCE = normalize(-vec3(10.5, 10.8, -10.6)); // Your
 
 const vec3 LIGHT_COLOR = vec3(1.0, 0.947, 0.888);
 const vec3 AMBIENT_LIGHT_COLOR = vec3(0.154, 0.203, 0.33); // Slightly increased ambient
-const float SPECULAR_INTENSITY = 0.1;
-const float SHININESS = 16.0;
+const float SPECULAR_INTENSITY = 0.1; // 5.0 for eyes
+const float SHININESS = 16.0; // 64.0 for eyes
 const float GAMMA_INV = 1.0/2.2;
+
+const int IRIS = 1;
+const int SKIN = 2;
+const int HAIR = 3;
 
 void main() {
     // 1. Sample Textures (GPU converts sRGB textures to linear here)

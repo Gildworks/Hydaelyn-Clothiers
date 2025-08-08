@@ -580,3 +580,10 @@ type FilterGear =
     }
     override this.ToString (): string = 
         this.Item.Name
+
+type MaterialParams = {
+    ShaderPackId: int
+    MaterialFlags: int
+    AlphaThreshold: float32
+    SpecularPower: float32
+}

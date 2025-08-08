@@ -9,6 +9,7 @@ open Veldrid
 open xivModdingFramework.Materials.DataContainers
 open xivModdingFramework.Materials.FileTypes
 open xivModdingFramework.Models.ModelTextures
+open xivModdingFramework.Materials.DataContainers
 open Shared
 
 let materialBuilder
@@ -22,7 +23,6 @@ let materialBuilder
     (materialFor: string)
     : Task<PreparedMaterial> =
     task {
-
         let dyedMat = mtrl.Clone() :?> XivMtrl
         let! stainTemplate = STM.GetStainingTemplateFile(STM.EStainingTemplate.Dawntrail)
         if dyedMat.ColorSetDyeData <> null && dyedMat.ColorSetDyeData.Length = 128 && dyedMat.ColorSetData <> null && dyedMat.ColorSetData.Count >= 1024 then
@@ -225,6 +225,7 @@ let materialBuilder
                     subsurfaceTex :> BindableResource,
                     sampler :> BindableResource
                 ))
+
             return {
                 DiffuseTexture = diffuseTex
                 NormalTexture = normalTex
