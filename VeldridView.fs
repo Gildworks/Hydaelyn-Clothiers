@@ -286,20 +286,20 @@ type VeldridView() as this =
         else
             let worldMatrices = Array.create boneCount Matrix4x4.Identity
             let finalTransforms = Array.create boneCount Matrix4x4.Identity
-            let bustScale = this.handleBustScaling(customizations.BustSize)
 
             // Build world matrices WITHOUT custom scaling first
             for i = 0 to boneCount - 1 do
                 let bone = skeleton.[i]
                 let parentIndex = bone.BoneParent
         
-                let localMatrixOriginal = new Matrix4x4(
-                    bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
-                    bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
-                    bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
-                    bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
-                )
-                let localMatrix = Matrix4x4.Transpose(localMatrixOriginal)
+                let localMatrix = 
+                    Matrix4x4(
+                        bone.PoseMatrix.[0], bone.PoseMatrix.[1], bone.PoseMatrix.[2], bone.PoseMatrix.[3],
+                        bone.PoseMatrix.[4], bone.PoseMatrix.[5], bone.PoseMatrix.[6], bone.PoseMatrix.[7],
+                        bone.PoseMatrix.[8], bone.PoseMatrix.[9], bone.PoseMatrix.[10], bone.PoseMatrix.[11],
+                        bone.PoseMatrix.[12], bone.PoseMatrix.[13], bone.PoseMatrix.[14], bone.PoseMatrix.[15]
+                    ) 
+                    |> Matrix4x4.Transpose
     
                 if parentIndex > -1 then
                     worldMatrices.[i] <- localMatrix * worldMatrices.[parentIndex]
@@ -309,16 +309,16 @@ type VeldridView() as this =
             // Apply custom scaling in the final skinning matrix calculation
             for i = 0 to boneCount - 1 do
                 let bone = skeleton.[i]
-                let invBindMatrixOriginal = new Matrix4x4(
+
+                let invBindMatrix = new Matrix4x4(
                     bone.InversePoseMatrix.[0], bone.InversePoseMatrix.[1], bone.InversePoseMatrix.[2], bone.InversePoseMatrix.[3],
                     bone.InversePoseMatrix.[4], bone.InversePoseMatrix.[5], bone.InversePoseMatrix.[6], bone.InversePoseMatrix.[7],
                     bone.InversePoseMatrix.[8], bone.InversePoseMatrix.[9], bone.InversePoseMatrix.[10], bone.InversePoseMatrix.[11],
                     bone.InversePoseMatrix.[12], bone.InversePoseMatrix.[13], bone.InversePoseMatrix.[14], bone.InversePoseMatrix.[15]
                 )
-                let invBindMatrix = Matrix4x4.Transpose(invBindMatrixOriginal)
-        
-                let mutable skinningMatrix = worldMatrices.[i] * invBindMatrixOriginal
-            
+
+                let skinningMatrix = worldMatrices.[i] * invBindMatrix
+
                 finalTransforms.[i] <- Matrix4x4.Transpose(skinningMatrix)
 
             finalTransforms
