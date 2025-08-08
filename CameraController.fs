@@ -65,7 +65,7 @@ type CameraController(?initialDistance: float32, ?initialYaw: float32, ?initialP
     member this.GetTarget() = target
 
     // Private method to update camera's position and its dynamic "up" vector
-    member private this.RecalculateCameraState() =
+    member this.RecalculateCameraState() =
         let R = distance
         let yaw = orbitAngles.X
         let pitch = orbitAngles.Y
