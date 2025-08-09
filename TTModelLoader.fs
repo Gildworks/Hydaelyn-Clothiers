@@ -104,10 +104,21 @@ let resolveMtrl (model: TTModel) (race: XivRace) (tribe: XivSubRace) (material: 
                     try
                         let! loaded = Mtrl.GetXivMtrl(material, item, false, tx)
                         let skinBase = Regex.Replace(loaded.MTRLPath, @"c\d{4}", target, RegexOptions.IgnoreCase)
+                        let xaelaTail = Regex.Replace(skinBase, "t00", "t01", RegexOptions.IgnoreCase)
+                        let xaelaBody = Regex.Replace(xaelaTail, "b00", "b01", RegexOptions.IgnoreCase)
+                        let xaelaBase = Regex.Replace(xaelaBody, "f00", "f01", RegexOptions.IgnoreCase)
                         if loaded.ShaderPack = ShaderHelpers.EShaderPack.Skin then
                             try
                                 let! skinReturn = Mtrl.GetXivMtrl(skinBase, true, tx) |> Async.AwaitTask
-                                return skinReturn.MTRLPath
+                                match tribe with
+                                | XivSubRace.AuRa_Xaela ->
+                                    try
+                                        let! xaelaReturn = Mtrl.GetXivMtrl(xaelaBase, true, tx) |> Async.AwaitTask
+                                        return xaelaReturn.MTRLPath
+                                    with _ ->
+                                        return skinReturn.MTRLPath
+                                | _ ->
+                                    return skinReturn.MTRLPath
                             with _ ->
                                 return loaded.MTRLPath
                         else return loaded.MTRLPath
@@ -115,9 +126,20 @@ let resolveMtrl (model: TTModel) (race: XivRace) (tribe: XivSubRace) (material: 
                     | _ ->
                         let basePath = Mtrl.GetMtrlPath(model.Source, material)
                         let skinBase = Regex.Replace(basePath, @"c\d{4}", target, RegexOptions.IgnoreCase)
+                        let xaelaTail = Regex.Replace(skinBase, "t00", "t01", RegexOptions.IgnoreCase)
+                        let xaelaBody = Regex.Replace(xaelaTail, "b00", "b01", RegexOptions.IgnoreCase)
+                        let xaelaBase = Regex.Replace(xaelaBody, "f00", "f01", RegexOptions.IgnoreCase)
                         try
                             let! skinReturn = Mtrl.GetXivMtrl(skinBase, true, tx) |> Async.AwaitTask
-                            return skinReturn.MTRLPath
+                            match tribe with
+                            | XivSubRace.AuRa_Xaela ->
+                                try
+                                    let! xaelaReturn = Mtrl.GetXivMtrl(xaelaBase, true, tx) |> Async.AwaitTask
+                                    return xaelaReturn.MTRLPath
+                                with _ ->
+                                    return skinReturn.MTRLPath
+                            | _ ->
+                                return skinReturn.MTRLPath
                         with _ ->
                             return basePath
                 } |> Async.AwaitTask
