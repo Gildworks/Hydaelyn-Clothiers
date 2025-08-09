@@ -180,7 +180,7 @@ void main(){
         vec3 diffuseTerm = NdotL * baseColor;
         vec3 ambient     = AMBIENT_LIGHT_COLOR * baseColor;
 
-        lightingLinear = ambient + (diffuseTerm * LIGHT_COLOR) + (specularTerm * LIGHT_COLOR) + emissive;
+        lightingLinear = ambient + (diffuseTerm * LIGHT_COLOR) + (specularTerm * LIGHT_COLOR); // + emissive;
     }
 
     // Tone map + gamma
