@@ -50,6 +50,9 @@ type VeldridView() as this =
     let mutable boneTransforms: Matrix4x4[] = Array.empty<Matrix4x4>
     let mutable skeleton: List<SkeletonData> = []
 
+    let mutable boundsCenter = Vector3.Zero
+    let mutable boundsDimension = 0.0f
+
     let mutable visibleRender           : bool                      = false
 
     let mutable boneTransformBuffer     : DeviceBuffer option       = None
@@ -90,15 +93,15 @@ type VeldridView() as this =
     let agent = MailboxProcessor.Start(fun inbox ->
 
         let rec loop () = async {
-            let! (slot, item: IItemModel, race, dye1, dye2, colors, customizations, gameLanguage, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
+            let! (slot, item: IItemModel, race, tribe, dye1, dye2, colors, customizations, gameLanguage, _mailboxAckReply: AsyncReplyChannel<unit>, taskCompletionSource: TaskCompletionSource<unit>) = inbox.Receive()
             try
                 try
                     Log.Information("Beginning new model loading action for {Model}", item.Name)
-                    do! this.AssignGear(slot, item, race, dye1, dye2, colors, customizations, device.Value, gameLanguage)
-                    taskCompletionSource.SetResult(())
+                    do! this.AssignGear(slot, item, race, tribe, dye1, dye2, colors, customizations, device.Value, gameLanguage)
                 with ex ->
                     taskCompletionSource.SetException(ex)
             finally
+                taskCompletionSource.SetResult(())
                 Log.Information("Finished loading action for {Model}", item.Name)
             
             _mailboxAckReply.Reply(())
@@ -108,6 +111,7 @@ type VeldridView() as this =
     )
 
     member this.ModelCount = models.Length
+    member val CenterCamera = false with get, set
 
     override this.Prepare (gd: GraphicsDevice): unit = 
         base.Prepare(gd: GraphicsDevice)
@@ -323,7 +327,7 @@ type VeldridView() as this =
 
             finalTransforms
 
-    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gd: GraphicsDevice, gameLanguage: XivLanguage) : Async<unit> =
+    member this.AssignGear(slot: EquipmentSlot, item: IItemModel, race: XivRace, tribe: XivSubRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gd: GraphicsDevice, gameLanguage: XivLanguage) : Async<unit> =
         try
             Log.Information("Initiating AssignGear logic for {Item}...", item.Name)
             async {
@@ -474,7 +478,7 @@ type VeldridView() as this =
                             FaceScale = 1.0f
                             MuscleDefinition = 1.0f
                         }
-                    do! this.RebuildCharacterModel(gd, race, customizations, gameLanguage)
+                    do! this.RebuildCharacterModel(gd, race, tribe, customizations, gameLanguage)
 
                 
                 with ex ->
@@ -486,7 +490,7 @@ type VeldridView() as this =
             Log.Error(ex, "AssignGear failed for slot {Slot} with item {ItemName}", slot, item.Name)
             reraise()
 
-    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, customizations: CharacterCustomizations, gameLanguage: XivLanguage) =
+    member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, tribe: XivSubRace, customizations: CharacterCustomizations, gameLanguage: XivLanguage) =
         try
             async {
                 let! activeModels =
@@ -535,7 +539,7 @@ type VeldridView() as this =
                     |> Set.toList
                     |> List.map (fun matPath -> async {
                         let ownerInput = activeModels |> List.find (fun input -> input.Model.Materials.Contains(matPath))
-                        let! mtrl = TTModelLoader.resolveMtrl ownerInput.Model matPath ownerInput.Item tx
+                        let! mtrl = TTModelLoader.resolveMtrl ownerInput.Model race tribe matPath ownerInput.Item tx
                         let! prepared = MaterialBuilder.materialBuilder gd.ResourceFactory gd texLayout.Value ownerInput.Dye1 ownerInput.Dye2 ownerInput.Colors mtrl ownerInput.Item.Name |> Async.AwaitTask
                         return (matPath, prepared)
                     })
@@ -545,9 +549,6 @@ type VeldridView() as this =
                 let mutable minX, maxX = Single.MaxValue, Single.MinValue
                 let mutable minY, maxY = Single.MaxValue, Single.MinValue
                 let mutable minZ, maxZ = Single.MaxValue, Single.MinValue
-
-                let mutable boundsCenter = Vector3.Zero
-                let mutable boundsDimension = 0.0f
         
                 for input in activeModels do
                     let mutable totalVertices = 0.0f
@@ -699,6 +700,7 @@ type VeldridView() as this =
                             IndexBuffer = indexBuffer
                             IndexCount = indices.Length
                             Material = materialDict.[matPath]
+                            MatPath = matPath
                             RawModel = null
                         }
                         finalMeshes.Add(renderMesh)
@@ -715,7 +717,9 @@ type VeldridView() as this =
                     // Calculate bone transforms with customizations and update GPU buffer
                     let customizedTransforms = this.calculateBoneTransforms skeleton customizations
                     gd.UpdateBuffer(boneTransformBuffer.Value, 0u, customizedTransforms)
-                    this.CenterCameraOnBounds(boundsCenter, boundsDimension)
+                    //if this.CenterCamera then
+                    //    this.CenterCameraOnBounds(boundsCenter, boundsDimension)
+                    //    this.CenterCamera <- false
                 else
                     match currentCharacterModel with
                     | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
@@ -726,13 +730,15 @@ type VeldridView() as this =
             Log.Error("Failed to build skeletal model: {Message}", ex.Message)
             reraise()
 
-    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gameLanguage: XivLanguage) : Async<unit> =
+    
+
+    member this.AssignTrigger (slot: EquipmentSlot, item: IItemModel, race: XivRace, tribe: XivSubRace, dye1: int, dye2: int, colors: CustomModelColors, customizations: CharacterCustomizations, gameLanguage: XivLanguage) : Async<unit> =
         async {
             try
                 Log.Information("Attempting to queue an assign task")
                 try
                     let tcs = TaskCompletionSource<unit>()
-                    do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, dye1, dye2, colors, customizations, gameLanguage, mailboxAckReply, tcs))
+                    do! agent.PostAndAsyncReply(fun mailboxAckReply -> (slot, item, race, tribe, dye1, dye2, colors, customizations, gameLanguage, mailboxAckReply, tcs))
                     do! Async.AwaitTask(tcs.Task)
                 with ex ->
                     Log.Error("Failed to complete AssignTrigger for {Item}: {Message}", item.Name, ex.Message)
@@ -740,6 +746,77 @@ type VeldridView() as this =
             finally
                 Log.Information("Succesfully queued assign task")
         }
+
+    member this.UpdateMaterialsForColors(newColors: CustomModelColors) (race: XivRace) (tribe: XivSubRace) : Async<unit> =
+        async {
+            match currentCharacterModel with
+            | None -> return ()
+            | Some model ->
+                let gd = device.Value
+                use tx = ModTransaction.BeginReadonlyTransaction()
+
+                // 1) Recompute material dict for current active models but with *newColors*
+                //    This mirrors your existing material build, just swapping colors.
+                let activeModels = 
+                    ttModelMap
+                    |> Map.values
+                    |> Seq.toList
+
+                let activeInputs = activeModels // whatever collection you already have
+                let uniqueMatPaths =
+                    activeInputs
+                    |> List.collect (fun input -> input.Model.Materials |> Seq.toList)
+                    |> Set.ofList
+                    |> Set.toList
+
+                let! preparedMaterials =
+                    uniqueMatPaths
+                    |> List.map (fun matPath -> async {
+                        let ownerInput =
+                            activeInputs
+                            |> List.find (fun input -> input.Model.Materials.Contains(matPath))
+                        let! mtrl = TTModelLoader.resolveMtrl ownerInput.Model race tribe matPath ownerInput.Item tx
+                        // NOTE: pass newColors here
+                        let! prepared = MaterialBuilder.materialBuilder gd.ResourceFactory gd texLayout.Value ownerInput.Dye1 ownerInput.Dye2 ownerInput.Colors mtrl ownerInput.Item.Name |> Async.AwaitTask
+                        return (matPath, prepared)
+                    })
+                    |> Async.Parallel
+
+                let newMatDict = dict preparedMaterials
+
+                // 2) Swap materials on the existing meshes (no geometry rebuild)
+                //    If Material is immutable, rebuild the list; otherwise assign in place.
+                let updatedMeshes =
+                    model.Meshes
+                    |> List.map (fun m ->
+                        let newMat = newMatDict.[m.MatPath]
+                        // dispose old later to avoid freeing while in use
+                        m, newMat
+                    )
+
+                // 3) Apply new materials
+                //    If Material is a mutable field, set it; otherwise build a new RenderModel.
+                for (m, newMat) in updatedMeshes do
+                    // if m.Material is mutable:
+                    // m.Material <- newMat
+                    ()
+
+                // or, if records are immutable:
+                let newModel =
+                    { model with
+                        Meshes =
+                            model.Meshes
+                            |> List.map (fun m ->
+                                let newMat = newMatDict.[m.MatPath]
+                                { m with Material = newMat }) }
+
+                currentCharacterModel <- Some newModel
+
+                // 4) Dispose old materials after swap to avoid leaks
+                //    (capture the old ones before the assignment if you’re mutating)
+                ()
+        }
+
         
 
     member this.RequestResize (w: uint32, h: uint32) =
@@ -1082,3 +1159,6 @@ type VeldridView() as this =
         camera.SetTarget(scaledCenter)
         camera.SetPosition(cameraPos)
         camera.RecalculateCameraState()
+
+    member this.CenterOnCurrentModel() =
+        this.CenterCameraOnBounds(boundsCenter, boundsDimension)

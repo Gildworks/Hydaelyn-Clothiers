@@ -226,6 +226,7 @@ type MainWindow () as this =
     let viewModel = new VeldridWindowViewModel()
 
     let mutable currentCharacterRace : XivRace = XivRace.Hyur_Midlander_Male
+    let mutable currentTribe : XivSubRace = XivSubRace.Hyur_Midlander
     let mutable selectedRaceNameOpt: string option = Some "Hyur"
     let mutable selectedClanNameOpt: string option = Some "Midlander"
     let mutable selectedGenderNameOpt: string option = Some "Male"
@@ -441,7 +442,7 @@ type MainWindow () as this =
 
                 for matName in dyeModel.Materials do
                     // *** FIXED HERE ***
-                    let! material = (TTModelLoader.resolveMtrl dyeModel matName item tx |> Async.StartAsTask)
+                    let! material = (TTModelLoader.resolveMtrl dyeModel currentCharacterRace currentTribe matName item tx |> Async.StartAsTask)
                     match material.ColorSetDyeData.Length with
                     | len when len >= 128 ->
                         for i in 0 .. 31 do
@@ -555,7 +556,7 @@ type MainWindow () as this =
                         modelColors.SkinColor <- selectedColor
                     | _ -> ()
                 
-                    do! this.OnSubmitCharacter(render)
+                    do! render.UpdateMaterialsForColors modelColors currentCharacterRace currentTribe
                 finally
                     ()
             }
@@ -677,7 +678,12 @@ type MainWindow () as this =
         clanSelector.SelectionChanged.Add(fun _ ->
             match clanSelector.SelectedValue with
             | :? string as clanStr -> selectedClanNameOpt <- Some clanStr
-            | :? ComboOption as clanCombo -> selectedClanNameOpt <- Some clanCombo.Value
+            | :? ComboOption as clanCombo ->
+                selectedClanNameOpt <- Some clanCombo.Value
+                match clanCombo.Value with
+                | "Raen" -> currentTribe <- XivSubRace.AuRa_Raen
+                | "Xaela" -> currentTribe <- XivSubRace.AuRa_Xaela
+                | _ -> currentTribe <- XivSubRace.Hyur_Midlander
             | _ -> selectedClanNameOpt <- None
             this.UpdateSubmitButtonState()
         )
@@ -1156,7 +1162,7 @@ type MainWindow () as this =
                                     | Some item ->
                                         printfn $"item to assign: {item.Name}"
                                         try
-                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, -1, 01, modelColors, characterCustomizations, userLanguage) :: allModelUpdateTasks
+                                            allModelUpdateTasks <- render.AssignTrigger(slot, item, parsedXivRace, currentTribe, -1, 01, modelColors, characterCustomizations, userLanguage) :: allModelUpdateTasks
                                             Log.Information("Successfully loaded {Model}!", item.Name)
                                         with ex ->
                                             Log.Error("Failed to load {Model}", item.Name)
@@ -1298,6 +1304,7 @@ type MainWindow () as this =
                 finally
                     Log.Information("Completed character submission actions!")
                     this.DecrementBusyCounter()
+                    render.CenterOnCurrentModel()
             with ex ->
                 Log.Error("Could not submit character! {MEssage}", ex.Message)
         }
@@ -1331,7 +1338,7 @@ type MainWindow () as this =
             try
                 Log.Information("Attempting to assign {Gear} to {Slot}", item.Name, slot.ToString())
                 try
-                    do! render.AssignTrigger(slot, item, race, dye1, dye2, currentModelColors, characterCustomizations, userLanguage)
+                    do! render.AssignTrigger(slot, item, race, currentTribe, dye1, dye2, currentModelColors, characterCustomizations, userLanguage)
                 with ex ->
                     Log.Fatal("Assign trigger failed! Model will not load! {Message}", ex.Message)
                     raise ex

@@ -111,6 +111,7 @@ let loadRenderModelFromItem
                         IndexBuffer = indexBuffer
                         IndexCount = indices.Length
                         Material = material
+                        MatPath = String.Empty
                         RawModel = ttModel
                     }
                 )

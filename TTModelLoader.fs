@@ -4,6 +4,7 @@ open Shared
 
 open System.Collections.Generic
 open System.Threading.Tasks
+open System.Text.RegularExpressions
 
 open xivModdingFramework.Items.Interfaces
 open xivModdingFramework.General.Enums
@@ -93,17 +94,32 @@ let loadTTModel (item: IItemModel) (race: XivRace) (slot: EquipmentSlot) : Task<
         }
     resolvedModel
 
-let resolveMtrl (model: TTModel) (material: string) (item: IItemModel) (tx: ModTransaction) : Async<XivMtrl> =
+let resolveMtrl (model: TTModel) (race: XivRace) (tribe: XivSubRace) (material: string) (item: IItemModel) (tx: ModTransaction) : Async<XivMtrl> =
+    let raceCode = race.GetRaceCodeInt()
+    let target = $"c{raceCode:D4}"
     let finalMat =
         task {
             let! materialPath =
                 task {
                     try
                         let! loaded = Mtrl.GetXivMtrl(material, item, false, tx)
-                        return loaded.MTRLPath
+                        let skinBase = Regex.Replace(loaded.MTRLPath, @"c\d{4}", target, RegexOptions.IgnoreCase)
+                        if loaded.ShaderPack = ShaderHelpers.EShaderPack.Skin then
+                            try
+                                let! skinReturn = Mtrl.GetXivMtrl(skinBase, true, tx) |> Async.AwaitTask
+                                return skinReturn.MTRLPath
+                            with _ ->
+                                return loaded.MTRLPath
+                        else return loaded.MTRLPath
                     with
                     | _ ->
-                        return Mtrl.GetMtrlPath(model.Source, material)
+                        let basePath = Mtrl.GetMtrlPath(model.Source, material)
+                        let skinBase = Regex.Replace(basePath, @"c\d{4}", target, RegexOptions.IgnoreCase)
+                        try
+                            let! skinReturn = Mtrl.GetXivMtrl(skinBase, true, tx) |> Async.AwaitTask
+                            return skinReturn.MTRLPath
+                        with _ ->
+                            return basePath
                 } |> Async.AwaitTask
             let! mat =
                 try

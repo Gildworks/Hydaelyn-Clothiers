@@ -28,9 +28,7 @@ let materialBuilder
     task {
         let shaderPackId =
             match mtrl.ShaderPack with
-            | ShaderHelpers.EShaderPack.Iris
-            | ShaderHelpers.EShaderPack.CharacterReflection
-            | ShaderHelpers.EShaderPack.CharacterOcclusion -> 1
+            | ShaderHelpers.EShaderPack.Iris -> 1
             | ShaderHelpers.EShaderPack.Skin -> 2
             | ShaderHelpers.EShaderPack.Hair -> 3
             | _ -> 0

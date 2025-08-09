@@ -279,6 +279,7 @@ type RenderMesh = {
     IndexBuffer                 : DeviceBuffer
     IndexCount                  : int
     Material                    : PreparedMaterial
+    MatPath                     : string
     RawModel                    : TTModel
 }
 
