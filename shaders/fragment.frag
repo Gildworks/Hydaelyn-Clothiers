@@ -137,7 +137,7 @@ void main(){
         lightingLinear = ambient
                        + (diffuseTerm  * LIGHT_COLOR)
                        + (specularTerm * LIGHT_COLOR)
-                       + emissive;
+                       ;
     }
     // ===== IRIS (your F0=5 mix restored, medium-tight highlight) =====
     else if (materialParams.u_ShaderPackId == IRIS){
@@ -153,7 +153,7 @@ void main(){
 
         vec3 diffuseTerm = NdotL * baseColor; // full diffuse (your request)
         vec3 ambient = AMBIENT_LIGHT_COLOR * baseColor * 0.5;
-        lightingLinear = ambient + (diffuseTerm * LIGHT_COLOR) + (specularTerm * LIGHT_COLOR) + emissive;
+        lightingLinear = ambient + (diffuseTerm * LIGHT_COLOR) + (specularTerm * LIGHT_COLOR);
     }
     // ===== HAIR (back to Blinn–Phong, stable on cards) =====
     else if (materialParams.u_ShaderPackId == HAIR){
@@ -166,7 +166,7 @@ void main(){
         vec3 diffuseTerm = (1.0 * NdotL) * baseColor;                     // small diffuse bed
         vec3 ambient     = AMBIENT_LIGHT_COLOR * baseColor;
 
-        lightingLinear = ambient + (diffuseTerm * LIGHT_COLOR) + (specularTerm * LIGHT_COLOR) + emissive;
+        lightingLinear = ambient + (diffuseTerm * LIGHT_COLOR) + (specularTerm * LIGHT_COLOR);
     }
     // ===== DEFAULT / GEAR =====
     else {

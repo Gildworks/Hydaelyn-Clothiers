@@ -60,10 +60,6 @@ type VeldridView() as this =
     let mutable boneTransformSet        : ResourceSet option        = None
 
     let mutable currentCharacterModel   : RenderModel option        = None
-
-    let mutable gearItem                : IItemModel option         = None
-    let mutable modelRace               : XivRace option            = None
-    let mutable modelSlot               : EquipmentSlot option      = None
     let mutable assignModel             : bool                      = false
 
     // === Render Resources ===
