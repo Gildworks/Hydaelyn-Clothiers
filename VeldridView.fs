@@ -234,6 +234,7 @@ type VeldridView() as this =
                 cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
             else
                 if not visibleRender then
+                    this.CenterOnCurrentModel()
                     Log.Information("Adding first model to scene.")
                     visibleRender <- not visibleRender
                 for mesh in visibleModels.Value.Meshes do
@@ -474,7 +475,8 @@ type VeldridView() as this =
                             FaceScale = 1.0f
                             MuscleDefinition = 1.0f
                         }
-                    do! this.RebuildCharacterModel(gd, race, tribe, customizations, gameLanguage)
+                    if this.RenderCheck() then
+                        do! this.RebuildCharacterModel(gd, race, tribe, customizations, gameLanguage)
 
                 
                 with ex ->
@@ -1136,6 +1138,11 @@ type VeldridView() as this =
             |> Map.remove Hair
             |> Map.remove Tail
             |> Map.remove Ear
+            |> Map.remove Head
+            |> Map.remove Body
+            |> Map.remove Hands
+            |> Map.remove Legs
+            |> Map.remove Feet
 
         modelMap <-
             modelMap
@@ -1147,7 +1154,7 @@ type VeldridView() as this =
     member this.CenterCameraOnBounds(center: Vector3, maxDimension: float32) =
         let scaledCenter = Vector3(center.X * -2.5f, center.Y * 2.5f, center.Z * 2.5f)
 
-        let distance = maxDimension * 6.0f
+        let distance = maxDimension * 5.0f
 
         let cameraPos = scaledCenter + Vector3(0.0f, 0.0f, distance)
 
@@ -1158,3 +1165,16 @@ type VeldridView() as this =
 
     member this.CenterOnCurrentModel() =
         this.CenterCameraOnBounds(boundsCenter, boundsDimension)
+
+    member this.RenderCheck() =
+        let faceOk = ttModelMap.ContainsKey(Face)
+        let hairOk = ttModelMap.ContainsKey(Hair)
+        let bodyOk = ttModelMap.ContainsKey(Body)
+        let handOk = ttModelMap.ContainsKey(Hands)
+        let legsOk = ttModelMap.ContainsKey(Legs)
+        let feetOk = ttModelMap.ContainsKey(Feet)
+
+        if faceOk && hairOk && bodyOk && handOk && legsOk && feetOk then
+            true
+        else
+            false

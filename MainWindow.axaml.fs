@@ -1022,6 +1022,7 @@ type MainWindow () as this =
         |> Async.StartImmediate
 
     member private this.OnSubmitCharacter(render: VeldridView) =
+        do render.clearCharacter()
         async {
             let mutable allModelUpdateTasks: Async<unit> list = []
             this.IncrementBusyCounter()
@@ -1304,7 +1305,6 @@ type MainWindow () as this =
                 finally
                     Log.Information("Completed character submission actions!")
                     this.DecrementBusyCounter()
-                    render.CenterOnCurrentModel()
             with ex ->
                 Log.Error("Could not submit character! {MEssage}", ex.Message)
         }
