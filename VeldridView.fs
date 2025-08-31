@@ -481,12 +481,12 @@ type VeldridView() as this =
                 
                 with ex ->
                     Log.Error("Failed to load TTModel for item {ItemName}: {message}", item.Name, ex.Message)
-                    raise ex
+                    return ()
             
             }
         with ex ->
             Log.Error(ex, "AssignGear failed for slot {Slot} with item {ItemName}", slot, item.Name)
-            reraise()
+            async { return () }
 
     member this.RebuildCharacterModel(gd: GraphicsDevice, race: XivRace, tribe: XivSubRace, customizations: CharacterCustomizations, gameLanguage: XivLanguage) =
         try
