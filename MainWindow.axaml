@@ -581,7 +581,7 @@
 			<ScrollViewer Grid.Column="4">
 				<StackPanel>
 					<StackPanel>
-						<TextBlock Text="Cheracter Features" HorizontalAlignment="Stretch" Margin="19" />
+						<TextBlock Text="Character Features" HorizontalAlignment="Stretch" Margin="19" />
 						<ComboBox x:Name="HairSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
 
 						<ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch" Margin="50,10,10,10" />
