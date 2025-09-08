@@ -2,10 +2,15 @@
 
 layout(location = 0) in vec3 fs_Position_VS;
 layout(location = 1) in vec4 fs_Color_VS;
-layout(location = 2) in vec2 fs_UV_VS;
-layout(location = 3) in vec3 fs_Normal_VS;
-layout(location = 4) in vec3 fs_Tangent_VS;
-layout(location = 5) in vec3 fs_Bitangent_VS;
+layout(location = 2) in vec4 fs_Color2_VS;
+layout(location = 3) in vec2 fs_UV_VS;
+layout(location = 4) in vec2 fs_UV2_VS;
+layout(location = 5) in vec2 fs_UV3_VS;
+layout(location = 6) in vec3 fs_Normal_VS;
+layout(location = 7) in vec3 fs_Tangent_VS;
+layout(location = 8) in vec3 fs_Bitangent_VS;
+layout(location = 9) in float fs_Handedness_VS;
+layout(location = 10) in vec3 fs_FlowDirection_VS;
 
 layout(set = 1, binding = 0) uniform texture2D tex_Diffuse;
 layout(set = 1, binding = 1) uniform texture2D tex_Normal;
@@ -46,21 +51,50 @@ float burleyDiffuse(float NdotL, float NdotV, float LdotH, float roughness){
 }
 
 void main(){
+    // --- Early Out Debug Test ---
+    //if (materialParams.u_ShaderPackId != IRIS) discard;
+
+    //fsout_Color = vec4(vec3(clamp(materialParams.u_ShaderPackId / 4.0, 0.0, 1.0)), 1.0);
+    //return;
+    
     // --- Texture samples ---
-    vec4  albedo       = texture(sampler2D(tex_Diffuse,   SharedSampler), fs_UV_VS);
-    vec4  normalSample = texture(sampler2D(tex_Normal,    SharedSampler), fs_UV_VS);
-    vec4  specSample   = texture(sampler2D(tex_Specular,  SharedSampler), fs_UV_VS); // rgb color, a gloss
-    vec3  emissive     = texture(sampler2D(tex_Emissive,  SharedSampler), fs_UV_VS).rgb;
-    float roughMap     = texture(sampler2D(tex_Roughness, SharedSampler), fs_UV_VS).r;
-    float metalness    = texture(sampler2D(tex_Metalness, SharedSampler), fs_UV_VS).r;
-    float occlusion    = texture(sampler2D(tex_Occlusion, SharedSampler), fs_UV_VS).r;
-    vec4  subsample    = texture(sampler2D(tex_Subsurface,SharedSampler), fs_UV_VS);
+    vec2 samplerUV = fs_UV_VS;
+    if (materialParams.u_ShaderPackId == HAIR){
+        samplerUV = max(fs_UV_VS, fs_UV_VS);
+    }
+
+    vec4  albedo       = texture(sampler2D(tex_Diffuse,   SharedSampler), samplerUV);
+    vec4  normalSample = texture(sampler2D(tex_Normal,    SharedSampler), samplerUV);
+    vec4  specSample   = texture(sampler2D(tex_Specular,  SharedSampler), samplerUV); // rgb color, a gloss
+    vec3  emissive     = texture(sampler2D(tex_Emissive,  SharedSampler), samplerUV).rgb;
+    float roughMap     = texture(sampler2D(tex_Roughness, SharedSampler), samplerUV).r;
+    float metalness    = texture(sampler2D(tex_Metalness, SharedSampler), samplerUV).r;
+    float occlusion    = texture(sampler2D(tex_Occlusion, SharedSampler), samplerUV).r;
+    vec4  subsample    = texture(sampler2D(tex_Subsurface,SharedSampler), samplerUV);
+    vec4  alphaSample  = texture(sampler2D(tex_Alpha,     SharedSampler), samplerUV);
 
     // --- Alpha policy ---
     float outAlpha;
     if (materialParams.u_ShaderPackId == HAIR){
-        if (albedo.a < 0.8) discard;      // hair: only albedo.a, hard cut
+        //fsout_Color = normalSample;
+        //return;
+
+        if (albedo.a < materialParams.u_AlphaThreshold) {
+            albedo       = texture(sampler2D(tex_Diffuse,   SharedSampler), fs_UV2_VS);
+            normalSample = texture(sampler2D(tex_Normal,    SharedSampler), fs_UV2_VS);
+            specSample   = texture(sampler2D(tex_Specular,  SharedSampler), fs_UV2_VS);
+            emissive     = texture(sampler2D(tex_Emissive,  SharedSampler), fs_UV2_VS).rgb;
+            roughMap     = texture(sampler2D(tex_Roughness, SharedSampler), fs_UV2_VS).r;
+            metalness    = texture(sampler2D(tex_Metalness, SharedSampler), fs_UV2_VS).r;
+            occlusion    = texture(sampler2D(tex_Occlusion, SharedSampler), fs_UV2_VS).r;
+            subsample    = texture(sampler2D(tex_Subsurface,SharedSampler), fs_UV2_VS);
+        }
+
+        if (albedo.a < materialParams.u_AlphaThreshold) discard;
         outAlpha = albedo.a;
+    //} else if (materialParams.u_ShaderPackId == IRIS) {
+        //fsout_Color = vec4(fs_Handedness_VS, fs_Handedness_VS, fs_Handedness_VS, 1.0);
+        //return;
     } else {
         if (albedo.a < materialParams.u_AlphaThreshold) discard;
         outAlpha = albedo.a;
@@ -159,7 +193,7 @@ void main(){
     else if (materialParams.u_ShaderPackId == HAIR){
         baseColor = albedo.rgb;
         float roughHair     = max(roughCombined, 0.60);                    // avoid glassy strands
-        float shininessHair = mix(64.0, 128.0, clamp(1.0 - roughHair,0.0,1.0));
+        float shininessHair = mix(0.0, 8.0, clamp(1.0 - roughHair,0.0,1.0));
         float specBP        = pow(NdotH, shininessHair);
         vec3  specularTerm  = specBP * specColorMap * 0.02;                       // tinted by hair spec map
 

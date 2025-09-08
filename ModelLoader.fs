@@ -78,18 +78,24 @@ let loadRenderModelFromItem
                         part.Vertices
                         |> Seq.map (fun vtx ->
                             // --- CONVERT TO THE NEW STRUCT ---
+                            let handednessFloat = if vtx.Handedness then 1.0f else 0.0f
                             VertexPositionSkinned(
                                 SharpToNumerics.vec3 vtx.Position,
                                 SharpToNumerics.vec3 vtx.Normal,
                                 SharpToNumerics.convertColor vtx.VertexColor,
+                                SharpToNumerics.convertColor vtx.VertexColor2,
                                 SharpToNumerics.vec2 vtx.UV1,
+                                SharpToNumerics.vec2 vtx.UV2,
+                                SharpToNumerics.vec2 vtx.UV3,
                                 SharpToNumerics.vec3 vtx.Tangent,
                                 SharpToNumerics.vec3 vtx.Binormal,
                                 // --- ADD THE NEW DATA ---
                                 // Convert byte[4] to a Vector4 for the shader
                                 System.Numerics.Vector4(float32 vtx.BoneIds.[0], float32 vtx.BoneIds.[1], float32 vtx.BoneIds.[2], float32 vtx.BoneIds.[3]),
                                 // Convert byte weights (0-255) to float weights (0.0-1.0)
-                                System.Numerics.Vector4(float32 vtx.Weights.[0] / 255.0f, float32 vtx.Weights.[1] / 255.0f, float32 vtx.Weights.[2] / 255.0f, float32 vtx.Weights.[3] / 255.0f)
+                                System.Numerics.Vector4(float32 vtx.Weights.[0] / 255.0f, float32 vtx.Weights.[1] / 255.0f, float32 vtx.Weights.[2] / 255.0f, float32 vtx.Weights.[3] / 255.0f),
+                                handednessFloat,
+                                SharpToNumerics.vec3 vtx.FlowDirection
                             )
                         )
                         |> Seq.toArray

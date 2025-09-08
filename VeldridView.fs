@@ -159,12 +159,17 @@ type VeldridView() as this =
                         VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
                         VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
                         VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                        VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
                         VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+                        VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
+                        VertexElementDescription("UV3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                         VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                         VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                         // --- ADD THESE NEW LAYOUT ELEMENTS ---
                         VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                         VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                        VertexElementDescription("Handedness", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float1)
+                        VertexElementDescription("FlowDirection", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
             
                     |]
                 )
@@ -172,6 +177,7 @@ type VeldridView() as this =
                 let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
                 let blendState = BlendStateDescription(
                     RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
+                    true,
                     BlendAttachmentDescription(
                         true,
                         BlendFactor.SourceAlpha,
@@ -654,16 +660,23 @@ type VeldridView() as this =
                                             boneIndices.[i] <- float32 masterBoneIndexLookup.[boneName]
                                             boneWeights.[i] <- (float32 vertex.Weights.[i]) / 255.0f
 
+                                let handednessFloat = if vertex.Handedness then 1.0f else 0.0f
+
                                 vertexList.Add(
                                     VertexPositionSkinned(
                                         SharpToNumerics.vec3 scaledPosition,
                                         SharpToNumerics.vec3 vertex.Normal,
                                         SharpToNumerics.convertColor vertex.VertexColor,
+                                        SharpToNumerics.convertColor vertex.VertexColor2,
                                         SharpToNumerics.vec2 vertex.UV1,
+                                        SharpToNumerics.vec2 vertex.UV2,
+                                        SharpToNumerics.vec2 vertex.UV3,
                                         SharpToNumerics.vec3 vertex.Tangent,
                                         SharpToNumerics.vec3 vertex.Binormal,
                                         Vector4(boneIndices.[0], boneIndices.[1], boneIndices.[2], boneIndices.[3]),
-                                        Vector4(boneWeights.[0], boneWeights.[1], boneWeights.[2], boneWeights.[3])
+                                        Vector4(boneWeights.[0], boneWeights.[1], boneWeights.[2], boneWeights.[3]),
+                                        handednessFloat,
+                                        SharpToNumerics.vec3 vertex.FlowDirection
                                     )
                                 )
                             for index in part.TriangleIndices do

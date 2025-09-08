@@ -650,9 +650,9 @@ type VeldridWindowViewModel() as this =
             )
         this.GloballyFilteredGear <- filteredList
         this.HeadGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Head" || m.Item.SecondaryCategory = "Kopf")
-        this.BodyGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Body" || m.Item.SecondaryCategory = "Rumpf")
+        this.BodyGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory.Contains("Body") || m.Item.SecondaryCategory.Contains("Rumpf"))
         this.HandGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Hands" || m.Item.SecondaryCategory = "Hände")
-        this.LegGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs" || m.Item.SecondaryCategory = "Beine")
+        this.LegGear <- filteredList |> List.filter(fun m -> (m.Item.SecondaryCategory.Contains("Legs") || m.Item.SecondaryCategory.Contains("Beine")) && not (m.Item.SecondaryCategory.Contains("Body") || m.Item.SecondaryCategory.Contains("Rumpf")))
         this.FeetGear <- filteredList |> List.filter(fun m -> m.Item.SecondaryCategory = "Feet" || m.Item.SecondaryCategory = "Füße")
 
     member private this.FilterSlotResults(slot: string) =
@@ -665,7 +665,7 @@ type VeldridWindowViewModel() as this =
         | "Body" -> 
             this.BodyGear <- 
                 this.GloballyFilteredGear 
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Body" || m.Item.SecondaryCategory = "Rumpf")
+                |> List.filter(fun m -> m.Item.SecondaryCategory.Contains("Body") || m.Item.SecondaryCategory.Contains("Rumpf"))
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_bodySearch.ToLowerInvariant()))
         | "Hand" -> 
             this.HandGear <- 
@@ -675,7 +675,7 @@ type VeldridWindowViewModel() as this =
         | "Legs" -> 
             this.LegGear <- 
                 this.GloballyFilteredGear
-                |> List.filter(fun m -> m.Item.SecondaryCategory = "Legs" || m.Item.SecondaryCategory = "Beine")
+                |> List.filter(fun m -> (m.Item.SecondaryCategory.Contains("Legs") || m.Item.SecondaryCategory.Contains("Beine")) && not (m.Item.SecondaryCategory.Contains("Body") || m.Item.SecondaryCategory.Contains("Rumpf")))
                 |> List.filter(fun m -> m.Item.Name.ToLowerInvariant().Contains(_legsSearch.ToLowerInvariant()))
         | "Feet" -> 
             this.FeetGear <- 

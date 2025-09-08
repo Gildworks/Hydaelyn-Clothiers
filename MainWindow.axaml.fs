@@ -242,6 +242,8 @@ type MainWindow () as this =
     let mutable selectedSwatchBorders: System.Collections.Generic.Dictionary<paletteOptions, Border option> = System.Collections.Generic.Dictionary()
     let mutable modelColorId: raceIds = raceIds.AuRa_Xaela_Female
 
+    let mutable disabledSlots: Map<EquipmentSlot, ListBox> = Map.empty
+
     let mutable allGearCache: FilterGear list = List.empty
     let mutable allCharaCache: XivCharacter list = List.empty
     let mutable dyeListCache: string list = List.empty
@@ -430,6 +432,29 @@ type MainWindow () as this =
         submitCharacterButton.IsEnabled <- raceOk && genderOk && clanOk && cacheOk
         clearAllButton.IsEnabled <- raceOk && genderOk && clanOk && cacheOk
 
+    member private this.DisableSlot(slot: ListBox) =
+        slot.IsEnabled <- false
+
+    member private this.EnableSlot(slot: EquipmentSlot) =
+        let listBox: ListBox option = 
+            match slot with
+            | Head -> Some headSlotCombo
+            | Body -> Some bodySlotCombo
+            | Hands -> Some handSlotCombo
+            | Legs -> Some legsSlotCombo
+            | Feet -> Some feetSlotCombo
+            | _ -> None
+        if listBox.IsSome then
+            listBox.Value.IsEnabled <- true
+
+    member private this.UpdateSlotStates() =
+        EquipmentSlot.all
+        |> List.iter (fun slot ->
+            match Map.tryFind slot disabledSlots with
+            | Some listBox -> this.DisableSlot(listBox)
+            | None -> this.EnableSlot(slot)
+        )
+
     member private this.UpdateDyeChannelsForItem(item: IItemModel, itemSlot: EquipmentSlot, tx: ModTransaction) =
         task {
             Log.Information("Updating dye slots for {item}", item.Name)
@@ -474,6 +499,29 @@ type MainWindow () as this =
             this.IncrementBusyCounter()
             Log.Information("Adding {Gear} to model list", item.Name)
             let helperItem = item :?> XivGear
+            Log.Information("Checking if any slots should be disabled...")
+
+            if item.SecondaryCategory.Contains("Body") || item.SecondaryCategory.Contains("Legs") then
+                disabledSlots <- Map.empty
+                match item.SecondaryCategory with
+                | c when c.Contains("Head") ->
+                    disabledSlots <-
+                        disabledSlots
+                        |> Map.add Head headSlotCombo
+                | c when c.Contains("Hands") ->
+                    disabledSlots <-
+                        disabledSlots
+                        |> Map.add Hands handSlotCombo
+                | c when c.Contains("Legs") && c.Contains("Body") ->
+                    disabledSlots <-
+                        disabledSlots
+                        |> Map.add Legs legsSlotCombo
+                | c when c.Contains("Feet") ->
+                    disabledSlots <-
+                        disabledSlots
+                        |> Map.add Feet feetSlotCombo
+                | _ -> ()
+            do this.UpdateSlotStates()
             try
                 let mutable resetDye = true
                 match lastSelectedGearItem.TryGetValue(eqSlot) with

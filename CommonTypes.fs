@@ -25,10 +25,12 @@ type VertexPositionColorUvUnused =
     val Color           : Vector4
     val Color2          : Vector4
     val UV              : Vector2
+    val UV2             : Vector2
+    val UV3             : Vector2
     val Normal          : Vector3
     val BiTangent       : Vector3
     val Unknown1        : Vector3
-    new(pos, col, col2, uv, nor, bitan, un1) = { Position = pos; Color = col; Color2 = col2; UV = uv; Normal = nor; BiTangent = bitan; Unknown1 = un1 }
+    new(pos, col, col2, uv, uv2, uv3, nor, bitan, un1) = { Position = pos; Color = col; Color2 = col2; UV = uv; UV2 = uv2; UV3 = uv3; Normal = nor; BiTangent = bitan; Unknown1 = un1 }
 
 [<Struct>]
 type VertexPositionColorUv =
@@ -51,22 +53,32 @@ type VertexPositionSkinned =
     val Position        : Vector3
     val Normal          : Vector3
     val Color           : Vector4
+    val Color2          : Vector4
     val UV              : Vector2
+    val UV2             : Vector2
+    val UV3             : Vector2
     val Tangent         : Vector3
     val Bitangent       : Vector3
     val BoneIndices     : Vector4
     val BoneWeights     : Vector4
+    val Handedness      : float32
+    val FlowDirection   : Vector3
 
-    new (pos, norm, col, uv, tan, bitan, boneIndices, boneWeights) =
+    new (pos, norm, col, col2, uv, uv2, uv3, tan, bitan, boneIndices, boneWeights, handedness, flowDir) =
         {
             Position = pos
             Normal = norm
             Color = col
+            Color2 = col2
             UV = uv
+            UV2 = uv2
+            UV3 = uv3
             Tangent = tan
             Bitangent = bitan
             BoneIndices = boneIndices
             BoneWeights = boneWeights
+            Handedness = handedness
+            FlowDirection = flowDir
         }
 
 [<Struct>]
@@ -192,6 +204,10 @@ type EquipmentSlot =
     | RingR
     | Necklace
     | Earrings
+
+module EquipmentSlot =
+    let all =
+        [ Head; Body; Hands; Legs; Feet; Face; Hair; Tail; Ear; Bracelet; RingL; RingR; Necklace; Earrings ]
 
 type ColorSetRow =
     {

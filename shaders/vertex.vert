@@ -15,21 +15,31 @@ layout(set = 2, binding = 0) uniform BoneTransforms
 layout(location = 0) in vec3 in_Position_OS;
 layout(location = 1) in vec3 in_Normal_OS;
 layout(location = 2) in vec4 in_Color;
-layout(location = 3) in vec2 in_UV;
-layout(location = 4) in vec3 in_Tangent_OS;
-layout(location = 5) in vec3 in_BiTangent_OS; // Note: You had a typo here in your original code (Bitangent)
+layout(location = 3) in vec4 in_Color2;
+layout(location = 4) in vec2 in_UV;
+layout(location = 5) in vec2 in_UV2;
+layout(location = 6) in vec2 in_UV3;
+layout(location = 7) in vec3 in_Tangent_OS;
+layout(location = 8) in vec3 in_BiTangent_OS; // Note: You had a typo here in your original code (Bitangent)
 // --- ADD THE NEW SKINNING INPUTS ---
-layout(location = 6) in vec4 in_BoneIndices;
-layout(location = 7) in vec4 in_BoneWeights;
+layout(location = 9) in vec4 in_BoneIndices;
+layout(location = 10) in vec4 in_BoneWeights;
+layout(location = 11) in float in_Handedness;
+layout(location = 12) in vec3 in_FlowDirection;
 
 
 // Output to Fragment Shader
 layout(location = 0) out vec3 fs_Position_VS;
 layout(location = 1) out vec4 fs_Color_VS;
-layout(location = 2) out vec2 fs_UV_VS;
-layout(location = 3) out vec3 fs_Normal_VS;
-layout(location = 4) out vec3 fs_Tangent_VS;
-layout(location = 5) out vec3 fs_BiTangent_VS;
+layout(location = 2) out vec4 fs_Color2_VS;
+layout(location = 3) out vec2 fs_UV_VS;
+layout(location = 4) out vec2 fs_UV2_VS;
+layout(location = 5) out vec2 fs_UV3_VS;
+layout(location = 6) out vec3 fs_Normal_VS;
+layout(location = 7) out vec3 fs_Tangent_VS;
+layout(location = 8) out vec3 fs_BiTangent_VS;
+layout(location = 9) out float fs_Handedness_VS;
+layout(location = 10) out vec3 fs_FlowDirection_VS;
 
 void main() {
     // --- SKINNING LOGIC ---
@@ -59,5 +69,10 @@ void main() {
     fs_BiTangent_VS = normalize(viewModelMatrix3x3 * skinnedBiTangent.xyz);
     
     fs_Color_VS = in_Color;
+    fs_Color2_VS = in_Color2;
     fs_UV_VS = in_UV;
+    fs_UV2_VS = in_UV2;
+    fs_UV3_VS = in_UV3;
+    fs_Handedness_VS = in_Handedness;
+    fs_FlowDirection_VS = in_FlowDirection;
 }
