@@ -92,6 +92,7 @@ void main(){
 
         if (albedo.a < materialParams.u_AlphaThreshold) discard;
         outAlpha = albedo.a;
+        if (outAlpha < 1) discard;
     //} else if (materialParams.u_ShaderPackId == IRIS) {
         //fsout_Color = vec4(fs_Handedness_VS, fs_Handedness_VS, fs_Handedness_VS, 1.0);
         //return;
