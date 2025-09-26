@@ -59,12 +59,11 @@ type VertexPositionSkinned =
     val UV3             : Vector2
     val Tangent         : Vector3
     val Bitangent       : Vector3
+    val FlowDirection   : Vector3
     val BoneIndices     : Vector4
     val BoneWeights     : Vector4
-    val Handedness      : float32
-    val FlowDirection   : Vector3
 
-    new (pos, norm, col, col2, uv, uv2, uv3, tan, bitan, boneIndices, boneWeights, handedness, flowDir) =
+    new (pos, norm, col, col2, uv, uv2, uv3, tan, bitan, flowDir, boneIndices, boneWeights) =
         {
             Position = pos
             Normal = norm
@@ -77,7 +76,6 @@ type VertexPositionSkinned =
             Bitangent = bitan
             BoneIndices = boneIndices
             BoneWeights = boneWeights
-            Handedness = handedness
             FlowDirection = flowDir
         }
 

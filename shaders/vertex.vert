@@ -21,11 +21,10 @@ layout(location = 5) in vec2 in_UV2;
 layout(location = 6) in vec2 in_UV3;
 layout(location = 7) in vec3 in_Tangent_OS;
 layout(location = 8) in vec3 in_BiTangent_OS; // Note: You had a typo here in your original code (Bitangent)
+layout(location = 9) in vec3 in_FlowDirection;
 // --- ADD THE NEW SKINNING INPUTS ---
-layout(location = 9) in vec4 in_BoneIndices;
-layout(location = 10) in vec4 in_BoneWeights;
-layout(location = 11) in float in_Handedness;
-layout(location = 12) in vec3 in_FlowDirection;
+layout(location = 10) in vec4 in_BoneIndices;
+layout(location = 11) in vec4 in_BoneWeights;
 
 
 // Output to Fragment Shader
@@ -38,8 +37,7 @@ layout(location = 5) out vec2 fs_UV3_VS;
 layout(location = 6) out vec3 fs_Normal_VS;
 layout(location = 7) out vec3 fs_Tangent_VS;
 layout(location = 8) out vec3 fs_BiTangent_VS;
-layout(location = 9) out float fs_Handedness_VS;
-layout(location = 10) out vec3 fs_FlowDirection_VS;
+layout(location = 9) out vec3 fs_FlowDir_VS;
 
 void main() {
     // --- SKINNING LOGIC ---
@@ -73,6 +71,5 @@ void main() {
     fs_UV_VS = in_UV;
     fs_UV2_VS = in_UV2;
     fs_UV3_VS = in_UV3;
-    fs_Handedness_VS = in_Handedness;
-    fs_FlowDirection_VS = in_FlowDirection;
+    fs_FlowDir_VS = in_FlowDirection;
 }

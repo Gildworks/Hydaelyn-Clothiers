@@ -89,13 +89,12 @@ let loadRenderModelFromItem
                                 SharpToNumerics.vec2 vtx.UV3,
                                 SharpToNumerics.vec3 vtx.Tangent,
                                 SharpToNumerics.vec3 vtx.Binormal,
+                                SharpToNumerics.vec3 vtx.FlowDirection,
                                 // --- ADD THE NEW DATA ---
                                 // Convert byte[4] to a Vector4 for the shader
                                 System.Numerics.Vector4(float32 vtx.BoneIds.[0], float32 vtx.BoneIds.[1], float32 vtx.BoneIds.[2], float32 vtx.BoneIds.[3]),
                                 // Convert byte weights (0-255) to float weights (0.0-1.0)
-                                System.Numerics.Vector4(float32 vtx.Weights.[0] / 255.0f, float32 vtx.Weights.[1] / 255.0f, float32 vtx.Weights.[2] / 255.0f, float32 vtx.Weights.[3] / 255.0f),
-                                handednessFloat,
-                                SharpToNumerics.vec3 vtx.FlowDirection
+                                System.Numerics.Vector4(float32 vtx.Weights.[0] / 255.0f, float32 vtx.Weights.[1] / 255.0f, float32 vtx.Weights.[2] / 255.0f, float32 vtx.Weights.[3] / 255.0f)
                             )
                         )
                         |> Seq.toArray
