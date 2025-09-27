@@ -52,46 +52,64 @@ let materialBuilder
 
         let dyedMat = mtrl.Clone() :?> XivMtrl
         let! stainTemplate = STM.GetStainingTemplateFile(STM.EStainingTemplate.Dawntrail)
-        if dyedMat.ColorSetDyeData <> null && dyedMat.ColorSetDyeData.Length = 128 && dyedMat.ColorSetData <> null && dyedMat.ColorSetData.Count >= 1024 then
+        if dyedMat.ColorSetDyeData <> null
+           && dyedMat.ColorSetDyeData.Length = 128
+           && dyedMat.ColorSetData <> null
+           && dyedMat.ColorSetData.Count >= 1024 then
+
             for dyeInstructionIndex in 0 .. 31 do
-                let conceptualRowForInstructions = dyeInstructionIndex / 2
-                let isBPartInstructions = (dyeInstructionIndex % 2) = 1
+                let conceptualRow = dyeInstructionIndex / 2
+                let isBPart = (dyeInstructionIndex % 2) = 1
 
-                let dyeDataOffset = dyeInstructionIndex * 4
-                let b0_flags = dyedMat.ColorSetDyeData[dyeDataOffset + 0]
-                let b2_template_part1 = dyedMat.ColorSetDyeData[dyeDataOffset + 2]
-                let b3_template_part2 = dyedMat.ColorSetDyeData[dyeDataOffset + 3]
-                let templateOffset = if b3_template_part2 >= 8uy then 8uy else 0uy
+                let off = dyeInstructionIndex * 4
+                let b0_flags = dyedMat.ColorSetDyeData.[off + 0]
+                let b2       = dyedMat.ColorSetDyeData.[off + 2]
+                let b3       = dyedMat.ColorSetDyeData.[off + 3]
 
-                let templateFile = uint16 b2_template_part1 ||| (uint16 (b3_template_part2 - templateOffset) <<< 8)
-                let templateKey = (templateFile % 1000us) + 1000us
-                
-                let dyeToApply : int =
-                    if b3_template_part2 >= 8uy then dye2 else dye1
+                // --- decode per-instruction ---
+                let templateIndex : uint16 =
+                    uint16 b2 ||| (uint16 (b3 &&& 0x07uy) <<< 8)      // lower 3 bits = template high
 
-                match dyeToApply with
-                | n when n >= 0 && templateKey > 1000us && templateKey <> UInt16.MaxValue ->
+                let templateKey : uint16 =
+                    (templateIndex % 1000us) + 1000us                  // normalize like TT
 
+                let channel : int =
+                    int ((b3 >>> 3) &&& 0x03uy)                       // 0..3 → channels 1..4
+
+                // feature flags (bit layout unchanged)
+                let flags : uint32 = uint32 b0_flags
+                let useDiffuse   = (flags &&& 0x01u) <> 0u
+                let useSpecular  = (flags &&& 0x02u) <> 0u
+                let useEmissive  = (flags &&& 0x04u) <> 0u
+                let useSpecPower = (flags &&& 0x08u) <> 0u
+                let useMetallic  = (flags &&& 0x10u) <> 0u
+                let useRoughness = (flags &&& 0x20u) <> 0u
+
+                if templateKey <> 0us && templateKey <> UInt16.MaxValue
+                   && (useDiffuse || useSpecular || useEmissive || useSpecPower || useMetallic || useRoughness) then
                     match stainTemplate.GetTemplate(templateKey) with
-                    | null ->
-                        ()
+                    | null -> ()
                     | templateEntry ->
-                        for mapping in StainingTemplateEntry.TemplateEntryOffsetToColorsetOffset.[STM.EStainingTemplate.Dawntrail] do
-                            let templateComponentFileOffset = mapping.Key
-                            let colorsetComponentDataOffset = mapping.Value
+                        let conceptualRowBase = conceptualRow * 64
+                        let partBase = conceptualRowBase + (if isBPart then 32 else 0)
 
-                            let dyedComponentHalfs = templateEntry.GetData(templateComponentFileOffset, n)
-                            if dyedComponentHalfs <> null && dyedComponentHalfs.Length > 0 then
-                                let conceptualRowBaseInColorSetData = conceptualRowForInstructions * 64
-                                let partSpecificBaseInColorSetData = conceptualRowBaseInColorSetData + (if isBPartInstructions then 32 else 0)
+                        // your two-slot policy (alias 3→1 and 4→2); -1 means “don’t apply”
+                        let dyeToApply =
+                            match channel with
+                            | 0 | 2 -> dye1
+                            | 1 | 3 -> dye2
+                            | _     -> -1
 
-                                for k in 0 .. dyedComponentHalfs.Length - 1 do
-                                    let targetIndexColorSetData = partSpecificBaseInColorSetData + colorsetComponentDataOffset + k
-                                    if targetIndexColorSetData < dyedMat.ColorSetData.Count then
-                                        dyedMat.ColorSetData.[targetIndexColorSetData] <- dyedComponentHalfs.[k]
-
-                | _ ->
-                    ()
+                        if dyeToApply >= 0 then
+                            for mapping in StainingTemplateEntry.TemplateEntryOffsetToColorsetOffset.[STM.EStainingTemplate.Dawntrail] do
+                                let templateComponentFileOffset = mapping.Key
+                                let colorsetComponentDataOffset = mapping.Value
+                                let dyedComponentHalfs = templateEntry.GetData(templateComponentFileOffset, dyeToApply)
+                                if dyedComponentHalfs <> null && dyedComponentHalfs.Length > 0 then
+                                    for k in 0 .. dyedComponentHalfs.Length - 1 do
+                                        let idx = partBase + colorsetComponentDataOffset + k
+                                        if idx < dyedMat.ColorSetData.Count then
+                                            dyedMat.ColorSetData.[idx] <- dyedComponentHalfs.[k]
         
         let! modelTex = ModelTexture.GetModelMaps(dyedMat, true, colors)
 
