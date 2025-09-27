@@ -169,6 +169,7 @@
         <PackageReference Include="System.Net.Http" Version="4.3.4" />
         <PackageReference Include="Veldrid" Version="4.9.0" />
         <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
+        <PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
         <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
         <PackageReference Include="Veldrid.Utilities" Version="4.9.0" />
         <PackageReference Include="Velopack" Version="0.0.1298" />

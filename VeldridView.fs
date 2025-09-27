@@ -146,83 +146,20 @@ type VeldridView() as this =
 
         if isResizing then () else       
 
-        let fb = swapchain.Framebuffer
+        let mutable fb = swapchain.Framebuffer
+
         if fb.Width <> this.WindowWidth || fb.Height <> this.WindowHeight then
             gd.WaitForIdle()
             swapchain.Resize(this.WindowWidth, this.WindowHeight)
+            fb <- swapchain.Framebuffer
 
         let w = float32 fb.Width
         let h = float32 fb.Height
-
-        let mutable pipeline : bool = false
 
         if (opaquePipeline.IsNone || cutoutPipeline.IsNone || transparentPipeline.IsNone) && texLayout.IsSome && not assignModel then
             opaquePipeline <- Some (this.CreateOpaquePipeline(fb, gd))
             cutoutPipeline <- Some (this.CreateCutoutPipeline(fb, gd))
             transparentPipeline <- Some (this.CreateTransparentPipeline(fb, gd))
-            //pipeline <- true
-        else pipeline <- true
-
-
-        //if pipeline.IsNone && texLayout.IsSome && not assignModel then 
-        //    try
-        //        Log.Information("Setting the standard pipeline.")
-        //        let vertexLayout = VertexLayoutDescription(
-        //            [|
-        //                VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
-        //                VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-        //                VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-        //                VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
-        //                VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-        //                VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-        //                VertexElementDescription("UV3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
-        //                VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-        //                VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-        //                VertexElementDescription("FlowDir", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
-        //                // --- ADD THESE NEW LAYOUT ELEMENTS ---
-        //                VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
-        //                VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
-            
-        //            |]
-        //        )
-        //        let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
-        //        let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
-        //        let blendState = BlendStateDescription(
-        //            RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
-        //            false,
-        //            BlendAttachmentDescription(
-        //                true,
-        //                BlendFactor.SourceAlpha,
-        //                BlendFactor.InverseSourceAlpha,
-        //                BlendFunction.Add,
-        //                BlendFactor.One,
-        //                BlendFactor.InverseSourceAlpha,
-        //                BlendFunction.Add
-        //            )
-        //        )
-        //        let pipelineDesc = GraphicsPipelineDescription(
-        //            blendState,
-        //            DepthStencilStateDescription(
-        //                depthTestEnabled = true,
-        //                depthWriteEnabled = false,
-        //                comparisonKind = ComparisonKind.LessEqual
-        //            ),
-        //            RasterizerStateDescription(
-        //                cullMode = FaceCullMode.Back,
-        //                fillMode = PolygonFillMode.Solid,
-        //                frontFace = FrontFace.CounterClockwise,
-        //                depthClipEnabled = false,
-        //                scissorTestEnabled = false
-        //            ),
-        //            PrimitiveTopology.TriangleList,
-        //            shaderSet,
-        //            [| mvpLayout.Value; texLayout.Value; boneTransformLayout.Value |],
-        //            fb.OutputDescription
-        //        )
-        //        let pipe = gd.ResourceFactory.CreateGraphicsPipeline(pipelineDesc)
-        //        pipeline <- Some pipe
-        //    with ex ->
-        //        Log.Fatal("Could not set standard pipeline. Nothing will render. {Message}", ex.Message)
 
         if w > 0.0f && h > 0.0f then
             let aspect = w / h
@@ -246,10 +183,11 @@ type VeldridView() as this =
             let visibleModels = currentCharacterModel
 
             if visibleModels.IsNone then
-                if (opaquePipeline.IsNone) then
-                    this.CreateEmptyPipeline gd swapchain.Framebuffer.OutputDescription
-                cmdList.SetPipeline(emptyPipeline.Value)
-                cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
+                //if (opaquePipeline.IsNone) then
+                //    this.CreateEmptyPipeline gd swapchain.Framebuffer.OutputDescription
+                //cmdList.SetPipeline(emptyPipeline.Value)
+                //cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
+                ()
             else
                 if not visibleRender then
                     Log.Information("Adding first model to scene.")
@@ -312,10 +250,10 @@ type VeldridView() as this =
             Log.Information("Setting the standard pipeline.")
             let vertexLayout = VertexLayoutDescription(
                 [|
-                    VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
-                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-                    VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                    VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                    VertexElementDescription("Color2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("UV3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
@@ -328,7 +266,7 @@ type VeldridView() as this =
             
                 |]
             )
-            let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
+            let shaders = ShaderUtils.getCrossStandardShaderSet gd.ResourceFactory
             let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
             let blendState = BlendStateDescription(
                 RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
@@ -373,10 +311,10 @@ type VeldridView() as this =
             Log.Information("Setting the standard pipeline.")
             let vertexLayout = VertexLayoutDescription(
                 [|
-                    VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
-                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-                    VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                    VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                    VertexElementDescription("Color2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("UV3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
@@ -389,7 +327,7 @@ type VeldridView() as this =
             
                 |]
             )
-            let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
+            let shaders = ShaderUtils.getCrossStandardShaderSet gd.ResourceFactory
             let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
             let blendState = BlendStateDescription(
                 RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
@@ -434,10 +372,10 @@ type VeldridView() as this =
             Log.Information("Setting the standard pipeline.")
             let vertexLayout = VertexLayoutDescription(
                 [|
-                    VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3)
-                    VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3)
-                    VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4)
-                    VertexElementDescription("Color2", VertexElementSemantic.Color, VertexElementFormat.Float4)
+                    VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
+                    VertexElementDescription("Color2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
                     VertexElementDescription("UV3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2)
@@ -450,7 +388,7 @@ type VeldridView() as this =
             
                 |]
             )
-            let shaders = ShaderUtils.getStandardShaderSet gd.ResourceFactory
+            let shaders = ShaderUtils.getCrossStandardShaderSet gd.ResourceFactory
             let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
             let blendState = BlendStateDescription(
                 RgbaFloat(0.0f, 0.0f, 0.0f, 0.0f),
@@ -1331,7 +1269,7 @@ type VeldridView() as this =
 
         let mvpSet = factory.CreateResourceSet(ResourceSetDescription(mvpLayout, dummyMVP))
 
-        let shaders = ShaderUtils.getEmptyShaderSet factory
+        let shaders = ShaderUtils.getCrossEmptyShaderSet factory
         let shaderSet = ShaderSetDescription([| vertexLayout |], shaders)
 
         let pipeline = factory.CreateGraphicsPipeline(GraphicsPipelineDescription(

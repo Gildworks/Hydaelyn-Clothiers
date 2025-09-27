@@ -8,7 +8,7 @@ layout(location = 4) in vec2 fs_UV2_VS;
 layout(location = 5) in vec2 fs_UV3_VS;
 layout(location = 6) in vec3 fs_Normal_VS;
 layout(location = 7) in vec3 fs_Tangent_VS;
-layout(location = 8) in vec3 fs_Bitangent_VS;
+layout(location = 8) in vec3 fs_BiTangent_VS;
 layout(location = 9) in vec3 fs_FlowDir_VS;
 
 layout(set = 1, binding = 0) uniform texture2D tex_Diffuse;
@@ -95,7 +95,7 @@ void main(){
     vec3 n_ts = normalize(normalSample.xyz * 2.0 - 1.0);
     vec3 N = normalize(fs_Normal_VS);
     vec3 T = normalize(fs_Tangent_VS);
-    vec3 B = normalize(fs_Bitangent_VS);
+    vec3 B = normalize(fs_BiTangent_VS);
     mat3 TBN = mat3(T,B,N);
     N = normalize(TBN * n_ts);
 
