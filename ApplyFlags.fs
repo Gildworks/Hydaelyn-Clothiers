@@ -63,6 +63,9 @@ let filterFlagConflicts (flags: Map<EquipmentParameterFlag, bool>): Task<Map<Equ
                 finalFlags <- finalFlags.Remove EquipmentParameterFlag.HandHideForearm
             | EquipmentParameterFlag.LegHideHalfBoot, true ->
                 finalFlags <- finalFlags.Remove EquipmentParameterFlag.FootHideKnee
+            | EquipmentParameterFlag.LegHideShortBoot, true ->
+                finalFlags <- finalFlags.Remove EquipmentParameterFlag.FootHideAnkle
+                finalFlags <- finalFlags.Remove EquipmentParameterFlag.FootHideKnee
                 
             | _ -> ()
 

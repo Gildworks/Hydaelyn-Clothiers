@@ -277,7 +277,8 @@ type VeldridView() as this =
             gd.SubmitCommands(cmdList)
             gd.SwapBuffers(swapchain)
 
-            if not firstRender then firstRender <- true
+            if not firstRender then
+                firstRender <- true
 
             let mutable count = disposeQueue.Count
             for _ in 0 .. count - 1 do
@@ -930,9 +931,9 @@ type VeldridView() as this =
                     // Calculate bone transforms with customizations and update GPU buffer
                     let customizedTransforms = this.calculateBoneTransforms skeleton customizations
                     gd.UpdateBuffer(boneTransformBuffer.Value, 0u, customizedTransforms)
-                    //if this.CenterCamera then
-                    //    this.CenterCameraOnBounds(boundsCenter, boundsDimension)
-                    //    this.CenterCamera <- false
+                    if not this.IsFirstRenderComplete then
+                        this.CenterOnCurrentModel()
+                        //this.CenterCamera <- false
                 else
                     match currentCharacterModel with
                     | Some oldModel -> disposeQueue.Enqueue((oldModel, 5))
