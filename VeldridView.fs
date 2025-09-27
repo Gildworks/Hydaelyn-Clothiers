@@ -253,6 +253,7 @@ type VeldridView() as this =
             else
                 if not visibleRender then
                     Log.Information("Adding first model to scene.")
+                    this.CenterOnCurrentModel()
                     visibleRender <- not visibleRender
                 for mesh in visibleModels.Value.Meshes do
                     try
