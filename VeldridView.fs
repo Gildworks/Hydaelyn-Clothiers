@@ -260,6 +260,7 @@ type VeldridView() as this =
                     VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("FlowDir", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Handedness", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float1)
                     // --- ADD THESE NEW LAYOUT ELEMENTS ---
                     VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
@@ -321,6 +322,7 @@ type VeldridView() as this =
                     VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("FlowDir", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Handedness", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float1)
                     // --- ADD THESE NEW LAYOUT ELEMENTS ---
                     VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
@@ -382,6 +384,7 @@ type VeldridView() as this =
                     VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("Bitangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
                     VertexElementDescription("FlowDir", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3)
+                    VertexElementDescription("Handedness", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float1)
                     // --- ADD THESE NEW LAYOUT ELEMENTS ---
                     VertexElementDescription("BoneIndices", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     VertexElementDescription("BoneWeights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
@@ -817,6 +820,7 @@ type VeldridView() as this =
                                         SharpToNumerics.vec3 vertex.Tangent,
                                         SharpToNumerics.vec3 vertex.Binormal,
                                         SharpToNumerics.vec3 vertex.FlowDirection,
+                                        handednessFloat,
                                         Vector4(boneIndices.[0], boneIndices.[1], boneIndices.[2], boneIndices.[3]),
                                         Vector4(boneWeights.[0], boneWeights.[1], boneWeights.[2], boneWeights.[3])
                                     )

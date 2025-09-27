@@ -90,6 +90,7 @@ let loadRenderModelFromItem
                                 SharpToNumerics.vec3 vtx.Tangent,
                                 SharpToNumerics.vec3 vtx.Binormal,
                                 SharpToNumerics.vec3 vtx.FlowDirection,
+                                handednessFloat,
                                 // --- ADD THE NEW DATA ---
                                 // Convert byte[4] to a Vector4 for the shader
                                 System.Numerics.Vector4(float32 vtx.BoneIds.[0], float32 vtx.BoneIds.[1], float32 vtx.BoneIds.[2], float32 vtx.BoneIds.[3]),

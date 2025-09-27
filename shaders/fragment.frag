@@ -10,6 +10,7 @@ layout(location = 6) in vec3 fs_Normal_VS;
 layout(location = 7) in vec3 fs_Tangent_VS;
 layout(location = 8) in vec3 fs_BiTangent_VS;
 layout(location = 9) in vec3 fs_FlowDir_VS;
+layout(location = 10) in float fs_Handedness_VS;
 
 layout(set = 1, binding = 0) uniform texture2D tex_Diffuse;
 layout(set = 1, binding = 1) uniform texture2D tex_Normal;
@@ -92,11 +93,19 @@ void main(){
 
     // --- TBN & normal ---
     //normalSample.g = 1.0 - normalSample.g; // uncomment if your maps are Y-inverted
-    vec3 n_ts = normalize(normalSample.xyz * 2.0 - 1.0);
+    //vec3 n_ts = normalize(normalSample.xyz * 2.0 - 1.0),
+                          //sqrt(max(1.0 - dot(normalSample.xy * 2.0 - 1.0,
+                                         //normalSample.xy * 2.0 - 1.0), 0.0)));
     vec3 N = normalize(fs_Normal_VS);
     vec3 T = normalize(fs_Tangent_VS);
     vec3 B = normalize(fs_BiTangent_VS);
-    mat3 TBN = mat3(T,B,N);
+
+    T = normalize(T - N * dot(N, T));
+    //vec3 B = normalize(cross(N, T)) * fs_Handedness_VS;
+    mat3 TBN = mat3(T, B, N);
+    vec3 n_ts = vec3(normalSample.xy * 2.0 - 1.0,
+                     sqrt(max(1.0 - dot(normalSample.xy * 2.0 - 1.0,
+                                        normalSample.xy * 2.0 - 1.0), 0.0)));
     N = normalize(TBN * n_ts);
 
     // --- Vectors ---
