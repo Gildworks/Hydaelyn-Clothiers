@@ -81,14 +81,14 @@ type VertexPositionSkinned =
             FlowDirection = flowDir
         }
 
-[<Struct>]
-type TransformsUBO =
-    {
-        World: Matrix4x4
-        View: Matrix4x4
-        Projection: Matrix4x4
-        EyePosition: Vector4
-    }
+//[<Struct>]
+//type TransformsUBO =
+//    {
+//        World: Matrix4x4
+//        View: Matrix4x4
+//        Projection: Matrix4x4
+//        EyePosition: Vector4
+//    }
 
 type CharacterCustomizations =
     {

@@ -183,10 +183,6 @@ type VeldridView() as this =
             let visibleModels = currentCharacterModel
 
             if visibleModels.IsNone then
-                //if (opaquePipeline.IsNone) then
-                //    this.CreateEmptyPipeline gd swapchain.Framebuffer.OutputDescription
-                //cmdList.SetPipeline(emptyPipeline.Value)
-                //cmdList.SetGraphicsResourceSet(0u, emptyMVPSet.Value)
                 ()
             else
                 if not visibleRender then
@@ -196,7 +192,6 @@ type VeldridView() as this =
                 for mesh in visibleModels.Value.Meshes do
                     try
                         gd.UpdateBuffer(mvpBuffer.Value, 0u, transformsData)
-                        //cmdList.SetPipeline(pipeline.Value)
                         match mesh.Material.Mtrl.ShaderPack with
                         | ShaderHelpers.EShaderPack.Hair ->
                             cmdList.SetPipeline(cutoutPipeline.Value)

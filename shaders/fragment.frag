@@ -66,18 +66,12 @@ void main(){
     float outAlpha;
     if (materialParams.u_ShaderPackId == HAIR){
         vec4 testAlbedo = texture(sampler2D(tex_Diffuse, SharedSampler), fs_UV2_VS);
-        //if (testAlbedo.a < materialParams.u_AlphaThreshold) discard;
-        //outAlpha = albedo.a;
-        //if (outAlpha < materialParams.u_AlphaThreshold) discard;
-        //fsout_Color = vec4(alpha.r, alpha.g, alpha.b, 1.0);
-        //return;
         outAlpha = testAlbedo.a;
         if (fs_UV2_VS.x == 0.0){
             outAlpha = albedo.a;
         }
         if (outAlpha < 0.5) discard;
     } else {
-        //if (albedo.a < materialParams.u_AlphaThreshold) discard;
         outAlpha = albedo.a;
     }
 
