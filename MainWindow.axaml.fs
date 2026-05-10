@@ -77,10 +77,12 @@ module DataHelpers =
         task {
             Log.Information("Starting color palette acquisition")
             let cmpPath = "chara/xls/charamake/human.cmp"
-            let sharedOffset = 320 * 8
+            let sharedSize = 192*8
+            let sharedOffset = sharedSize * 3
             let blockSize = 160 * 8
             let raceBlockStart = sharedOffset + (blockSize * (int race))
-            let uiPalettesOffset = 160 * 8
+            let uiPalettesOffset = 288*8 //sharedSize
+            let unknownOffset = sharedSize*2
 
             let offsetsMap = dict [
                 paletteOptions.RenderHighlights, (0, 192)
@@ -111,7 +113,8 @@ module DataHelpers =
 
             let cmpSet = new CharaMakeParameterSet(cmpData)
             let allBytes = cmpSet.GetBytes()
-            let metadataStartOffset = CharaMakeParameterSet.MetadataStart
+            let metadataStartOffset = cmpSet.MetaDataStart
+            Log.Information("CMP Data Length: {l}", metadataStartOffset)
 
             let colorDataBytes = allBytes |> Seq.take metadataStartOffset
 
@@ -579,7 +582,8 @@ type MainWindow () as this =
                         | _ ->
                             DataHelpers.vec4ToDXColor renderPalette.PaletteColors.[index]
                     let hairStrandsOriginal =
-                        if renderPalette.HairLightColor.Length > 0 then
+                        //DataHelpers.vec4ToLinearDXColor renderPalette.HairLightColor.[index]
+                        if renderPalette.HairLightColor.Length > index then
                             DataHelpers.vec4ToLinearDXColor renderPalette.HairLightColor.[index]
                         else
                             modelColors.LightColor
@@ -590,7 +594,7 @@ type MainWindow () as this =
                         modelColors.HairColor <- selectedColor
                         if not (highlightEnableControl.IsChecked.GetValueOrDefault(false)) then
                             modelColors.HairHighlightColor <- Nullable selectedColor
-                        modelColors.LightColor <- DataHelpers.vec4ToLinearDXColor renderPalette.HairLightColor.[index]
+                        //modelColors.LightColor <- DataHelpers.vec4ToLinearDXColor renderPalette.HairLightColor.[index]
                     | 0 ->
                         modelColors.HairHighlightColor <- Nullable selectedColor
                     | 1 ->
